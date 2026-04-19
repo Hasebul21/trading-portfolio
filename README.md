@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Personal trading portfolio
 
-## Getting Started
+Next.js app with **Supabase** (Postgres + email/password auth). Record buys and sells; **Portfolio** shows open positions (BDT), optional **AmarStock** live LTP for symbols in the movers feed, and unrealized P/L when LTP is available.
 
-First, run the development server:
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 20+
+- A free [Supabase](https://supabase.com/) project
+
+## Supabase setup
+
+1. Create a project, then open **SQL Editor** and run the script in [`supabase/schema.sql`](supabase/schema.sql). That creates `transactions` (with `fees_bdt`), **capital contributions** (manual invested total), **long-term** symbol list, **immediate trade plans** (buy/sell + target price), and row-level security.
+2. If you created the database **before** `fees_bdt` existed, run [`supabase/migrations/20260208120000_add_fees_bdt.sql`](supabase/migrations/20260208120000_add_fees_bdt.sql) once.
+3. If you are upgrading an older project without the planning tables, run [`supabase/migrations/20260209120000_planning_tables.sql`](supabase/migrations/20260209120000_planning_tables.sql) once.
+4. In **Project Settings → API**, copy the **Project URL** and **anon public** key.
+
+### Charges (Bangladesh / BO-style)
+
+On **Record**, transfer-in (buy) and transfer-out (sell) percentages apply by default; you can tick demat, remat, pledge, unpledge, or add a flat **extra fees** line (e.g. cheque dishonor, wealth certificates). Rates live in [`src/lib/fees/bd-charges.ts`](src/lib/fees/bd-charges.ts)—edit there if your broker’s sheet differs. Account opening (BDT 950) and annual BO maintenance (BDT 450) are not auto-applied per trade; book them via **extra fees** when you want them on a specific entry.
+
+### DSE market prices (AmarStock)
+
+The server fetches [`https://www.amarstock.com/api/feed/index/move`](https://www.amarstock.com/api/feed/index/move) (JSON gainers/losers, not the full DSE). Holdings whose **symbol** appears there get **Market LTP**, **day Δ / %**, and **unrealized P/L** vs your average cost. Other symbols show “—” until they show up in that snapshot. Responses are cached about **60 seconds** (`revalidate` on the portfolio route + fetch cache). Optional env: `AMARSTOCK_MOVE_URL` to point at another URL if AmarStock changes paths. Treat this as unofficial third-party data.
+
+### Auth URLs (required for production)
+
+In Supabase **Authentication → URL configuration**, set:
+
+- **Site URL**: your deployed app URL (for local dev, `http://localhost:3000`).
+- **Redirect URLs**: add the same URLs you use (e.g. `http://localhost:3000/**` and `https://your-app.vercel.app/**`).
+
+For a solo project you may turn off **Confirm email** (see below).
+
+### Email verification (can’t verify / no inbox)
+
+Supabase decides whether a new user must click an email link before signing in.
+
+1. **Turn off confirmation (simplest for local / personal use)**  
+   Dashboard → **Authentication** → **Providers** → **Email** → disable **“Confirm email”** (wording may be “Enable email confirmations” — turn it **off**). Save. New sign-ups get a session immediately; use **Register** then you’re in (or sign in if the user already exists).
+
+2. **Confirm an existing user in the dashboard**  
+   **Authentication** → **Users** → select the user → use **Confirm user** / mark email confirmed (exact control depends on dashboard version). Then **Sign in** with email + password.
+
+3. **Fix redirect / Site URL (if the link opens but fails)**  
+   **Authentication** → **URL configuration**: set **Site URL** to where you use the app (e.g. `http://localhost:3000`). Under **Redirect URLs**, add `http://localhost:3000/**` and any deployed URL. Misconfigured URLs can break the verification link.
+
+4. **Other sign-in methods (optional, more setup)**  
+   In **Authentication** → **Providers**, enable **Google**, **GitHub**, etc., and add the client IDs/secrets they require. The app would need extra UI to use them; today it only has email + password.
+
+5. **Magic link**  
+   Still email-based; useful if you prefer link login over password, but it does not remove the need for a working inbox.
+
+## Local development
+
+Copy environment variables:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Or one step (install, create `.env.local` if missing, start dev):
 
-## Learn More
+```bash
+make
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000). Register, then use **Record** for trades and **Portfolio** for the summary.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy (free tier)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The database and auth stay on **Supabase**. The Next.js app can be hosted on **Vercel** or **Netlify** (both have free tiers for personal projects).
 
-## Deploy on Vercel
+1. Push this repository to GitHub.
+2. In Vercel or Netlify: **New project → Import** the repo, framework **Next.js**, build `npm run build`, output default.
+3. Add the same two variables in the host’s environment UI: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+4. Redeploy after saving env vars.
+5. Update Supabase **Site URL** and **Redirect URLs** to match your production domain.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+No extra database is required on the host; all persistent data lives in Supabase Postgres.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts
+
+| Command        | Description              |
+| -------------- | ------------------------ |
+| `npm run dev`  | Development server       |
+| `npm run build`| Production build         |
+| `npm run start`| Start production server  |
+| `npm run lint` | ESLint                   |
