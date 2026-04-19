@@ -14,13 +14,13 @@ Next.js app with **Supabase** (Postgres + email/password auth). Record buys and 
 3. If you are upgrading an older project without the planning tables, run [`supabase/migrations/20260209120000_planning_tables.sql`](supabase/migrations/20260209120000_planning_tables.sql) once.
 4. In **Project Settings → API**, copy the **Project URL** and **anon public** key.
 
-### Charges (Bangladesh / BO-style)
+### Commission (BDT)
 
-On **Record**, transfer-in (buy) and transfer-out (sell) percentages apply by default; you can tick demat, remat, pledge, unpledge, or add a flat **extra fees** line (e.g. cheque dishonor, wealth certificates). Rates live in [`src/lib/fees/bd-charges.ts`](src/lib/fees/bd-charges.ts)—edit there if your broker’s sheet differs. Account opening (BDT 950) and annual BO maintenance (BDT 450) are not auto-applied per trade; book them via **extra fees** when you want them on a specific entry.
+On **Record**, broker commission is applied automatically on **both buys and sells**: **0.4%** of gross (quantity × price), rounded to two decimals—aligned with typical DSE notes (e.g. commission 8.20 on amount 2,050.50). The rate lives in [`src/lib/fees/trade-commission.ts`](src/lib/fees/trade-commission.ts). To override without editing code, set **`NEXT_PUBLIC_TRADE_COMMISSION_RATE`** in `.env.local` (decimal, e.g. `0.004` for 0.4%). Buy commission is folded into book cost in portfolio math; sell commission is stored on the row only.
 
-### DSE market prices (AmarStock)
+### DSE market prices (Portfolio)
 
-The server fetches [`https://www.amarstock.com/api/feed/index/move`](https://www.amarstock.com/api/feed/index/move) (JSON gainers/losers, not the full DSE). Holdings whose **symbol** appears there get **Market LTP**, **day Δ / %**, and **unrealized P/L** vs your average cost. Other symbols show “—” until they show up in that snapshot. Responses are cached about **60 seconds** (`revalidate` on the portfolio route + fetch cache). Optional env: `AMARSTOCK_MOVE_URL` to point at another URL if AmarStock changes paths. Treat this as unofficial third-party data.
+**Portfolio** loads **LTP**, **today’s high / low**, and **unrealized P/L** from DSE’s latest share price page ([`latest_share_price_scroll_l.php`](https://dsebd.org/latest_share_price_scroll_l.php)) via a small HTML parse. **52-week high / low** is read from each symbol’s DSE company page (`displayCompany.php`). Fetches use Next’s `revalidate` (**~60s** for the price table, **~1h** per company page). Optional env overrides: **`DSE_LSP_URL`** (full URL to the LSP page), **`DSE_COMPANY_URL_BASE`** (e.g. `https://dsebd.org/displayCompany.php` without query string). If DSE changes markup, some cells may show “—”.
 
 ### Auth URLs (required for production)
 

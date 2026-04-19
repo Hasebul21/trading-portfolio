@@ -15,7 +15,13 @@ export type HoldingRow = {
   shares: number;
   category: string | null;
   totalCost: number;
+  /** True average cost per share: (buys incl. fees − cost removed on sells) ÷ shares. */
   avgPrice: number;
+  /**
+   * Commission/fees (BDT) attributed to the remaining position after proportional
+   * reduction on sells. `avgPrice` already includes this spread across shares.
+   */
+  feesInPositionBdt: number;
 };
 
 function num(v: string | number): number {
@@ -26,6 +32,8 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
   type State = {
     shares: number;
     totalCost: number;
+    /** Fees attributed to shares still held (reduced proportionally on each sell). */
+    feesInPosition: number;
     avg: number;
     category: string | null;
   };
@@ -45,7 +53,7 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
 
     let state = bySymbol.get(symbol);
     if (!state) {
-      state = { shares: 0, totalCost: 0, avg: 0, category: null };
+      state = { shares: 0, totalCost: 0, feesInPosition: 0, avg: 0, category: null };
       bySymbol.set(symbol, state);
     }
 
@@ -60,17 +68,26 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
 
     if (row.side === "buy") {
       const newShares = state.shares + qty;
+      state.feesInPosition += fees;
       state.totalCost += qty * price + fees;
       state.shares = newShares;
       state.avg = newShares > 0 ? state.totalCost / newShares : 0;
     } else {
-      const sellQty = Math.min(qty, state.shares);
+      const preShares = state.shares;
+      const sellQty = Math.min(qty, preShares);
+      if (preShares > 0 && sellQty > 0) {
+        const soldFraction = sellQty / preShares;
+        state.feesInPosition -= soldFraction * state.feesInPosition;
+      }
       state.totalCost -= sellQty * state.avg;
       state.shares -= sellQty;
       if (state.shares <= 0) {
         state.shares = 0;
         state.totalCost = 0;
+        state.feesInPosition = 0;
         state.avg = 0;
+      } else {
+        state.avg = state.totalCost / state.shares;
       }
     }
   }
@@ -83,6 +100,8 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
       category: s.category,
       totalCost: s.totalCost,
       avgPrice: s.avg,
+      feesInPositionBdt:
+        Math.round(Math.max(0, s.feesInPosition) * 100) / 100,
     }));
 }
 

@@ -55,14 +55,13 @@ export async function addLongTermHolding(formData: FormData) {
   if (!user) return;
 
   const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
-  const notes = String(formData.get("notes") ?? "").trim() || null;
 
   if (!symbol) return;
 
   await supabase.from("long_term_holdings").insert({
     user_id: user.id,
     symbol,
-    notes,
+    notes: null,
   });
 
   revalidatePath("/long-term");
@@ -97,8 +96,6 @@ export async function addTradePlan(formData: FormData) {
   const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
   const side = String(formData.get("side") ?? "").toLowerCase();
   const priceRaw = String(formData.get("target_price") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
-
   const targetPrice = Number(priceRaw);
 
   if (!symbol) return;
@@ -110,7 +107,7 @@ export async function addTradePlan(formData: FormData) {
     symbol,
     side,
     target_price: targetPrice,
-    notes,
+    notes: null,
   });
 
   revalidatePath("/trade-plans");

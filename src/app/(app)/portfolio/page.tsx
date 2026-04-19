@@ -1,80 +1,95 @@
-import { fetchPortfolioWithAmarQuotes } from "@/lib/market/portfolio-with-quotes";
+import { AppPageHeader } from "@/components/app-page-header";
+import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
 import Link from "next/link";
-import { Alert } from "antd";
-import { PortfolioHoldingsTable } from "./portfolio-holdings-table";
+import { Card, Empty, Typography } from "antd";
+import { PortfolioLiveShell } from "./portfolio-live-shell";
 
-/** Refresh portfolio + AmarStock movers cache (seconds). */
+/** Refresh portfolio + DSE market fetch cache (seconds). */
 export const revalidate = 60;
 
 export default async function PortfolioPage() {
-  const { error, holdings, marketError, quotedSymbolCount } =
-    await fetchPortfolioWithAmarQuotes();
+  const { error, holdings, marketError } = await fetchPortfolioWithDseMarket();
 
   if (error) {
+    const missingTable =
+      /could not find the table|does not exist|schema cache|relation.*transactions/i.test(
+        error,
+      );
+
     return (
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Portfolio</h1>
-        <p
-          className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200"
-          role="alert"
-        >
+      <div className="mx-auto max-w-2xl text-left">
+        <AppPageHeader title="Portfolio" />
+        <Typography.Paragraph type="danger" className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
           {error}
-        </p>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Confirm you ran <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code>{" "}
-          and set environment variables.
-        </p>
+        </Typography.Paragraph>
+        {missingTable ? (
+          <div className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="font-medium text-zinc-900 dark:text-zinc-100">
+              Create the tables in Supabase (one time)
+            </p>
+            <ol className="mt-2 list-decimal space-y-2 pl-5">
+              <li>
+                Open{" "}
+                <a
+                  href="https://supabase.com/dashboard"
+                  className="font-medium text-zinc-900 underline dark:text-zinc-100"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Supabase Dashboard
+                </a>{" "}
+                → your project → SQL Editor → New query.
+              </li>
+              <li>
+                Copy the full file{" "}
+                <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
+                  supabase/schema.sql
+                </code>{" "}
+                from this repo, paste into the editor, click Run.
+              </li>
+              <li>Reload this page. If it still errors, wait ~30s (schema cache) and refresh again.</li>
+            </ol>
+          </div>
+        ) : (
+          <Typography.Paragraph type="secondary" className="mt-2 text-sm">
+            Check{" "}
+            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">.env.local</code> points at
+            this project and run{" "}
+            <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code> in
+            the SQL Editor if tables are missing.
+          </Typography.Paragraph>
+        )}
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-        Portfolio
-      </h1>
-      <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-400">
-        Rows are built from{" "}
-        <Link href="/record" className="font-medium text-zinc-900 underline dark:text-zinc-100">
-          Record
-        </Link>
-        . Market LTP is pulled from the AmarStock movers JSON feed
-        (top gainers/losers by index impact)—not the full DSE list—so only symbols
-        appearing in that snapshot show a live price. Data may be delayed; the feed
-        can change without notice.
-      </p>
-
-      {holdings.length > 0 ? (
-        marketError ? (
-          <Alert
-            className="mt-4"
-            type="warning"
-            showIcon
-            message="Could not load AmarStock prices"
-            description={marketError}
-          />
-        ) : (
-          <Alert
-            className="mt-4"
-            type="info"
-            showIcon
-            message="DSE market prices (AmarStock)"
-            description={`Live LTP matched for ${quotedSymbolCount} of ${holdings.length} holding(s) from the movers feed. Others show “—” until that symbol appears in the feed.`}
-          />
-        )
-      ) : null}
+      <AppPageHeader title="Portfolio" />
 
       {holdings.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-          No open positions yet. Record a buy for any symbol—it will show here with
-          full details.{" "}
-          <Link href="/record" className="font-medium text-zinc-900 underline dark:text-zinc-100">
-            Go to Record
-          </Link>
-        </p>
+        <Card className="border-dashed border-zinc-300 dark:border-zinc-700">
+          <Empty
+            description={
+              <Typography.Text type="secondary" className="text-base">
+                No open positions yet.{" "}
+                <Link
+                  href="/record"
+                  className="font-medium text-zinc-900 underline dark:text-zinc-100"
+                >
+                  Record a buy
+                </Link>{" "}
+                to see it here.
+              </Typography.Text>
+            }
+          />
+        </Card>
       ) : (
-        <div className="mt-6">
-          <PortfolioHoldingsTable holdings={holdings} />
+        <div className="mt-2 text-left">
+          <PortfolioLiveShell
+            initialHoldings={holdings}
+            initialMarketError={marketError}
+          />
         </div>
       )}
     </div>

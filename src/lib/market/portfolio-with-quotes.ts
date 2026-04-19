@@ -1,36 +1,61 @@
+import { computeFloorPivot, type FloorPivot } from "@/lib/pivot-floor";
 import { fetchUserHoldings } from "@/lib/holdings";
 import type { HoldingRow } from "@/lib/portfolio";
-import { fetchAmarstockMoversLtpMap } from "./amarstock-move";
+import { fetchDseCompanyExtras } from "./dse-company-52w";
+import { fetchDseLspQuoteMap } from "./dse-lsp-quotes";
 
 export type PortfolioMarketRow = HoldingRow & {
   marketLtp: number | null;
-  dayChange: number | null;
-  dayChangePct: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+  pivot: FloorPivot | null;
   /** (LTP − avg) × shares when LTP known */
   unrealizedPl: number | null;
 };
 
-export async function fetchPortfolioWithAmarQuotes(): Promise<{
+async function mapInBatches<T, R>(
+  items: readonly T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const chunk = items.slice(i, i + batchSize);
+    out.push(...(await Promise.all(chunk.map(fn))));
+  }
+  return out;
+}
+
+/** Portfolio rows: DSE LSP (LTP + pivot inputs), company page (52w range). */
+export async function fetchPortfolioWithDseMarket(): Promise<{
   error: string | null;
   holdings: PortfolioMarketRow[];
   marketError: string | null;
   quotedSymbolCount: number;
 }> {
-  const [holdingsRes, marketRes] = await Promise.all([
+  const [holdingsRes, lspRes] = await Promise.all([
     fetchUserHoldings(),
-    fetchAmarstockMoversLtpMap(),
+    fetchDseLspQuoteMap(),
   ]);
 
   if (holdingsRes.error) {
     return {
       error: holdingsRes.error,
       holdings: [],
-      marketError: marketRes.error,
+      marketError: lspRes.error,
       quotedSymbolCount: 0,
     };
   }
 
-  const { bySymbol, error: marketError } = marketRes;
+  const { bySymbol, error: lspError } = lspRes;
+  const symbols = [...new Set(holdingsRes.holdings.map((h) => h.symbol))];
+
+  const extrasEntries = await mapInBatches(symbols, 5, async (sym) => {
+    const ex = await fetchDseCompanyExtras(sym);
+    return [sym, ex] as const;
+  });
+  const extrasBySymbol = new Map(extrasEntries);
+
   let quoted = 0;
 
   const holdings: PortfolioMarketRow[] = holdingsRes.holdings.map((h) => {
@@ -43,11 +68,17 @@ export async function fetchPortfolioWithAmarQuotes(): Promise<{
         ? (marketLtp - h.avgPrice) * h.shares
         : null;
 
+    const extras = extrasBySymbol.get(h.symbol);
+    const pivot = q
+      ? computeFloorPivot(q.dayHigh, q.dayLow, q.closep)
+      : null;
+
     return {
       ...h,
       marketLtp,
-      dayChange: q?.change ?? null,
-      dayChangePct: q?.changePer ?? null,
+      week52High: extras?.week52High ?? null,
+      week52Low: extras?.week52Low ?? null,
+      pivot,
       unrealizedPl,
     };
   });
@@ -55,7 +86,7 @@ export async function fetchPortfolioWithAmarQuotes(): Promise<{
   return {
     error: null,
     holdings,
-    marketError,
+    marketError: lspError,
     quotedSymbolCount: quoted,
   };
 }

@@ -1,10 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import {
-  computeTransactionFeesBdt,
-  parseFeeFlagsFromFormData,
-} from "@/lib/fees/bd-charges";
+import { computeTradeCommissionBdt } from "@/lib/fees/trade-commission";
 import { type TransactionRow, sharesAvailableForSymbol } from "@/lib/portfolio";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -26,8 +23,6 @@ export async function recordTransaction(
   const side = String(formData.get("side") ?? "").toLowerCase();
   const quantityRaw = String(formData.get("quantity") ?? "").trim();
   const priceRaw = String(formData.get("price_per_share") ?? "").trim();
-  const categoryRaw = String(formData.get("category") ?? "").trim();
-
   if (!symbol) {
     return { error: "Symbol is required." };
   }
@@ -77,8 +72,7 @@ export async function recordTransaction(
     }
   }
 
-  const feeFlags = parseFeeFlagsFromFormData(formData);
-  const feesBdt = computeTransactionFeesBdt(side, quantity, pricePerShare, feeFlags);
+  const feesBdt = computeTradeCommissionBdt(quantity, pricePerShare);
 
   const { error: insertError } = await supabase.from("transactions").insert({
     user_id: user.id,
@@ -86,7 +80,7 @@ export async function recordTransaction(
     side,
     quantity,
     price_per_share: pricePerShare,
-    category: categoryRaw || null,
+    category: null,
     fees_bdt: feesBdt,
   });
 
@@ -96,5 +90,6 @@ export async function recordTransaction(
 
   revalidatePath("/portfolio");
   revalidatePath("/record");
+  revalidatePath("/trade-history");
   return { ok: true };
 }
