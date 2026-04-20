@@ -40,7 +40,11 @@ create table if not exists public.long_term_holdings (
   user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
   created_at timestamptz not null default now(),
   symbol text not null,
-  notes text
+  notes text,
+  buy_point_bdt numeric,
+  sell_point_bdt numeric,
+  manual_avg_cost_bdt numeric,
+  manual_total_invested_bdt numeric
 );
 
 create index if not exists long_term_holdings_user_idx

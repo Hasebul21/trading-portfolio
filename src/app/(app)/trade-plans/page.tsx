@@ -1,11 +1,13 @@
-import { AppPageHeader, AppSectionTitle } from "@/components/app-page-header";
 import { AppPageStack } from "@/components/app-page-stack";
 import { addTradePlan } from "../planning-actions";
 import { SymbolField } from "@/components/symbol-field";
 import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
 import { createClient } from "@/lib/supabase/server";
 import { TradePlansTable } from "@/components/planning/trade-plans-table";
-import { Button, Card } from "antd";
+import { Button } from "antd";
+
+const toolbarShell =
+  "rounded-md border border-teal-200/60 bg-white/92 px-2 py-1 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
 
 export default async function TradePlansPage() {
   const { instruments, error: instrumentsError } = await getCachedDseInstruments();
@@ -17,8 +19,7 @@ export default async function TradePlansPage() {
 
   if (error) {
     return (
-      <AppPageStack className="mx-auto max-w-4xl text-left">
-        <AppPageHeader title="Price targets" />
+      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
@@ -36,57 +37,46 @@ export default async function TradePlansPage() {
   const list = rows ?? [];
 
   return (
-    <AppPageStack className="mx-auto max-w-4xl text-left">
-      <AppPageHeader title="Price targets" />
-
-      <Card
-        size="small"
-        className="max-w-xl rounded-xl border-teal-200/50 bg-white/85 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/70"
-        styles={{ body: { padding: "12px 14px" } }}
-      >
-        <form action={addTradePlan} className="space-y-2">
-          <div className="grid gap-2 sm:grid-cols-3 sm:items-end">
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Symbol
-              <SymbolField
-                instruments={instruments}
-                loadError={instrumentsError}
-                required
-                placeholder="BRACBANK"
-                size="sm"
-              />
-            </label>
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Side
-              <select
-                name="side"
-                required
-                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-              >
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
-              </select>
-            </label>
-            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Target
-              <input
-                name="target_price"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="any"
-                required
-                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-              />
-            </label>
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
+      <div className={toolbarShell}>
+        <form action={addTradePlan} className="flex flex-wrap items-center gap-1.5">
+          <div className="min-w-0 flex-1 basis-[7.5rem] sm:basis-[9.5rem]">
+            <SymbolField
+              instruments={instruments}
+              loadError={instrumentsError}
+              required
+              aria-label="Symbol (DSE code)"
+              placeholder="Symbol"
+              size="sm"
+              className="box-border h-7 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[11px] leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+            />
           </div>
-          <Button type="primary" htmlType="submit" size="small" className="text-xs">
+          <select
+            name="side"
+            required
+            aria-label="Buy or sell"
+            className="box-border h-7 w-[4.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1 text-[11px] text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+          >
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+          <input
+            name="target_price"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            required
+            aria-label="Target price (BDT)"
+            placeholder="Target"
+            className="box-border h-7 w-[5.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+          />
+          <Button type="primary" htmlType="submit" size="small" className="h-7 shrink-0 px-2.5 text-[11px] leading-none">
             Add
           </Button>
         </form>
-      </Card>
+      </div>
 
-      <AppSectionTitle>Active targets ({list.length})</AppSectionTitle>
       <TradePlansTable rows={list} />
     </AppPageStack>
   );

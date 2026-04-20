@@ -47,7 +47,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
       ) : null}
       {state.ok && !pending ? (
         <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Transaction saved. Portfolio updated.
+          Saved.
         </p>
       ) : null}
       <form

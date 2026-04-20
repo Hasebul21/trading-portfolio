@@ -58,10 +58,23 @@ export async function addLongTermHolding(formData: FormData) {
 
   if (!symbol) return;
 
+  const buyRaw = String(formData.get("buy_point_bdt") ?? "").trim();
+  const sellRaw = String(formData.get("sell_point_bdt") ?? "").trim();
+  const buyPoint =
+    buyRaw === "" ? null : Number(buyRaw);
+  const sellPoint =
+    sellRaw === "" ? null : Number(sellRaw);
+  const buy_point_bdt =
+    buyPoint !== null && Number.isFinite(buyPoint) && buyPoint >= 0 ? buyPoint : null;
+  const sell_point_bdt =
+    sellPoint !== null && Number.isFinite(sellPoint) && sellPoint >= 0 ? sellPoint : null;
+
   await supabase.from("long_term_holdings").insert({
     user_id: user.id,
     symbol,
     notes: null,
+    buy_point_bdt,
+    sell_point_bdt,
   });
 
   revalidatePath("/long-term");
@@ -82,6 +95,52 @@ export async function deleteLongTermHolding(formData: FormData) {
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
+
+  revalidatePath("/long-term");
+}
+
+const LONG_TERM_EDITABLE_FIELDS = new Set([
+  "buy_point_bdt",
+  "sell_point_bdt",
+  "manual_avg_cost_bdt",
+  "manual_total_invested_bdt",
+]);
+
+function parseLongTermNumericField(raw: string): number | null {
+  const s = raw.trim();
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+/** Update one numeric column on a watchlist row (blur-save from the table). */
+export async function updateLongTermField(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const id = String(formData.get("id") ?? "").trim();
+  const field = String(formData.get("field") ?? "").trim();
+  if (!id) return;
+  if (!LONG_TERM_EDITABLE_FIELDS.has(field)) return;
+
+  const value = parseLongTermNumericField(String(formData.get("value") ?? ""));
+
+  const patch: Record<string, number | null> = { [field]: value };
+
+  const { error } = await supabase
+    .from("long_term_holdings")
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("updateLongTermField", error.message);
+    return;
+  }
 
   revalidatePath("/long-term");
 }

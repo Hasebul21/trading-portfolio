@@ -26,7 +26,6 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
       <TradeHistorySection
         key={dayParam ?? "last-7-days"}
         rows={historyRows}
-        activeDay={dayParam}
         loadError={txRes.error}
       />
     </div>

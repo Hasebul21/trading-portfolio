@@ -1,4 +1,3 @@
-import { AppPageHeader } from "@/components/app-page-header";
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
 import Link from "next/link";
@@ -19,7 +18,6 @@ export default async function PortfolioPage() {
 
     return (
       <AppPageStack className="mx-auto max-w-2xl text-left">
-        <AppPageHeader title="Portfolio" />
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </p>
@@ -66,8 +64,6 @@ export default async function PortfolioPage() {
 
   return (
     <AppPageStack>
-      <AppPageHeader title="Portfolio" />
-
       {holdings.length === 0 ? (
         <Card
           variant="outlined"

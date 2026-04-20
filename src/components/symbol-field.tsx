@@ -20,6 +20,8 @@ type Props = {
   className?: string;
   /** Tighter input + hint for compact forms. */
   size?: "default" | "sm";
+  /** For toolbar layouts without a visible label. */
+  "aria-label"?: string;
 };
 
 const defaultInputClass =
@@ -44,6 +46,7 @@ export function SymbolField({
   disabled,
   className,
   size = "default",
+  "aria-label": ariaLabel,
 }: Props) {
   const inputClass =
     className ?? (size === "sm" ? smInputClass : defaultInputClass);
@@ -56,6 +59,7 @@ export function SymbolField({
       <input
         type="text"
         name={name}
+        aria-label={ariaLabel}
         list={instruments.length > 0 ? datalistId : undefined}
         required={required}
         disabled={disabled}

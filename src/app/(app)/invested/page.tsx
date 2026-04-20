@@ -1,10 +1,13 @@
 import { addCapitalContribution } from "../planning-actions";
-import { AppPageHeader, AppSectionTitle } from "@/components/app-page-header";
+import { AppSectionTitle } from "@/components/app-page-header";
 import { AppPageStack } from "@/components/app-page-stack";
 import { createClient } from "@/lib/supabase/server";
 import { formatBdt } from "@/lib/format-bdt";
 import { InvestedContributionsTable } from "@/components/planning/invested-contributions-table";
-import { Button, Card } from "antd";
+import { Button } from "antd";
+
+const toolbarShell =
+  "rounded-md border border-teal-200/60 bg-white/92 px-2 py-1 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
 
 export default async function InvestedPage() {
   const supabase = await createClient();
@@ -15,8 +18,7 @@ export default async function InvestedPage() {
 
   if (error) {
     return (
-      <AppPageStack className="mx-auto max-w-2xl text-left">
-        <AppPageHeader title="Invested capital" />
+      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-2xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
@@ -36,52 +38,36 @@ export default async function InvestedPage() {
   const total = list.reduce((s, r) => s + Number(r.amount_bdt), 0);
 
   return (
-    <AppPageStack className="mx-auto max-w-2xl text-left">
-      <AppPageHeader title="Invested capital" />
-
-      <Card className="max-w-xl rounded-2xl border-teal-200/50 bg-white/85 shadow-lg shadow-teal-950/5 backdrop-blur-sm dark:border-teal-900/35 dark:bg-zinc-900/70 dark:shadow-black/30">
-        <p className="text-sm font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Total invested
-        </p>
-        <h2 className="mb-1 mt-2 text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-          {formatBdt(total)}
-        </h2>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          {list.length} contribution{list.length === 1 ? "" : "s"}
-        </p>
-      </Card>
-
-      <Card
-        size="small"
-        className="max-w-sm rounded-xl border-teal-200/50 bg-white/85 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/70"
-        styles={{ body: { padding: "12px 14px" } }}
-      >
-        <form action={addCapitalContribution} className="flex flex-col gap-2.5">
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            BDT
-            <input
-              name="amount_bdt"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="any"
-              required
-              className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </label>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            Note
-            <input
-              name="note"
-              placeholder="optional"
-              className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-xs text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </label>
-          <Button type="primary" htmlType="submit" size="small" className="w-fit text-xs">
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-2xl text-left">
+      <div className={toolbarShell}>
+        <form action={addCapitalContribution} className="flex flex-wrap items-center gap-1.5">
+          <input
+            name="amount_bdt"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            required
+            aria-label="Amount in BDT"
+            placeholder="BDT"
+            className="box-border h-7 w-[5.5rem] shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+          />
+          <input
+            name="note"
+            aria-label="Note (optional)"
+            placeholder="Note"
+            className="box-border h-7 min-w-0 flex-1 basis-[6rem] rounded border border-zinc-300/90 bg-white px-2 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+          />
+          <Button type="primary" htmlType="submit" size="small" className="h-7 shrink-0 px-2.5 text-[11px] leading-none">
             Add
           </Button>
         </form>
-      </Card>
+        <p className="mt-1 border-t border-zinc-200/60 pt-1 text-[10px] tabular-nums text-zinc-500 dark:border-zinc-700/50 dark:text-zinc-400">
+          Total <span className="font-semibold text-zinc-800 dark:text-zinc-200">{formatBdt(total)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500"> · </span>
+          {list.length} contribution{list.length === 1 ? "" : "s"}
+        </p>
+      </div>
 
       <AppSectionTitle>History</AppSectionTitle>
       <InvestedContributionsTable rows={list} />

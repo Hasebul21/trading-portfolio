@@ -13,8 +13,8 @@ export default function AppLayout({
       <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/75 shadow-sm shadow-zinc-900/5 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/75 dark:shadow-black/20">
         <div className="mx-auto flex min-h-16 w-full max-w-[min(100%,1920px)] flex-wrap items-center gap-x-4 gap-y-4 px-4 py-4 sm:gap-x-5 sm:gap-y-4 sm:px-6 lg:px-8">
           <div className="flex shrink-0 items-center gap-2">
-            <span className="rounded-xl bg-gradient-to-br from-teal-500 via-emerald-600 to-teal-700 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-md shadow-teal-600/30 dark:from-teal-400 dark:via-emerald-500 dark:to-teal-600">
-              Ledger
+            <span className="rounded-xl bg-gradient-to-br from-teal-500 via-emerald-600 to-teal-700 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white shadow-md shadow-teal-600/30 dark:from-teal-400 dark:via-emerald-500 dark:to-teal-600">
+              Trading
             </span>
           </div>
           <AppShellNav />
@@ -36,7 +36,7 @@ export default function AppLayout({
         <div className="mx-auto flex max-w-[min(100%,1920px)] flex-col gap-2 px-4 sm:px-6 lg:px-8">
           <span className="inline-flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-teal-500/70" aria-hidden />
-            Personal trading ledger — not financial advice.
+            Personal use only — not financial advice.
           </span>
         </div>
       </footer>
