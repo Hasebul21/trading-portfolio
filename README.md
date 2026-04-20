@@ -20,7 +20,7 @@ On **Record**, broker commission is applied automatically on **both buys and sel
 
 ### DSE market prices (Portfolio)
 
-**Portfolio** loads **LTP**, **today’s high / low**, and **unrealized P/L** from DSE’s latest share price page ([`latest_share_price_scroll_l.php`](https://dsebd.org/latest_share_price_scroll_l.php)) via a small HTML parse. **52-week high / low** is read from each symbol’s DSE company page (`displayCompany.php`). Fetches use Next’s `revalidate` (**~60s** for the price table, **~1h** per company page). Optional env overrides: **`DSE_LSP_URL`** (full URL to the LSP page), **`DSE_COMPANY_URL_BASE`** (e.g. `https://dsebd.org/displayCompany.php` without query string). If DSE changes markup, some cells may show “—”.
+**Portfolio** loads **LTP**, **today’s high / low**, and **unrealized P/L** from DSE’s latest share price page ([`latest_share_price_scroll_l.php`](https://dsebd.org/latest_share_price_scroll_l.php)) via a small HTML parse. **52-week high / low** is read from each symbol’s DSE company page (`displayCompany.php`). Fetches use Next’s `revalidate` (**~60s** for the price table, **~1h** per company page). Optional env overrides: **`DSE_LSP_URL`** (full URL to the LSP page), **`DSE_COMPANY_URL_BASE`** (e.g. `https://dsebd.org/displayCompany.php` without query string).
 
 ### Auth URLs (required for production)
 
