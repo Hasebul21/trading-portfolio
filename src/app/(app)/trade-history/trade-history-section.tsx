@@ -89,7 +89,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
         <Table<Row>
           columns={columns}
           dataSource={data}
-          pagination={tablePagination("rows")}
+          pagination={tablePagination("rows", { hideOnSinglePage: false })}
           size="middle"
           bordered
         />

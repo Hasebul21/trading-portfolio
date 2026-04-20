@@ -1,15 +1,9 @@
 "use client";
 
-import { deleteLongTermHolding, updateLongTermField } from "@/app/(app)/planning-actions";
+import { deleteLongTermHolding, updateLongTermRow } from "@/app/(app)/planning-actions";
 import { tablePagination } from "@/lib/table-pagination";
 import { Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-
-type LongTermEditableField =
-  | "buy_point_bdt"
-  | "sell_point_bdt"
-  | "manual_avg_cost_bdt"
-  | "manual_total_invested_bdt";
 
 export type LongTermHoldingRow = {
   id: string;
@@ -49,44 +43,78 @@ function effectiveTotal(r: LongTermHoldingRow): number | null {
   return r.portfolio_total_invested_bdt;
 }
 
-const inputClass =
-  "box-border h-8 w-full min-w-0 flex-1 rounded border border-zinc-300/90 bg-white px-1.5 text-right text-xs tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+function rowRefreshKey(r: LongTermHoldingRow): string {
+  return [
+    r.id,
+    r.buy_point_bdt ?? "",
+    r.sell_point_bdt ?? "",
+    r.manual_avg_cost_bdt ?? "",
+    r.manual_total_invested_bdt ?? "",
+  ].join("|");
+}
 
-function BdtCellForm({
-  rowId,
-  field,
-  displayString,
-  title,
-}: {
-  rowId: string;
-  field: LongTermEditableField;
-  displayString: string;
-  title: string;
-}) {
+const inputClass =
+  "box-border h-8 w-full min-w-[3.5rem] max-w-[6.5rem] rounded border border-zinc-300/90 bg-white px-1.5 text-right text-xs tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+
+const fieldLabelClass = "text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+function LongTermRowEditor({ row }: { row: LongTermHoldingRow }) {
   return (
-    <form
-      action={updateLongTermField}
-      className="flex flex-col items-stretch gap-1 sm:flex-row sm:items-center sm:justify-end sm:gap-1.5"
-    >
-      <input type="hidden" name="id" value={rowId} />
-      <input type="hidden" name="field" value={field} />
-      <input
-        key={`${rowId}-${field}-${displayString}`}
-        name="value"
-        type="text"
-        inputMode="decimal"
-        title={title}
-        aria-label={title}
-        defaultValue={displayString}
-        placeholder="—"
-        className={inputClass}
-      />
-      <Button
-        type="primary"
-        size="small"
-        htmlType="submit"
-        className="h-8 shrink-0 px-2.5 text-[11px] font-semibold sm:min-w-[52px]"
-      >
+    <form action={updateLongTermRow} className="flex flex-wrap items-end gap-x-3 gap-y-2 py-0.5">
+      <input type="hidden" name="id" value={row.id} />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Buy pt</span>
+        <input
+          name="buy_point_bdt"
+          type="text"
+          inputMode="decimal"
+          defaultValue={strForInput(numOrNull(row.buy_point_bdt))}
+          placeholder="—"
+          aria-label="Buy point (BDT), empty to clear"
+          title="Buy point (BDT), empty to clear"
+          className={inputClass}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Sell pt</span>
+        <input
+          name="sell_point_bdt"
+          type="text"
+          inputMode="decimal"
+          defaultValue={strForInput(numOrNull(row.sell_point_bdt))}
+          placeholder="—"
+          aria-label="Sell point (BDT), empty to clear"
+          title="Sell point (BDT), empty to clear"
+          className={inputClass}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Avg cost</span>
+        <input
+          name="manual_avg_cost_bdt"
+          type="text"
+          inputMode="decimal"
+          defaultValue={strForInput(effectiveAvg(row))}
+          placeholder="—"
+          aria-label="Avg cost (BDT). Clear and save to use portfolio average."
+          title="Avg cost (BDT). Clears to use portfolio average when you hold this symbol."
+          className={inputClass}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Total</span>
+        <input
+          name="manual_total_invested_bdt"
+          type="text"
+          inputMode="decimal"
+          defaultValue={strForInput(effectiveTotal(row))}
+          placeholder="—"
+          aria-label="Total invested (BDT). Clear and save to use portfolio book value."
+          title="Total invested (BDT). Clears to use portfolio book value when you hold this symbol."
+          className={inputClass}
+        />
+      </div>
+      <Button type="primary" size="small" htmlType="submit" className="h-8 shrink-0 px-3 text-xs font-semibold">
         Save
       </Button>
     </form>
@@ -100,8 +128,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     {
       title: "Symbol",
       dataIndex: "symbol",
-      width: 100,
-      fixed: "left",
+      width: 96,
       align: "left",
       render: (v: string) => (
         <Typography.Text strong className="font-mono">
@@ -112,7 +139,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     {
       title: "Added",
       dataIndex: "created_at",
-      width: 108,
+      width: 100,
       align: "left",
       render: (v: string) => (
         <span className="text-zinc-600 dark:text-zinc-400">
@@ -121,67 +148,16 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       ),
     },
     {
-      title: "Buy point",
-      key: "buy_point_bdt",
-      width: 148,
-      align: "right",
-      render: (_: unknown, r) => (
-        <BdtCellForm
-          rowId={r.id}
-          field="buy_point_bdt"
-          displayString={strForInput(numOrNull(r.buy_point_bdt))}
-          title="Buy point (BDT), empty to clear"
-        />
-      ),
-    },
-    {
-      title: "Sell point",
-      key: "sell_point_bdt",
-      width: 148,
-      align: "right",
-      render: (_: unknown, r) => (
-        <BdtCellForm
-          rowId={r.id}
-          field="sell_point_bdt"
-          displayString={strForInput(numOrNull(r.sell_point_bdt))}
-          title="Sell point (BDT), empty to clear"
-        />
-      ),
-    },
-    {
-      title: "Avg cost",
-      key: "avg_cost",
-      width: 152,
-      align: "right",
-      render: (_: unknown, r) => (
-        <BdtCellForm
-          rowId={r.id}
-          field="manual_avg_cost_bdt"
-          displayString={strForInput(effectiveAvg(r))}
-          title="Avg cost (BDT). Clears to use portfolio average when you hold this symbol."
-        />
-      ),
-    },
-    {
-      title: "Total invested",
-      key: "total_invested",
-      width: 160,
-      align: "right",
-      render: (_: unknown, r) => (
-        <BdtCellForm
-          rowId={r.id}
-          field="manual_total_invested_bdt"
-          displayString={strForInput(effectiveTotal(r))}
-          title="Total invested (BDT). Clears to use portfolio book value when you hold this symbol."
-        />
-      ),
+      title: "Buy / sell points & cost overrides",
+      key: "edit_row",
+      align: "left",
+      render: (_: unknown, r) => <LongTermRowEditor key={rowRefreshKey(r)} row={r} />,
     },
     {
       title: "",
       key: "actions",
       align: "right",
       width: 88,
-      fixed: "right",
       render: (_: unknown, r) => (
         <form action={deleteLongTermHolding} className="inline">
           <input type="hidden" name="id" value={r.id} />
@@ -194,19 +170,18 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   ];
 
   return (
-    <div className="max-w-full overflow-x-auto">
+    <div className="max-w-full">
       <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-        Edit a value, then click <strong>Save</strong> for that cell. Clear <strong>Avg cost</strong> or{" "}
-        <strong>Total invested</strong> and save to use your open portfolio numbers again (plain numbers, e.g.{" "}
+        Edit fields in a row, then click that row&apos;s <strong>Save</strong> once. Clear <strong>Avg cost</strong> or{" "}
+        <strong>Total</strong> and save to use your open portfolio numbers again (plain numbers, e.g.{" "}
         <span className="font-mono">142.5</span>).
       </p>
       <Table<Row>
-        className="min-w-[860px]"
+        className="long-term-holdings-table"
         columns={columns}
         dataSource={data}
         locale={{ emptyText: "No symbols yet." }}
         pagination={tablePagination("symbols", { hideOnSinglePage: false })}
-        scroll={{ x: "max-content" }}
         size="middle"
         bordered
       />

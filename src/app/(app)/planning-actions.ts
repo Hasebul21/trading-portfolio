@@ -99,13 +99,6 @@ export async function deleteLongTermHolding(formData: FormData) {
   revalidatePath("/long-term");
 }
 
-const LONG_TERM_EDITABLE_FIELDS = new Set([
-  "buy_point_bdt",
-  "sell_point_bdt",
-  "manual_avg_cost_bdt",
-  "manual_total_invested_bdt",
-]);
-
 function parseLongTermNumericField(raw: string): number | null {
   const s = raw.trim();
   if (s === "") return null;
@@ -114,8 +107,8 @@ function parseLongTermNumericField(raw: string): number | null {
   return n;
 }
 
-/** Update one numeric column on a watchlist row (blur-save from the table). */
-export async function updateLongTermField(formData: FormData) {
+/** Update all editable numeric fields on one watchlist row from a single form submit. */
+export async function updateLongTermRow(formData: FormData) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -123,22 +116,30 @@ export async function updateLongTermField(formData: FormData) {
   if (!user) return;
 
   const id = String(formData.get("id") ?? "").trim();
-  const field = String(formData.get("field") ?? "").trim();
   if (!id) return;
-  if (!LONG_TERM_EDITABLE_FIELDS.has(field)) return;
 
-  const value = parseLongTermNumericField(String(formData.get("value") ?? ""));
-
-  const patch: Record<string, number | null> = { [field]: value };
+  const buy_point_bdt = parseLongTermNumericField(String(formData.get("buy_point_bdt") ?? ""));
+  const sell_point_bdt = parseLongTermNumericField(String(formData.get("sell_point_bdt") ?? ""));
+  const manual_avg_cost_bdt = parseLongTermNumericField(
+    String(formData.get("manual_avg_cost_bdt") ?? ""),
+  );
+  const manual_total_invested_bdt = parseLongTermNumericField(
+    String(formData.get("manual_total_invested_bdt") ?? ""),
+  );
 
   const { error } = await supabase
     .from("long_term_holdings")
-    .update(patch)
+    .update({
+      buy_point_bdt,
+      sell_point_bdt,
+      manual_avg_cost_bdt,
+      manual_total_invested_bdt,
+    })
     .eq("id", id)
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("updateLongTermField", error.message);
+    console.error("updateLongTermRow", error.message);
     return;
   }
 

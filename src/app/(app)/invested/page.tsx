@@ -7,7 +7,7 @@ import { InvestedContributionsTable } from "@/components/planning/invested-contr
 import { Button } from "antd";
 
 const toolbarShell =
-  "rounded-md border border-teal-200/60 bg-white/92 px-2 py-1 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
+  "rounded-lg border border-teal-200/60 bg-white/92 px-3 py-2.5 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
 
 export default async function InvestedPage() {
   const supabase = await createClient();
@@ -50,22 +50,27 @@ export default async function InvestedPage() {
             required
             aria-label="Amount in BDT"
             placeholder="BDT"
-            className="box-border h-7 w-[5.5rem] shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 w-[6.5rem] shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
           <input
             name="note"
             aria-label="Note (optional)"
             placeholder="Note"
-            className="box-border h-7 min-w-0 flex-1 basis-[6rem] rounded border border-zinc-300/90 bg-white px-2 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 min-w-0 flex-1 basis-[8rem] rounded-md border border-zinc-300/90 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
-          <Button type="primary" htmlType="submit" size="small" className="h-7 shrink-0 px-2.5 text-[11px] leading-none">
+          <Button type="primary" htmlType="submit" className="h-9 shrink-0 px-4 text-sm">
             Add
           </Button>
         </form>
-        <p className="mt-1 border-t border-zinc-200/60 pt-1 text-[10px] tabular-nums text-zinc-500 dark:border-zinc-700/50 dark:text-zinc-400">
-          Total <span className="font-semibold text-zinc-800 dark:text-zinc-200">{formatBdt(total)}</span>
-          <span className="text-zinc-400 dark:text-zinc-500"> · </span>
-          {list.length} contribution{list.length === 1 ? "" : "s"}
+        <p className="mt-3 border-t border-zinc-200/70 pt-3 text-base tabular-nums leading-snug text-zinc-600 dark:border-zinc-700/50 dark:text-zinc-300 sm:text-lg">
+          Total{" "}
+          <span className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {formatBdt(total)}
+          </span>
+          <span className="mx-1.5 text-zinc-400 dark:text-zinc-500">·</span>
+          <span className="font-medium text-zinc-800 dark:text-zinc-100">
+            {list.length} contribution{list.length === 1 ? "" : "s"}
+          </span>
         </p>
       </div>
 

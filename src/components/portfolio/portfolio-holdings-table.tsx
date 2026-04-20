@@ -167,7 +167,7 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
         className="portfolio-holdings-table"
         columns={columns}
         dataSource={data}
-        pagination={tablePagination("positions")}
+        pagination={tablePagination("positions", { hideOnSinglePage: false })}
         size="middle"
         bordered={false}
         tableLayout="auto"
