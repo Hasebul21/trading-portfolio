@@ -55,16 +55,45 @@ function rowRefreshKey(r: LongTermHoldingRow): string {
   ].join("|");
 }
 
-const inputClass =
-  "box-border h-8 w-full min-w-[3.5rem] max-w-[6.5rem] rounded border border-zinc-300/90 bg-white px-1.5 text-right text-xs tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+/** Buy / sell points: larger tap targets and type. */
+const pointsInputClass =
+  "box-border h-11 min-h-[2.75rem] w-full min-w-[4.5rem] rounded-md border border-teal-200/90 bg-white px-3 py-2 text-right text-base tabular-nums leading-tight text-zinc-900 outline-none ring-teal-500/20 focus:ring-2 dark:border-teal-800/60 dark:bg-zinc-950 dark:text-zinc-50";
 
-const fieldLabelClass = "text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+const costInputClass =
+  "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-sm tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+
+const pointsLabelClass =
+  "text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300";
+
+const fieldLabelClass = "text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+const rowFieldsLayout =
+  "flex w-full min-w-0 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4";
+
+/** Buy & sell columns grow more than cost overrides on wide screens. */
+const pointsFieldShell = "flex min-w-0 flex-[1.25] basis-[min(100%,12rem)] flex-col gap-1 sm:basis-0 sm:min-w-[8rem]";
+const costFieldShell = "flex min-w-0 flex-1 basis-[min(100%,10rem)] flex-col gap-1 sm:basis-0 sm:min-w-[6.5rem]";
 
 function bdtReadCell(n: number | null) {
   if (n === null || !Number.isFinite(n)) {
     return <Typography.Text type="secondary">—</Typography.Text>;
   }
-  return <span className="tabular-nums text-[13px]">{formatBdt(n)}</span>;
+  return <span className="tabular-nums text-sm">{formatBdt(n)}</span>;
+}
+
+function bdtReadCellPoints(n: number | null) {
+  if (n === null || !Number.isFinite(n)) {
+    return (
+      <Typography.Text type="secondary" className="text-base">
+        —
+      </Typography.Text>
+    );
+  }
+  return (
+    <span className="tabular-nums text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-lg">
+      {formatBdt(n)}
+    </span>
+  );
 }
 
 function LongTermRowReadOnly({
@@ -75,24 +104,24 @@ function LongTermRowReadOnly({
   onEdit: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-0.5">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className={fieldLabelClass}>Buy pt</span>
-        {bdtReadCell(numOrNull(row.buy_point_bdt))}
+    <div className={`${rowFieldsLayout} py-0.5`}>
+      <div className={pointsFieldShell}>
+        <span className={pointsLabelClass}>Buy pt</span>
+        {bdtReadCellPoints(numOrNull(row.buy_point_bdt))}
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className={fieldLabelClass}>Sell pt</span>
-        {bdtReadCell(numOrNull(row.sell_point_bdt))}
+      <div className={pointsFieldShell}>
+        <span className={pointsLabelClass}>Sell pt</span>
+        {bdtReadCellPoints(numOrNull(row.sell_point_bdt))}
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
         {bdtReadCell(effectiveAvg(row))}
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className={costFieldShell}>
         <span className={fieldLabelClass}>Total</span>
         {bdtReadCell(effectiveTotal(row))}
       </div>
-      <Button type="default" size="small" className="h-8 shrink-0 px-3 text-xs font-semibold" onClick={onEdit}>
+      <Button type="default" size="middle" className="h-10 shrink-0 px-4 text-sm font-semibold" onClick={onEdit}>
         Edit
       </Button>
     </div>
@@ -101,10 +130,10 @@ function LongTermRowReadOnly({
 
 function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCancel: () => void }) {
   return (
-    <form action={updateLongTermRow} className="flex flex-wrap items-end gap-x-3 gap-y-2 py-0.5">
+    <form action={updateLongTermRow} className={`${rowFieldsLayout} py-0.5`}>
       <input type="hidden" name="id" value={row.id} />
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className={fieldLabelClass}>Buy pt</span>
+      <div className={pointsFieldShell}>
+        <span className={pointsLabelClass}>Buy pt</span>
         <input
           name="buy_point_bdt"
           type="text"
@@ -113,11 +142,11 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           placeholder="—"
           aria-label="Buy point, empty to clear"
           title="Buy point, empty to clear"
-          className={inputClass}
+          className={pointsInputClass}
         />
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className={fieldLabelClass}>Sell pt</span>
+      <div className={pointsFieldShell}>
+        <span className={pointsLabelClass}>Sell pt</span>
         <input
           name="sell_point_bdt"
           type="text"
@@ -126,10 +155,10 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           placeholder="—"
           aria-label="Sell point, empty to clear"
           title="Sell point, empty to clear"
-          className={inputClass}
+          className={pointsInputClass}
         />
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
         <input
           name="manual_avg_cost_bdt"
@@ -139,10 +168,10 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           placeholder="—"
           aria-label="Avg cost. Clear and save to use portfolio average."
           title="Avg cost. Clears to use portfolio average when you hold this symbol."
-          className={inputClass}
+          className={costInputClass}
         />
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className={costFieldShell}>
         <span className={fieldLabelClass}>Total</span>
         <input
           name="manual_total_invested_bdt"
@@ -152,14 +181,14 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           placeholder="—"
           aria-label="Total invested. Clear and save to use portfolio book value."
           title="Total invested. Clears to use portfolio book value when you hold this symbol."
-          className={inputClass}
+          className={costInputClass}
         />
       </div>
       <div className="flex shrink-0 gap-2">
-        <Button type="default" size="small" className="h-8 px-3 text-xs font-semibold" htmlType="button" onClick={onCancel}>
+        <Button type="default" size="middle" className="h-10 px-4 text-sm font-semibold" htmlType="button" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="primary" size="small" htmlType="submit" className="h-8 px-3 text-xs font-semibold">
+        <Button type="primary" size="middle" htmlType="submit" className="h-10 px-4 text-sm font-semibold">
           Save
         </Button>
       </div>
@@ -222,7 +251,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   ];
 
   return (
-    <div className="max-w-full">
+    <div className="w-full min-w-0 max-w-full">
       <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400">
         Click <strong>Edit</strong> on a row to change buy/sell points or cost overrides, then <strong>Save</strong>.{" "}
         <strong>Cancel</strong> discards unsaved changes. Clear <strong>Avg cost</strong> or <strong>Total</strong> and save

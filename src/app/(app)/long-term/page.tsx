@@ -13,8 +13,9 @@ import { Button } from "antd";
 const toolbarShell =
   "rounded-md border border-teal-200/60 bg-white/92 px-2 py-1 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
 
-const compactNum =
-  "box-border h-7 w-[4.75rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500";
+/** Add-row buy / sell: wider, easier to read than compact cost fields. */
+const addRowPointsNum =
+  "box-border h-9 min-h-9 min-w-[6rem] flex-1 basis-[7rem] rounded-md border border-teal-200/90 bg-white px-2.5 text-right text-sm tabular-nums text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-teal-800/55 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500 sm:max-w-[11rem]";
 
 /** Idempotent patch when `long_term_holdings` predates newer columns. */
 const LONG_TERM_SCHEMA_PATCH = `alter table public.long_term_holdings
@@ -46,7 +47,7 @@ export default async function LongTermPage() {
       );
 
     return (
-      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
+      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full max-w-7xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
@@ -109,7 +110,7 @@ export default async function LongTermPage() {
   });
 
   return (
-    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full max-w-7xl text-left">
       <div className={toolbarShell}>
         <form action={addLongTermHolding} className="flex flex-wrap items-center gap-1.5">
           <div className="min-w-0 flex-1 basis-[7.5rem] sm:max-w-xs">
@@ -131,7 +132,7 @@ export default async function LongTermPage() {
             step="any"
             aria-label="Buy point (optional)"
             placeholder="Buy pt"
-            className={compactNum}
+            className={addRowPointsNum}
           />
           <input
             name="sell_point_bdt"
@@ -141,9 +142,9 @@ export default async function LongTermPage() {
             step="any"
             aria-label="Sell point (optional)"
             placeholder="Sell pt"
-            className={compactNum}
+            className={addRowPointsNum}
           />
-          <Button type="primary" htmlType="submit" size="small" className="h-7 shrink-0 px-2.5 text-[11px] leading-none">
+          <Button type="primary" htmlType="submit" size="middle" className="h-9 shrink-0 px-3 text-sm">
             Add
           </Button>
         </form>
