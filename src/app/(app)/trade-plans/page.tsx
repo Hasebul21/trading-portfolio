@@ -67,7 +67,7 @@ export default async function TradePlansPage() {
             min="0"
             step="any"
             required
-            aria-label="Target price (BDT)"
+            aria-label="Target price"
             placeholder="Target"
             className="box-border h-7 w-[5.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />

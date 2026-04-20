@@ -128,7 +128,7 @@ export async function recordTransaction(
   const qtyLabel = quantity % 1 === 0 ? String(quantity) : String(quantity);
   return {
     ok: true,
-    summary: `${symbol} · ${side} · ${qtyLabel} sh @ ${formatPlainNumberMax2Decimals(pricePerShare)} BDT`,
+    summary: `${symbol} · ${side} · ${qtyLabel} sh @ ${formatPlainNumberMax2Decimals(pricePerShare)}`,
   };
 }
 

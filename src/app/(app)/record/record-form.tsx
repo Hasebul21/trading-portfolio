@@ -93,7 +93,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
           />
         </label>
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Price per share (BDT)
+          Price per share
           <input
             name="price_per_share"
             type="number"

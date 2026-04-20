@@ -129,7 +129,7 @@ export default async function LongTermPage() {
             inputMode="decimal"
             min="0"
             step="any"
-            aria-label="Buy point (BDT, optional)"
+            aria-label="Buy point (optional)"
             placeholder="Buy pt"
             className={compactNum}
           />
@@ -139,7 +139,7 @@ export default async function LongTermPage() {
             inputMode="decimal"
             min="0"
             step="any"
-            aria-label="Sell point (BDT, optional)"
+            aria-label="Sell point (optional)"
             placeholder="Sell pt"
             className={compactNum}
           />

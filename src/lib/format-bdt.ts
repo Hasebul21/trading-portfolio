@@ -1,13 +1,3 @@
-/** BDT currency; never more than two fraction digits. */
-export function formatBdt(n: number): string {
-  return n.toLocaleString("en-BD", {
-    style: "currency",
-    currency: "BDT",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-}
-
 /**
  * Non-currency amounts for tables: locale grouping, at most two fraction digits.
  */
@@ -17,6 +7,14 @@ export function formatNumberMax2Decimals(n: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
+}
+
+/**
+ * Same as {@link formatNumberMax2Decimals} — plain amount, no currency code or symbol in the string.
+ * Kept as `formatBdt` for call sites that represent taka amounts in the UI.
+ */
+export function formatBdt(n: number): string {
+  return formatNumberMax2Decimals(n);
 }
 
 /**

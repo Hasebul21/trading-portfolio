@@ -48,8 +48,8 @@ export default async function InvestedPage() {
             min="0"
             step="any"
             required
-            aria-label="Amount in BDT"
-            placeholder="BDT"
+            aria-label="Amount"
+            placeholder="0"
             className="box-border h-9 w-[6.5rem] shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
           <input

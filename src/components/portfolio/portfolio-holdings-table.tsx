@@ -140,15 +140,38 @@ export function PortfolioHoldingsTable({
     setSaveError(null);
     setDraft((prev) => {
       const base = holdings.find((h) => h.symbol === symbol);
+      if (!base) return prev;
       const cur = prev[symbol] ?? {
-        shares: base ? formatPlainNumberMax2Decimals(base.shares) : "",
-        avg: base ? formatPlainNumberMax2Decimals(base.avgPrice) : "",
-        total: base ? formatPlainNumberMax2Decimals(base.totalCost) : "",
+        shares: formatPlainNumberMax2Decimals(base.shares),
+        avg: formatPlainNumberMax2Decimals(base.avgPrice),
+        total: formatPlainNumberMax2Decimals(base.totalCost),
       };
-      return {
-        ...prev,
-        [symbol]: { ...cur, [field]: value },
-      };
+      const next: BookDraft = { ...cur, [field]: value };
+
+      const sharesFallback = parseBookNumber(next.shares) ?? base.shares;
+
+      if (field === "avg") {
+        const newAvg = parseBookNumber(value);
+        if (newAvg !== null && sharesFallback > 0) {
+          const t = Math.round(newAvg * sharesFallback * 100) / 100;
+          next.total = formatPlainNumberMax2Decimals(t);
+        }
+      } else if (field === "total") {
+        const newTot = parseBookNumber(value);
+        if (newTot !== null && sharesFallback > 0) {
+          const a = Math.round((newTot / sharesFallback) * 100) / 100;
+          next.avg = formatPlainNumberMax2Decimals(a);
+        }
+      } else if (field === "shares") {
+        const newSh = parseBookNumber(value);
+        if (newSh !== null && newSh > 0) {
+          const avgForTot = parseBookNumber(next.avg) ?? base.avgPrice;
+          const t = Math.round(newSh * avgForTot * 100) / 100;
+          next.total = formatPlainNumberMax2Decimals(t);
+        }
+      }
+
+      return { ...prev, [symbol]: next };
     });
   }
 
@@ -251,9 +274,6 @@ export function PortfolioHoldingsTable({
           dataIndex: "totalCost",
           width: 120,
           align: "right",
-          sorter: (a, b) => a.totalCost - b.totalCost,
-          defaultSortOrder: "descend",
-          showSorterTooltip: { title: "Sort by total invested" },
           render: (_: unknown, row) => (
             <input
               aria-label={`${row.symbol} total invested`}
@@ -456,9 +476,11 @@ export function PortfolioHoldingsTable({
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
           <p className="text-left text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Edit shares, average cost, and total invested for any row. Values must satisfy{" "}
+            Edit shares, average cost, and total invested for any row. Changing <strong>average</strong> updates{" "}
+            <strong>total</strong> (and the other way around); changing <strong>shares</strong> keeps average and
+            updates total. Values must satisfy{" "}
             <span className="font-medium text-zinc-700 dark:text-zinc-300">total ≈ shares × average</span>{" "}
-            (within 0.06 BDT). If they match your transaction ledger, the manual override for that symbol is removed.
+            (within 0.06). If they match your transaction ledger, the manual override for that symbol is removed.
           </p>
           {saveError ? (
             <Alert type="error" showIcon message={saveError} className="text-left" />

@@ -71,7 +71,7 @@ export function validateCostTriplet(shares: number, avgPrice: number, totalCost:
   }
   const implied = shares * avgPrice;
   if (Math.abs(implied - totalCost) > BDT_TRIPLET_EPS) {
-    return `Total invested (${totalCost.toFixed(2)}) must match shares × average cost (${implied.toFixed(2)}) within ${BDT_TRIPLET_EPS} BDT. Adjust one of the three fields.`;
+    return `Total invested (${totalCost.toFixed(2)}) must match shares × average cost (${implied.toFixed(2)}) within ${BDT_TRIPLET_EPS}. Adjust one of the three fields.`;
   }
   return null;
 }

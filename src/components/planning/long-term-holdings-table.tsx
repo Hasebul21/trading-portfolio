@@ -111,8 +111,8 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           inputMode="decimal"
           defaultValue={strForInput(numOrNull(row.buy_point_bdt))}
           placeholder="—"
-          aria-label="Buy point (BDT), empty to clear"
-          title="Buy point (BDT), empty to clear"
+          aria-label="Buy point, empty to clear"
+          title="Buy point, empty to clear"
           className={inputClass}
         />
       </div>
@@ -124,8 +124,8 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           inputMode="decimal"
           defaultValue={strForInput(numOrNull(row.sell_point_bdt))}
           placeholder="—"
-          aria-label="Sell point (BDT), empty to clear"
-          title="Sell point (BDT), empty to clear"
+          aria-label="Sell point, empty to clear"
+          title="Sell point, empty to clear"
           className={inputClass}
         />
       </div>
@@ -137,8 +137,8 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           inputMode="decimal"
           defaultValue={strForInput(effectiveAvg(row))}
           placeholder="—"
-          aria-label="Avg cost (BDT). Clear and save to use portfolio average."
-          title="Avg cost (BDT). Clears to use portfolio average when you hold this symbol."
+          aria-label="Avg cost. Clear and save to use portfolio average."
+          title="Avg cost. Clears to use portfolio average when you hold this symbol."
           className={inputClass}
         />
       </div>
@@ -150,8 +150,8 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
           inputMode="decimal"
           defaultValue={strForInput(effectiveTotal(row))}
           placeholder="—"
-          aria-label="Total invested (BDT). Clear and save to use portfolio book value."
-          title="Total invested (BDT). Clears to use portfolio book value when you hold this symbol."
+          aria-label="Total invested. Clear and save to use portfolio book value."
+          title="Total invested. Clears to use portfolio book value when you hold this symbol."
           className={inputClass}
         />
       </div>
