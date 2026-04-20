@@ -1,11 +1,16 @@
 "use client";
 
-import { deleteLongTermHolding, updateLongTermRow } from "@/app/(app)/planning-actions";
+import {
+  deleteLongTermHolding,
+  saveLongTermTable,
+  type LongTermRowSavePayload,
+} from "@/app/(app)/planning-actions";
 import { formatBdt, formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
-import { Button, Table, Typography } from "antd";
+import { Alert, Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 export type LongTermHoldingRow = {
   id: string;
@@ -21,6 +26,8 @@ export type LongTermHoldingRow = {
 };
 
 type Row = LongTermHoldingRow & { key: string };
+
+type DraftCell = { buy: string; sell: string; avg: string; total: string };
 
 function numOrNull(v: number | string | null | undefined): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -45,14 +52,43 @@ function effectiveTotal(r: LongTermHoldingRow): number | null {
   return r.portfolio_total_invested_bdt;
 }
 
-function rowRefreshKey(r: LongTermHoldingRow): string {
-  return [
-    r.id,
-    r.buy_point_bdt ?? "",
-    r.sell_point_bdt ?? "",
-    r.manual_avg_cost_bdt ?? "",
-    r.manual_total_invested_bdt ?? "",
-  ].join("|");
+function buildDraftFromRows(rows: LongTermHoldingRow[]): Record<string, DraftCell> {
+  const d: Record<string, DraftCell> = {};
+  for (const r of rows) {
+    d[r.id] = {
+      buy: strForInput(numOrNull(r.buy_point_bdt)),
+      sell: strForInput(numOrNull(r.sell_point_bdt)),
+      avg: strForInput(effectiveAvg(r)),
+      total: strForInput(effectiveTotal(r)),
+    };
+  }
+  return d;
+}
+
+function parseFieldToNullableNumber(raw: string): number | null {
+  const s = raw.trim().replace(/,/g, "");
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
+function rowToPayload(row: LongTermHoldingRow, cell: DraftCell | undefined): LongTermRowSavePayload {
+  const d =
+    cell ??
+    ({
+      buy: strForInput(numOrNull(row.buy_point_bdt)),
+      sell: strForInput(numOrNull(row.sell_point_bdt)),
+      avg: strForInput(effectiveAvg(row)),
+      total: strForInput(effectiveTotal(row)),
+    } satisfies DraftCell);
+  return {
+    id: row.id,
+    buy_point_bdt: parseFieldToNullableNumber(d.buy),
+    sell_point_bdt: parseFieldToNullableNumber(d.sell),
+    manual_avg_cost_bdt: parseFieldToNullableNumber(d.avg),
+    manual_total_invested_bdt: parseFieldToNullableNumber(d.total),
+  };
 }
 
 /** Buy / sell points: larger tap targets and type. */
@@ -70,7 +106,6 @@ const fieldLabelClass = "text-[11px] font-medium uppercase tracking-wide text-zi
 const rowFieldsLayout =
   "flex w-full min-w-0 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4";
 
-/** Buy & sell columns grow more than cost overrides on wide screens. */
 const pointsFieldShell = "flex min-w-0 flex-[1.25] basis-[min(100%,12rem)] flex-col gap-1 sm:basis-0 sm:min-w-[8rem]";
 const costFieldShell = "flex min-w-0 flex-1 basis-[min(100%,10rem)] flex-col gap-1 sm:basis-0 sm:min-w-[6.5rem]";
 
@@ -96,13 +131,7 @@ function bdtReadCellPoints(n: number | null) {
   );
 }
 
-function LongTermRowReadOnly({
-  row,
-  onEdit,
-}: {
-  row: LongTermHoldingRow;
-  onEdit: () => void;
-}) {
+function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
   return (
     <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
@@ -121,26 +150,30 @@ function LongTermRowReadOnly({
         <span className={fieldLabelClass}>Total</span>
         {bdtReadCell(effectiveTotal(row))}
       </div>
-      <Button type="default" size="middle" className="h-10 shrink-0 px-4 text-sm font-semibold" onClick={onEdit}>
-        Edit
-      </Button>
     </div>
   );
 }
 
-function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCancel: () => void }) {
+function LongTermFieldsEdit({
+  row,
+  values,
+  onPatch,
+}: {
+  row: LongTermHoldingRow;
+  values: DraftCell;
+  onPatch: (patch: Partial<DraftCell>) => void;
+}) {
   return (
-    <form action={updateLongTermRow} className={`${rowFieldsLayout} py-0.5`}>
-      <input type="hidden" name="id" value={row.id} />
+    <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
         <span className={pointsLabelClass}>Buy pt</span>
         <input
-          name="buy_point_bdt"
           type="text"
           inputMode="decimal"
-          defaultValue={strForInput(numOrNull(row.buy_point_bdt))}
+          value={values.buy}
+          onChange={(e) => onPatch({ buy: e.target.value })}
           placeholder="—"
-          aria-label="Buy point, empty to clear"
+          aria-label={`${row.symbol} buy point, empty to clear`}
           title="Buy point, empty to clear"
           className={pointsInputClass}
         />
@@ -148,12 +181,12 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
       <div className={pointsFieldShell}>
         <span className={pointsLabelClass}>Sell pt</span>
         <input
-          name="sell_point_bdt"
           type="text"
           inputMode="decimal"
-          defaultValue={strForInput(numOrNull(row.sell_point_bdt))}
+          value={values.sell}
+          onChange={(e) => onPatch({ sell: e.target.value })}
           placeholder="—"
-          aria-label="Sell point, empty to clear"
+          aria-label={`${row.symbol} sell point, empty to clear`}
           title="Sell point, empty to clear"
           className={pointsInputClass}
         />
@@ -161,12 +194,12 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
       <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
         <input
-          name="manual_avg_cost_bdt"
           type="text"
           inputMode="decimal"
-          defaultValue={strForInput(effectiveAvg(row))}
+          value={values.avg}
+          onChange={(e) => onPatch({ avg: e.target.value })}
           placeholder="—"
-          aria-label="Avg cost. Clear and save to use portfolio average."
+          aria-label={`${row.symbol} avg cost. Clear to use portfolio average.`}
           title="Avg cost. Clears to use portfolio average when you hold this symbol."
           className={costInputClass}
         />
@@ -174,31 +207,58 @@ function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCance
       <div className={costFieldShell}>
         <span className={fieldLabelClass}>Total</span>
         <input
-          name="manual_total_invested_bdt"
           type="text"
           inputMode="decimal"
-          defaultValue={strForInput(effectiveTotal(row))}
+          value={values.total}
+          onChange={(e) => onPatch({ total: e.target.value })}
           placeholder="—"
-          aria-label="Total invested. Clear and save to use portfolio book value."
+          aria-label={`${row.symbol} total invested. Clear to use portfolio book value.`}
           title="Total invested. Clears to use portfolio book value when you hold this symbol."
           className={costInputClass}
         />
       </div>
-      <div className="flex shrink-0 gap-2">
-        <Button type="default" size="middle" className="h-10 px-4 text-sm font-semibold" htmlType="button" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="primary" size="middle" htmlType="submit" className="h-10 px-4 text-sm font-semibold">
-          Save
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }
 
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, DraftCell>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const data: Row[] = rows.map((r) => ({ ...r, key: r.id }));
+
+  const beginEdit = useCallback(() => {
+    setSaveError(null);
+    setDraft(buildDraftFromRows(rows));
+    setEditing(true);
+  }, [rows]);
+
+  const cancelEdit = useCallback(() => {
+    setEditing(false);
+    setDraft({});
+    setSaveError(null);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    setSaveError(null);
+    const updates: LongTermRowSavePayload[] = rows.map((r) => rowToPayload(r, draft[r.id]));
+    setSaving(true);
+    try {
+      const res = await saveLongTermTable(updates);
+      if (!res.ok) {
+        setSaveError(res.error);
+        return;
+      }
+      setEditing(false);
+      setDraft({});
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }, [draft, rows, router]);
 
   const columns: ColumnsType<Row> = [
     {
@@ -218,21 +278,30 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       width: 100,
       align: "left",
       render: (v: string) => (
-        <span className="text-zinc-600 dark:text-zinc-400">
-          {new Date(v).toLocaleDateString()}
-        </span>
+        <span className="text-zinc-600 dark:text-zinc-400">{new Date(v).toLocaleDateString()}</span>
       ),
     },
     {
       title: "Buy / sell points & cost overrides",
       key: "edit_row",
       align: "left",
-      render: (_: unknown, r) =>
-        editingRowId === r.id ? (
-          <LongTermRowEditor key={rowRefreshKey(r)} row={r} onCancel={() => setEditingRowId(null)} />
-        ) : (
-          <LongTermRowReadOnly row={r} onEdit={() => setEditingRowId(r.id)} />
-        ),
+      render: (_: unknown, r) => {
+        if (!editing) return <LongTermFieldsReadOnly row={r} />;
+        const values = draft[r.id] ?? buildDraftFromRows([r])[r.id];
+        return (
+          <LongTermFieldsEdit
+            key={r.id}
+            row={r}
+            values={values}
+            onPatch={(patch) =>
+              setDraft((prev) => {
+                const base = prev[r.id] ?? buildDraftFromRows([r])[r.id];
+                return { ...prev, [r.id]: { ...base, ...patch } };
+              })
+            }
+          />
+        );
+      },
     },
     {
       title: "",
@@ -242,7 +311,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       render: (_: unknown, r) => (
         <form action={deleteLongTermHolding} className="inline">
           <input type="hidden" name="id" value={r.id} />
-          <Button type="link" danger size="small" htmlType="submit">
+          <Button type="link" danger size="small" htmlType="submit" disabled={editing}>
             Remove
           </Button>
         </form>
@@ -252,17 +321,49 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
 
   return (
     <div className="w-full min-w-0 max-w-full">
-      <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-        Click <strong>Edit</strong> on a row to change buy/sell points or cost overrides, then <strong>Save</strong>.{" "}
-        <strong>Cancel</strong> discards unsaved changes. Clear <strong>Avg cost</strong> or <strong>Total</strong> and save
-        to use your open portfolio numbers again.
-      </p>
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          Use <strong>Edit table</strong> to change all rows, then <strong>Save changes</strong>.{" "}
+          <strong>Cancel</strong> discards edits. Clear <strong>Avg cost</strong> or <strong>Total</strong> and save to
+          use your open portfolio numbers again. <strong>Remove</strong> is disabled while editing.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {!editing ? (
+            <Button type="default" size="middle" className="font-semibold" onClick={beginEdit}>
+              Edit table
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="primary"
+                size="middle"
+                className="font-semibold"
+                loading={saving}
+                disabled={saving}
+                onClick={() => void handleSave()}
+              >
+                Save changes
+              </Button>
+              <Button type="default" size="middle" className="font-semibold" disabled={saving} onClick={cancelEdit}>
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      {saveError ? (
+        <Alert type="error" showIcon className="mb-3" message="Could not save" description={saveError} />
+      ) : null}
       <Table<Row>
         className="long-term-holdings-table"
         columns={columns}
         dataSource={data}
         locale={{ emptyText: "No symbols yet." }}
-        pagination={tablePagination("symbols", { hideOnSinglePage: false })}
+        pagination={tablePagination("symbols", {
+          hideOnSinglePage: false,
+          pageSize: 15,
+          pageSizeOptions: [10, 15, 20, 50],
+        })}
         size="middle"
         bordered
       />

@@ -99,51 +99,63 @@ export async function deleteLongTermHolding(formData: FormData) {
   revalidatePath("/long-term");
 }
 
-function parseLongTermNumericField(raw: string): number | null {
-  const s = raw.trim();
-  if (s === "") return null;
-  const n = Number(s);
+export type LongTermRowSavePayload = {
+  id: string;
+  buy_point_bdt: number | null;
+  sell_point_bdt: number | null;
+  manual_avg_cost_bdt: number | null;
+  manual_total_invested_bdt: number | null;
+};
+
+function sanitizeLongTermNumber(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === "number" ? v : Number(v);
   if (!Number.isFinite(n) || n < 0) return null;
   return n;
 }
 
-/** Update all editable numeric fields on one watchlist row from a single form submit. */
-export async function updateLongTermRow(formData: FormData) {
+/** Persist all long-term rows in one action (used by table-level Save). */
+export async function saveLongTermTable(
+  updates: LongTermRowSavePayload[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false, error: "Not signed in" };
 
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) return;
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return { ok: true };
+  }
 
-  const buy_point_bdt = parseLongTermNumericField(String(formData.get("buy_point_bdt") ?? ""));
-  const sell_point_bdt = parseLongTermNumericField(String(formData.get("sell_point_bdt") ?? ""));
-  const manual_avg_cost_bdt = parseLongTermNumericField(
-    String(formData.get("manual_avg_cost_bdt") ?? ""),
-  );
-  const manual_total_invested_bdt = parseLongTermNumericField(
-    String(formData.get("manual_total_invested_bdt") ?? ""),
-  );
+  for (const u of updates) {
+    const id = String(u.id ?? "").trim();
+    if (!id) continue;
 
-  const { error } = await supabase
-    .from("long_term_holdings")
-    .update({
-      buy_point_bdt,
-      sell_point_bdt,
-      manual_avg_cost_bdt,
-      manual_total_invested_bdt,
-    })
-    .eq("id", id)
-    .eq("user_id", user.id);
+    const buy_point_bdt = sanitizeLongTermNumber(u.buy_point_bdt);
+    const sell_point_bdt = sanitizeLongTermNumber(u.sell_point_bdt);
+    const manual_avg_cost_bdt = sanitizeLongTermNumber(u.manual_avg_cost_bdt);
+    const manual_total_invested_bdt = sanitizeLongTermNumber(u.manual_total_invested_bdt);
 
-  if (error) {
-    console.error("updateLongTermRow", error.message);
-    return;
+    const { error } = await supabase
+      .from("long_term_holdings")
+      .update({
+        buy_point_bdt,
+        sell_point_bdt,
+        manual_avg_cost_bdt,
+        manual_total_invested_bdt,
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("saveLongTermTable", error.message);
+      return { ok: false, error: error.message };
+    }
   }
 
   revalidatePath("/long-term");
+  return { ok: true };
 }
 
 export async function addTradePlan(formData: FormData) {

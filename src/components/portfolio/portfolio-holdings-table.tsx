@@ -18,6 +18,15 @@ type BookDraft = { shares: string; avg: string; total: string };
 
 const { Search } = Input;
 
+const biasLineColumnTitle = (
+  <span className="block whitespace-normal text-right text-[11px] font-semibold leading-snug">
+    Bias Line
+    <span className="block pt-0.5 text-[10px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
+      (Buy Above / Sell Below)
+    </span>
+  </span>
+);
+
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
   if (n > 0) return `+${s}`;
@@ -380,66 +389,66 @@ export function PortfolioHoldingsTable({
           ),
       },
       {
-        title: "Session midpoint",
+        title: biasLineColumnTitle,
         key: "pivot",
-        width: 108,
+        width: 132,
         align: "right",
         ...(!bookEditing
           ? {
               sorter: sortNullableNumber((r) => r.pivot?.pivot),
-              showSorterTooltip: { title: "Sort by session midpoint" },
+              showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
             }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
       },
       {
-        title: "First downside target",
+        title: "First Buy Zone",
         key: "s1",
-        width: 118,
+        width: 120,
         align: "right",
         ...(!bookEditing
           ? {
               sorter: sortNullableNumber((r) => r.pivot?.s1),
-              showSorterTooltip: { title: "Sort by first downside target" },
+              showSorterTooltip: { title: "Sort by first buy zone (S1)" },
             }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s1 ?? null),
       },
       {
-        title: "Second downside target",
+        title: "Strong Buy Zone",
         key: "s2",
         width: 128,
         align: "right",
         ...(!bookEditing
           ? {
               sorter: sortNullableNumber((r) => r.pivot?.s2),
-              showSorterTooltip: { title: "Sort by second downside target" },
+              showSorterTooltip: { title: "Sort by strong buy zone (S2)" },
             }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s2 ?? null),
       },
       {
-        title: "First upside target",
+        title: "First Sell Zone",
         key: "r1",
-        width: 118,
+        width: 120,
         align: "right",
         ...(!bookEditing
           ? {
               sorter: sortNullableNumber((r) => r.pivot?.r1),
-              showSorterTooltip: { title: "Sort by first upside target" },
+              showSorterTooltip: { title: "Sort by first sell zone (R1)" },
             }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r1 ?? null),
       },
       {
-        title: "Second upside target",
+        title: "Strong Sell Zone",
         key: "r2",
         width: 128,
         align: "right",
         ...(!bookEditing
           ? {
               sorter: sortNullableNumber((r) => r.pivot?.r2),
-              showSorterTooltip: { title: "Sort by second upside target" },
+              showSorterTooltip: { title: "Sort by strong sell zone (R2)" },
             }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
