@@ -9,8 +9,6 @@ export type PositionOverrideRow = {
   total_cost_bdt: number;
 };
 
-const BDT_TRIPLET_EPS = 0.06;
-
 export function mergeLedgerWithOverrides(
   ledger: HoldingRow[],
   overrides: PositionOverrideRow[],
@@ -58,7 +56,7 @@ export function nearlyEqual(a: number, b: number, eps = 0.02): boolean {
   return Math.abs(a - b) <= eps;
 }
 
-/** Total should match shares × average within a small BDT tolerance (rounding). */
+/** Basic checks only; total and average may differ (e.g. fees, rounding). */
 export function validateCostTriplet(shares: number, avgPrice: number, totalCost: number): string | null {
   if (!(shares > 0) || !Number.isFinite(shares)) {
     return "Shares must be a positive number.";
@@ -68,10 +66,6 @@ export function validateCostTriplet(shares: number, avgPrice: number, totalCost:
   }
   if (!Number.isFinite(totalCost) || totalCost < 0) {
     return "Total invested must be zero or greater.";
-  }
-  const implied = shares * avgPrice;
-  if (Math.abs(implied - totalCost) > BDT_TRIPLET_EPS) {
-    return `Total invested (${totalCost.toFixed(2)}) must match shares × average cost (${implied.toFixed(2)}) within ${BDT_TRIPLET_EPS}. Adjust one of the three fields.`;
   }
   return null;
 }

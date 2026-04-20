@@ -10,8 +10,7 @@ import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Alert, Button, Card, Input, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Row = PortfolioMarketRow & { key: string };
 
@@ -73,14 +72,30 @@ function bookFingerprint(rows: PortfolioMarketRow[]) {
 const bookInputClass =
   "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[13px] tabular-nums text-zinc-900 outline-none ring-teal-500/25 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
+function sortNullableNumber(
+  pick: (r: Row) => number | null | undefined,
+): (a: Row, b: Row) => number {
+  return (a, b) => {
+    const av = pick(a);
+    const bv = pick(b);
+    const an = av !== null && av !== undefined && Number.isFinite(av) ? Number(av) : null;
+    const bn = bv !== null && bv !== undefined && Number.isFinite(bv) ? Number(bv) : null;
+    if (an === null && bn === null) return 0;
+    if (an === null) return 1;
+    if (bn === null) return -1;
+    return an - bn;
+  };
+}
+
 export function PortfolioHoldingsTable({
   holdings,
   enableBookEdit = false,
+  onAfterBookSave,
 }: {
   holdings: PortfolioMarketRow[];
   enableBookEdit?: boolean;
+  onAfterBookSave?: () => void | Promise<void>;
 }) {
-  const router = useRouter();
   const [symbolQuery, setSymbolQuery] = useState("");
   const [draft, setDraft] = useState<Record<string, BookDraft>>({});
   const [dirty, setDirty] = useState(false);
@@ -133,47 +148,50 @@ export function PortfolioHoldingsTable({
       .map((h) => ({ ...h, key: h.symbol }));
   }, [displayHoldings, symbolQuery]);
 
-  function patchDraft(symbol: string, field: keyof BookDraft, value: string) {
-    if (!bookEditing) return;
-    setDirty(true);
-    setSaveOk(false);
-    setSaveError(null);
-    setDraft((prev) => {
-      const base = holdings.find((h) => h.symbol === symbol);
-      if (!base) return prev;
-      const cur = prev[symbol] ?? {
-        shares: formatPlainNumberMax2Decimals(base.shares),
-        avg: formatPlainNumberMax2Decimals(base.avgPrice),
-        total: formatPlainNumberMax2Decimals(base.totalCost),
-      };
-      const next: BookDraft = { ...cur, [field]: value };
+  const patchDraft = useCallback(
+    (symbol: string, field: keyof BookDraft, value: string) => {
+      if (!bookEditing) return;
+      setDirty(true);
+      setSaveOk(false);
+      setSaveError(null);
+      setDraft((prev) => {
+        const base = holdings.find((h) => h.symbol === symbol);
+        if (!base) return prev;
+        const cur = prev[symbol] ?? {
+          shares: formatPlainNumberMax2Decimals(base.shares),
+          avg: formatPlainNumberMax2Decimals(base.avgPrice),
+          total: formatPlainNumberMax2Decimals(base.totalCost),
+        };
+        const next: BookDraft = { ...cur, [field]: value };
 
-      const sharesFallback = parseBookNumber(next.shares) ?? base.shares;
+        const sharesFallback = parseBookNumber(next.shares) ?? base.shares;
 
-      if (field === "avg") {
-        const newAvg = parseBookNumber(value);
-        if (newAvg !== null && sharesFallback > 0) {
-          const t = Math.round(newAvg * sharesFallback * 100) / 100;
-          next.total = formatPlainNumberMax2Decimals(t);
+        if (field === "avg") {
+          const newAvg = parseBookNumber(value);
+          if (newAvg !== null && sharesFallback > 0) {
+            const t = Math.round(newAvg * sharesFallback * 100) / 100;
+            next.total = formatPlainNumberMax2Decimals(t);
+          }
+        } else if (field === "total") {
+          const newTot = parseBookNumber(value);
+          if (newTot !== null && sharesFallback > 0) {
+            const a = Math.round((newTot / sharesFallback) * 100) / 100;
+            next.avg = formatPlainNumberMax2Decimals(a);
+          }
+        } else if (field === "shares") {
+          const newSh = parseBookNumber(value);
+          if (newSh !== null && newSh > 0) {
+            const avgForTot = parseBookNumber(next.avg) ?? base.avgPrice;
+            const t = Math.round(newSh * avgForTot * 100) / 100;
+            next.total = formatPlainNumberMax2Decimals(t);
+          }
         }
-      } else if (field === "total") {
-        const newTot = parseBookNumber(value);
-        if (newTot !== null && sharesFallback > 0) {
-          const a = Math.round((newTot / sharesFallback) * 100) / 100;
-          next.avg = formatPlainNumberMax2Decimals(a);
-        }
-      } else if (field === "shares") {
-        const newSh = parseBookNumber(value);
-        if (newSh !== null && newSh > 0) {
-          const avgForTot = parseBookNumber(next.avg) ?? base.avgPrice;
-          const t = Math.round(newSh * avgForTot * 100) / 100;
-          next.total = formatPlainNumberMax2Decimals(t);
-        }
-      }
 
-      return { ...prev, [symbol]: next };
-    });
-  }
+        return { ...prev, [symbol]: next };
+      });
+    },
+    [bookEditing, holdings],
+  );
 
   function buildPayload(): { ok: true; rows: PortfolioSaveRow[] } | { ok: false; message: string } {
     const rows: PortfolioSaveRow[] = [];
@@ -209,7 +227,7 @@ export function PortfolioHoldingsTable({
       setDirty(false);
       setDraft({});
       setBookEditorOpen(false);
-      router.refresh();
+      await onAfterBookSave?.();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -217,7 +235,7 @@ export function PortfolioHoldingsTable({
     }
   };
 
-  const columns: ColumnsType<Row> = (() => {
+  const columns: ColumnsType<Row> = useMemo(() => {
     const avgCol: ColumnsType<Row>[0] = bookEditing
       ? {
           title: "Average cost / share",
@@ -238,6 +256,8 @@ export function PortfolioHoldingsTable({
           key: "avgPrice",
           width: 128,
           align: "right",
+          sorter: (a, b) => a.avgPrice - b.avgPrice,
+          showSorterTooltip: { title: "Sort by average cost" },
           render: (_: unknown, row) => (
             <span className="tabular-nums text-[14px] font-medium">{formatBdt(row.avgPrice)}</span>
           ),
@@ -263,6 +283,8 @@ export function PortfolioHoldingsTable({
           dataIndex: "shares",
           width: 80,
           align: "right",
+          sorter: (a, b) => a.shares - b.shares,
+          showSorterTooltip: { title: "Sort by shares" },
           render: (v: number) => (
             <span className="tabular-nums text-[14px]">{formatNumberMax2Decimals(v)}</span>
           ),
@@ -289,7 +311,6 @@ export function PortfolioHoldingsTable({
           width: 112,
           align: "right",
           sorter: (a, b) => a.totalCost - b.totalCost,
-          defaultSortOrder: "descend",
           showSorterTooltip: { title: "Sort by total invested" },
           render: (_: unknown, row) => (
             <span className="tabular-nums text-[14px]">{formatBdt(row.totalCost)}</span>
@@ -302,6 +323,12 @@ export function PortfolioHoldingsTable({
         dataIndex: "symbol",
         width: 88,
         align: "left",
+        ...(!bookEditing
+          ? {
+              sorter: (a: Row, b: Row) => a.symbol.localeCompare(b.symbol),
+              showSorterTooltip: { title: "Sort by symbol" },
+            }
+          : {}),
         render: (v: string) => (
           <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-bold text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
             {v}
@@ -316,6 +343,12 @@ export function PortfolioHoldingsTable({
         dataIndex: "unrealizedPl",
         width: 118,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.unrealizedPl),
+              showSorterTooltip: { title: "Sort by unrealized P/L" },
+            }
+          : {}),
         render: (v: number | null) =>
           v === null ? (
             <Typography.Text type="secondary">—</Typography.Text>
@@ -333,6 +366,12 @@ export function PortfolioHoldingsTable({
         dataIndex: "marketLtp",
         width: 118,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.marketLtp),
+              showSorterTooltip: { title: "Sort by last price" },
+            }
+          : {}),
         render: (v: number | null) =>
           v === null ? (
             <Typography.Text type="secondary">—</Typography.Text>
@@ -345,6 +384,12 @@ export function PortfolioHoldingsTable({
         key: "pivot",
         width: 108,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.pivot?.pivot),
+              showSorterTooltip: { title: "Sort by session midpoint" },
+            }
+          : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
       },
       {
@@ -352,6 +397,12 @@ export function PortfolioHoldingsTable({
         key: "s1",
         width: 118,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.pivot?.s1),
+              showSorterTooltip: { title: "Sort by first downside target" },
+            }
+          : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s1 ?? null),
       },
       {
@@ -359,6 +410,12 @@ export function PortfolioHoldingsTable({
         key: "s2",
         width: 128,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.pivot?.s2),
+              showSorterTooltip: { title: "Sort by second downside target" },
+            }
+          : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s2 ?? null),
       },
       {
@@ -366,6 +423,12 @@ export function PortfolioHoldingsTable({
         key: "r1",
         width: 118,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.pivot?.r1),
+              showSorterTooltip: { title: "Sort by first upside target" },
+            }
+          : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r1 ?? null),
       },
       {
@@ -373,10 +436,16 @@ export function PortfolioHoldingsTable({
         key: "r2",
         width: 128,
         align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.pivot?.r2),
+              showSorterTooltip: { title: "Sort by second upside target" },
+            }
+          : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
       },
     ];
-  })();
+  }, [bookEditing, draft, patchDraft]);
 
   return (
     <Card
@@ -461,6 +530,7 @@ export function PortfolioHoldingsTable({
       </div>
 
       <Table<Row>
+        key={bookEditorOpen ? "portfolio-book-edit" : "portfolio-book-view"}
         className="portfolio-holdings-table"
         columns={columns}
         dataSource={data}
@@ -478,9 +548,8 @@ export function PortfolioHoldingsTable({
           <p className="text-left text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             Edit shares, average cost, and total invested for any row. Changing <strong>average</strong> updates{" "}
             <strong>total</strong> (and the other way around); changing <strong>shares</strong> keeps average and
-            updates total. Values must satisfy{" "}
-            <span className="font-medium text-zinc-700 dark:text-zinc-300">total ≈ shares × average</span>{" "}
-            (within 0.06). If they match your transaction ledger, the manual override for that symbol is removed.
+            updates total. You can save even if total and shares × average differ slightly (e.g. fees or rounding).
+            If all three match your transaction ledger, the manual override for that symbol is removed.
           </p>
           {saveError ? (
             <Alert type="error" showIcon message={saveError} className="text-left" />

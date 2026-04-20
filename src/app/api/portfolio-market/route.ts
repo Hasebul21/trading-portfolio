@@ -1,15 +1,10 @@
 import { fetchUserHoldings } from "@/lib/holdings";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
-import { computeFloorPivot, type FloorPivot } from "@/lib/pivot-floor";
+import { holdingsToMarketRows } from "@/lib/market/portfolio-with-quotes";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-
-export type PortfolioMarketQuote = {
-  marketLtp: number | null;
-  pivot: FloorPivot | null;
-};
 
 export async function GET() {
   const supabase = await createClient();
@@ -26,25 +21,12 @@ export async function GET() {
     return NextResponse.json({ error: holdingsRes.error }, { status: 500 });
   }
 
-  const symbols = [...new Set(holdingsRes.holdings.map((h) => h.symbol))];
   const lspRes = await fetchDseLspQuoteMapFresh();
-
-  const quotes: Record<string, PortfolioMarketQuote> = {};
-  for (const sym of symbols) {
-    const q = lspRes.bySymbol.get(sym);
-    if (!q) {
-      quotes[sym] = { marketLtp: null, pivot: null };
-      continue;
-    }
-    quotes[sym] = {
-      marketLtp: q.ltp,
-      pivot: computeFloorPivot(q.dayHigh, q.dayLow, q.closep),
-    };
-  }
+  const holdings = holdingsToMarketRows(holdingsRes.holdings, lspRes.bySymbol);
 
   return NextResponse.json({
     updatedAt: new Date().toISOString(),
     lspError: lspRes.error,
-    quotes,
+    holdings,
   });
 }

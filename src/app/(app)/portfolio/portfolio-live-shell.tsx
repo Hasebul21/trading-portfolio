@@ -1,9 +1,8 @@
 "use client";
 
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import type { FloorPivot } from "@/lib/pivot-floor";
 import { Alert } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
 
 function pollIntervalMs(): number {
@@ -14,18 +13,11 @@ function pollIntervalMs(): number {
   return Math.min(n, 120_000);
 }
 
-function mergeQuote(
-  row: PortfolioMarketRow,
-  q: { marketLtp: number | null; pivot: FloorPivot | null } | undefined,
-): PortfolioMarketRow {
-  if (!q) return row;
-  const { marketLtp, pivot } = q;
-  const unrealizedPl =
-    marketLtp !== null && Number.isFinite(marketLtp)
-      ? (marketLtp - row.avgPrice) * row.shares
-      : null;
-  return { ...row, marketLtp, pivot, unrealizedPl };
-}
+type PortfolioMarketApi = {
+  updatedAt: string;
+  lspError: string | null;
+  holdings: PortfolioMarketRow[];
+};
 
 export function PortfolioLiveShell({
   initialHoldings,
@@ -39,6 +31,24 @@ export function PortfolioLiveShell({
   const [hasPolled, setHasPolled] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
+  const initialKey = useMemo(
+    () =>
+      initialHoldings
+        .map(
+          (h) =>
+            `${h.symbol}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
+        )
+        .join("|"),
+    [initialHoldings],
+  );
+
+  const prevInitialKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (prevInitialKey.current === initialKey) return;
+    prevInitialKey.current = initialKey;
+    setRows(initialHoldings);
+  }, [initialKey, initialHoldings]);
+
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/portfolio-market", { cache: "no-store" });
@@ -49,15 +59,13 @@ export function PortfolioLiveShell({
         setHasPolled(true);
         return;
       }
-      const data = (await res.json()) as {
-        updatedAt: string;
-        quotes: Record<string, { marketLtp: number | null; pivot: FloorPivot | null }>;
-        lspError: string | null;
-      };
+      const data = (await res.json()) as PortfolioMarketApi;
       setLiveLspError(data.lspError);
       setHasPolled(true);
       setUpdatedAt(new Date(data.updatedAt));
-      setRows((prev) => prev.map((r) => mergeQuote(r, data.quotes[r.symbol])));
+      if (Array.isArray(data.holdings)) {
+        setRows(data.holdings);
+      }
     } catch (e) {
       setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
       setHasPolled(true);
@@ -83,7 +91,11 @@ export function PortfolioLiveShell({
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
-      <PortfolioHoldingsTable holdings={rows} enableBookEdit />
+      <PortfolioHoldingsTable
+        holdings={rows}
+        enableBookEdit
+        onAfterBookSave={refresh}
+      />
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <span className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur-sm dark:border-teal-800/50 dark:bg-zinc-900/80 dark:text-teal-100">
