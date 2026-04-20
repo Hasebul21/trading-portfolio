@@ -39,6 +39,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
   holdings: PortfolioMarketRow[];
   marketError: string | null;
   quotedSymbolCount: number;
+  totalRealizedBdt: number;
 }> {
   const [holdingsRes, lspRes] = await Promise.all([
     fetchUserHoldings(),
@@ -51,6 +52,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
       holdings: [],
       marketError: lspRes.error,
       quotedSymbolCount: 0,
+      totalRealizedBdt: 0,
     };
   }
 
@@ -68,5 +70,6 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
     holdings,
     marketError: lspError,
     quotedSymbolCount: quoted,
+    totalRealizedBdt: holdingsRes.totalRealizedBdt,
   };
 }

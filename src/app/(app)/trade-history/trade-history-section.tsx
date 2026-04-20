@@ -1,10 +1,13 @@
 "use client";
 
+import { deleteTransaction } from "@/app/(app)/actions";
 import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { TransactionRow } from "@/lib/portfolio";
-import { Table, Typography } from "antd";
+import { Button, Popconfirm, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 
 type Props = {
   rows: TransactionRow[];
@@ -14,8 +17,27 @@ type Props = {
 export function TradeHistorySection({ rows, loadError }: Props) {
   type Row = TransactionRow & { key: string };
   const data: Row[] = rows.map((r) => ({ ...r, key: r.id }));
+  const router = useRouter();
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
-  const columns: ColumnsType<Row> = [
+  const onRemove = useCallback(
+    async (id: string) => {
+      setRemoveError(null);
+      setRemovingId(id);
+      const res = await deleteTransaction(id);
+      setRemovingId(null);
+      if (res.error) {
+        setRemoveError(res.error);
+        return;
+      }
+      router.refresh();
+    },
+    [router],
+  );
+
+  const columns: ColumnsType<Row> = useMemo(
+    () => [
     {
       title: "When",
       dataIndex: "created_at",
@@ -73,13 +95,48 @@ export function TradeHistorySection({ rows, loadError }: Props) {
         <span className="tabular-nums">{formatBdt(Number(v ?? 0))}</span>
       ),
     },
-  ];
+    {
+      title: "",
+      key: "actions",
+      width: 96,
+      align: "center",
+      render: (_: unknown, record) => (
+        <Popconfirm
+          title="Remove this row?"
+          description="Deletes this ledger entry. Holdings and Net Gain/Loss will recalc."
+          okText="Remove"
+          okButtonProps={{ danger: true }}
+          cancelText="Cancel"
+          onConfirm={() => void onRemove(record.id)}
+        >
+          <Button
+            type="link"
+            danger
+            size="small"
+            loading={removingId === record.id}
+            disabled={removingId !== null && removingId !== record.id}
+            className="p-0"
+          >
+            Remove
+          </Button>
+        </Popconfirm>
+      ),
+    },
+  ],
+    [onRemove, removingId],
+  );
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       {loadError ? (
         <Typography.Paragraph type="danger" className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
           {loadError}
+        </Typography.Paragraph>
+      ) : null}
+
+      {removeError ? (
+        <Typography.Paragraph type="danger" className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
+          {removeError}
         </Typography.Paragraph>
       ) : null}
 

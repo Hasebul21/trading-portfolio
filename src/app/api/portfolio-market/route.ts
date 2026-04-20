@@ -28,5 +28,6 @@ export async function GET() {
     updatedAt: new Date().toISOString(),
     lspError: lspRes.error,
     holdings,
+    totalRealizedBdt: holdingsRes.totalRealizedBdt,
   });
 }

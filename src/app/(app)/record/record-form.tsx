@@ -122,7 +122,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             <Alert
               type="error"
               showIcon
-              message="Could not save"
+              title="Could not save"
               description={state.error}
               className="text-left"
               role="alert"
@@ -132,7 +132,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             <Alert
               type="success"
               showIcon
-              message="Saved"
+              title="Saved"
               description={state.summary ?? "Transaction was recorded."}
               className="text-left"
             />

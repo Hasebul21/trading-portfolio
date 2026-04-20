@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { aggregateHoldings, type TransactionRow } from "@/lib/portfolio";
+import {
+  aggregateHoldings,
+  totalRealizedProfitLossBdt,
+  type TransactionRow,
+} from "@/lib/portfolio";
 import { fetchPositionOverrides, mergeLedgerWithOverrides } from "@/lib/portfolio-overrides";
 
 export async function fetchUserHoldings() {
@@ -16,15 +20,25 @@ export async function fetchUserHoldings() {
   ]);
 
   if (txRes.error) {
-    return { error: txRes.error.message, holdings: [] as ReturnType<typeof aggregateHoldings> };
+    return {
+      error: txRes.error.message,
+      holdings: [] as ReturnType<typeof aggregateHoldings>,
+      totalRealizedBdt: 0,
+    };
   }
 
   if (ovRes.error) {
-    return { error: ovRes.error, holdings: [] as ReturnType<typeof aggregateHoldings> };
+    return {
+      error: ovRes.error,
+      holdings: [] as ReturnType<typeof aggregateHoldings>,
+      totalRealizedBdt: 0,
+    };
   }
 
-  const ledger = aggregateHoldings((txRes.data ?? []) as TransactionRow[]);
+  const txRows = (txRes.data ?? []) as TransactionRow[];
+  const ledger = aggregateHoldings(txRows);
   const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
+  const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
 
-  return { error: null as string | null, holdings };
+  return { error: null as string | null, holdings, totalRealizedBdt };
 }

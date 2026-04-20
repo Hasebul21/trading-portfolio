@@ -17,29 +17,33 @@ type PortfolioMarketApi = {
   updatedAt: string;
   lspError: string | null;
   holdings: PortfolioMarketRow[];
+  totalRealizedBdt: number;
 };
 
 export function PortfolioLiveShell({
   initialHoldings,
   initialMarketError,
+  initialTotalRealizedBdt,
 }: {
   initialHoldings: PortfolioMarketRow[];
   initialMarketError: string | null;
+  initialTotalRealizedBdt: number;
 }) {
   const [rows, setRows] = useState(initialHoldings);
+  const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
   const [liveLspError, setLiveLspError] = useState<string | null>(null);
   const [hasPolled, setHasPolled] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   const initialKey = useMemo(
     () =>
-      initialHoldings
+      `${initialHoldings
         .map(
           (h) =>
             `${h.symbol}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
         )
-        .join("|"),
-    [initialHoldings],
+        .join("|")}|realized:${initialTotalRealizedBdt}`,
+    [initialHoldings, initialTotalRealizedBdt],
   );
 
   const prevInitialKey = useRef<string | null>(null);
@@ -47,7 +51,8 @@ export function PortfolioLiveShell({
     if (prevInitialKey.current === initialKey) return;
     prevInitialKey.current = initialKey;
     setRows(initialHoldings);
-  }, [initialKey, initialHoldings]);
+    setTotalRealizedBdt(initialTotalRealizedBdt);
+  }, [initialKey, initialHoldings, initialTotalRealizedBdt]);
 
   const refresh = useCallback(async () => {
     try {
@@ -65,6 +70,9 @@ export function PortfolioLiveShell({
       setUpdatedAt(new Date(data.updatedAt));
       if (Array.isArray(data.holdings)) {
         setRows(data.holdings);
+      }
+      if (typeof data.totalRealizedBdt === "number" && Number.isFinite(data.totalRealizedBdt)) {
+        setTotalRealizedBdt(data.totalRealizedBdt);
       }
     } catch (e) {
       setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
@@ -109,6 +117,7 @@ export function PortfolioLiveShell({
 
       <PortfolioHoldingsTable
         holdings={rows}
+        totalRealizedBdt={totalRealizedBdt}
         enableBookEdit
         onAfterBookSave={refresh}
       />

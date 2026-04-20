@@ -28,6 +28,86 @@ function num(v: string | number): number {
   return typeof v === "number" ? v : Number(v);
 }
 
+/**
+ * Sum of **sell-only** gain/loss from the ledger, in chronological order.
+ * For each sell row (after buys have built the book): take **portfolio average
+ * cost per share** just before that sell, **sell quantity** and **sell price**
+ * from the row. Each sell adds:
+ *
+ * `(sell_price × sell_qty) − (avg_at_sell × sell_qty) − sell_fees`
+ *
+ * (same as net proceeds minus cost of shares sold). Buy-side `fees_bdt` are
+ * already inside `avg` via {@link aggregateHoldings} rules.
+ */
+export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
+  type State = {
+    shares: number;
+    totalCost: number;
+    feesInPosition: number;
+    avg: number;
+  };
+
+  const bySymbol = new Map<string, State>();
+  let realized = 0;
+
+  const sorted = [...rows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime();
+    const tb = new Date(b.created_at).getTime();
+    if (ta !== tb) return ta - tb;
+    return a.id.localeCompare(b.id);
+  });
+
+  for (const row of sorted) {
+    const symbol = row.symbol.trim().toUpperCase();
+    if (!symbol) continue;
+
+    let state = bySymbol.get(symbol);
+    if (!state) {
+      state = { shares: 0, totalCost: 0, feesInPosition: 0, avg: 0 };
+      bySymbol.set(symbol, state);
+    }
+
+    const qty = num(row.quantity);
+    const price = num(row.price_per_share);
+    const fees = Math.max(0, num(row.fees_bdt ?? 0));
+
+    if (row.side === "buy") {
+      const newShares = state.shares + qty;
+      state.feesInPosition += fees;
+      state.totalCost += qty * price + fees;
+      state.shares = newShares;
+      state.avg = newShares > 0 ? state.totalCost / newShares : 0;
+    } else {
+      const preShares = state.shares;
+      const sellQty = Math.min(qty, preShares);
+      const avgCost = state.avg;
+
+      if (preShares > 0 && sellQty > 0) {
+        const costBasisSold = sellQty * avgCost;
+        const proceedsNet = sellQty * price - fees;
+        realized += proceedsNet - costBasisSold;
+      }
+
+      if (preShares > 0 && sellQty > 0) {
+        const soldFraction = sellQty / preShares;
+        state.feesInPosition -= soldFraction * state.feesInPosition;
+      }
+      state.totalCost -= sellQty * avgCost;
+      state.shares -= sellQty;
+      if (state.shares <= 0) {
+        state.shares = 0;
+        state.totalCost = 0;
+        state.feesInPosition = 0;
+        state.avg = 0;
+      } else {
+        state.avg = state.totalCost / state.shares;
+      }
+    }
+  }
+
+  return Math.round(realized * 100) / 100;
+}
+
 export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
   type State = {
     shares: number;

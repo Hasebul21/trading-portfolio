@@ -323,7 +323,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
         </div>
       </div>
       {saveError ? (
-        <Alert type="error" showIcon className="mb-3" message="Could not save" description={saveError} />
+        <Alert type="error" showIcon className="mb-3" title="Could not save" description={saveError} />
       ) : null}
       <Table<Row>
         className="long-term-holdings-table"

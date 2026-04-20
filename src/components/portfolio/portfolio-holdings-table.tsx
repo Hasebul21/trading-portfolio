@@ -98,10 +98,13 @@ function sortNullableNumber(
 
 export function PortfolioHoldingsTable({
   holdings,
+  totalRealizedBdt = 0,
   enableBookEdit = false,
   onAfterBookSave,
 }: {
   holdings: PortfolioMarketRow[];
+  /** Sell-only net: Σ (sell price − avg at sell) × qty − sell fees (from ledger). */
+  totalRealizedBdt?: number;
   enableBookEdit?: boolean;
   onAfterBookSave?: () => void | Promise<void>;
 }) {
@@ -493,6 +496,20 @@ export function PortfolioHoldingsTable({
           ) : null}
         </div>
 
+        <div className="min-w-[10.5rem] max-w-[15rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
+            Net Gain/Loss
+          </div>
+          <div className="mt-0.5 min-h-[1.25rem]">
+            <Typography.Text
+              type={totalRealizedBdt >= 0 ? "success" : "danger"}
+              className="text-[15px] font-normal tabular-nums"
+            >
+              {fmtSignedBdt(totalRealizedBdt)}
+            </Typography.Text>
+          </div>
+        </div>
+
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Total invested
@@ -565,10 +582,10 @@ export function PortfolioHoldingsTable({
             symbol is removed.
           </p>
           {saveError ? (
-            <Alert type="error" showIcon message={saveError} className="text-left" />
+            <Alert type="error" showIcon title={saveError} className="text-left" />
           ) : null}
           {saveOk ? (
-            <Alert type="success" showIcon message="Portfolio book values saved." className="text-left" />
+            <Alert type="success" showIcon title="Portfolio book values saved." className="text-left" />
           ) : null}
           <div className="flex flex-wrap justify-center gap-2">
             <Button type="primary" size="large" loading={saving} disabled={!dirty || saving} onClick={() => void handleSaveBook()}>

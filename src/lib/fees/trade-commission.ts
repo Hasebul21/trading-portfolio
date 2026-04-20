@@ -1,6 +1,7 @@
 /**
  * Auto broker commission (BDT) on gross trade value (qty × price).
- * Default 0.4% matches typical DSE notes, e.g. Comm 8.20 on Amount 2,050.50.
+ * Default 0.4% is the same as **৳0.40 per ৳100** turnover (often said as 40 poisha per 100 taka).
+ * Example: Comm 8.20 on Amount 2,050.50.
  *
  * Override: set NEXT_PUBLIC_TRADE_COMMISSION_RATE in .env.local (decimal, e.g. 0.004 for 0.4%).
  */

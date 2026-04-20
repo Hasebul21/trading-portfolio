@@ -9,7 +9,8 @@ import { PortfolioLiveShell } from "./portfolio-live-shell";
 export const revalidate = 60;
 
 export default async function PortfolioPage() {
-  const { error, holdings, marketError } = await fetchPortfolioWithDseMarket();
+  const { error, holdings, marketError, totalRealizedBdt } =
+    await fetchPortfolioWithDseMarket();
 
   if (error) {
     const missingTable =
@@ -87,6 +88,7 @@ export default async function PortfolioPage() {
           <PortfolioLiveShell
             initialHoldings={holdings}
             initialMarketError={marketError}
+            initialTotalRealizedBdt={totalRealizedBdt}
           />
         </div>
       )}

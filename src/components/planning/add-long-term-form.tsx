@@ -58,7 +58,7 @@ export function AddLongTermForm({
           table.
         </p>
         {error ? (
-          <Alert type="error" showIcon className="text-left" message={error} />
+          <Alert type="error" showIcon className="text-left" title={error} />
         ) : null}
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-0 flex-1 basis-[8rem] sm:max-w-xs">

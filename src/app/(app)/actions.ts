@@ -205,3 +205,42 @@ export async function savePortfolioPositions(
   revalidatePath("/portfolio");
   return { ok: true };
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function deleteTransaction(
+  transactionId: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  const id = String(transactionId ?? "").trim();
+  if (!UUID_RE.test(id)) {
+    return { error: "Invalid transaction id." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id");
+
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data?.length) {
+    return { error: "That row was not found or is not yours." };
+  }
+
+  revalidatePath("/portfolio");
+  revalidatePath("/record");
+  revalidatePath("/trade-history");
+  return { ok: true };
+}
