@@ -1,32 +1,16 @@
 import { computeFloorPivot, type FloorPivot } from "@/lib/pivot-floor";
 import { fetchUserHoldings } from "@/lib/holdings";
 import type { HoldingRow } from "@/lib/portfolio";
-import { fetchDseCompanyExtras } from "./dse-company-52w";
 import { fetchDseLspQuoteMap } from "./dse-lsp-quotes";
 
 export type PortfolioMarketRow = HoldingRow & {
   marketLtp: number | null;
-  week52High: number | null;
-  week52Low: number | null;
   pivot: FloorPivot | null;
   /** (LTP − avg) × shares when LTP known */
   unrealizedPl: number | null;
 };
 
-async function mapInBatches<T, R>(
-  items: readonly T[],
-  batchSize: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const out: R[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const chunk = items.slice(i, i + batchSize);
-    out.push(...(await Promise.all(chunk.map(fn))));
-  }
-  return out;
-}
-
-/** Portfolio rows: DSE LSP (LTP + pivot inputs), company page (52w range). */
+/** Portfolio rows: DSE LSP (LTP + pivot inputs). */
 export async function fetchPortfolioWithDseMarket(): Promise<{
   error: string | null;
   holdings: PortfolioMarketRow[];
@@ -48,13 +32,6 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
   }
 
   const { bySymbol, error: lspError } = lspRes;
-  const symbols = [...new Set(holdingsRes.holdings.map((h) => h.symbol))];
-
-  const extrasEntries = await mapInBatches(symbols, 5, async (sym) => {
-    const ex = await fetchDseCompanyExtras(sym);
-    return [sym, ex] as const;
-  });
-  const extrasBySymbol = new Map(extrasEntries);
 
   let quoted = 0;
 
@@ -68,7 +45,6 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
         ? (marketLtp - h.avgPrice) * h.shares
         : null;
 
-    const extras = extrasBySymbol.get(h.symbol);
     const pivot = q
       ? computeFloorPivot(q.dayHigh, q.dayLow, q.closep)
       : null;
@@ -76,8 +52,6 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
     return {
       ...h,
       marketLtp,
-      week52High: extras?.week52High ?? null,
-      week52Low: extras?.week52Low ?? null,
       pivot,
       unrealizedPl,
     };

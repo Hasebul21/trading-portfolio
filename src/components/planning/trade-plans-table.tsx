@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteTradePlan } from "@/app/(app)/planning-actions";
+import { tablePagination } from "@/lib/table-pagination";
 import { formatBdt } from "@/lib/format-bdt";
 import { Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -62,10 +63,11 @@ export function TradePlansTable({ rows }: { rows: TradePlanRow[] }) {
 
   return (
     <Table<Row>
-      className="mt-4"
+      className=""
       columns={columns}
       dataSource={data}
-      pagination={false}
+      locale={{ emptyText: "No targets yet." }}
+      pagination={tablePagination("targets", { hideOnSinglePage: false })}
       size="middle"
       bordered
     />

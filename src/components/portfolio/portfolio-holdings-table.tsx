@@ -1,6 +1,7 @@
 "use client";
 
 import { formatBdt } from "@/lib/format-bdt";
+import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Card, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -38,9 +39,9 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
       width: 88,
       align: "left",
       render: (v: string) => (
-        <Typography.Text strong className="font-mono text-[14px]">
+        <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-bold text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
           {v}
-        </Typography.Text>
+        </span>
       ),
     },
     {
@@ -154,44 +155,20 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
       align: "right",
       render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
     },
-    {
-      title: "52-week high",
-      dataIndex: "week52High",
-      width: 88,
-      align: "right",
-      render: (v: number | null) =>
-        v === null ? (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ) : (
-          <span className="tabular-nums text-[14px]">{formatBdt(v)}</span>
-        ),
-    },
-    {
-      title: "52-week low",
-      dataIndex: "week52Low",
-      width: 88,
-      align: "right",
-      render: (v: number | null) =>
-        v === null ? (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ) : (
-          <span className="tabular-nums text-[14px]">{formatBdt(v)}</span>
-        ),
-    },
   ];
 
   return (
     <Card
-      bordered
-      className="w-full border-zinc-200 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/80"
+      variant="outlined"
+      className="w-full overflow-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
       styles={{ body: { padding: 0 } }}
     >
       <Table<Row>
         className="portfolio-holdings-table"
         columns={columns}
         dataSource={data}
-        pagination={false}
-        size="small"
+        pagination={tablePagination("positions")}
+        size="middle"
         bordered={false}
         tableLayout="auto"
       />

@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --accent: #0d9488;
+  --accent-muted: rgba(13, 148, 136, 0.12);
+  --glow-violet: rgba(99, 102, 241, 0.07);
 }
 
 @theme inline {
@@ -14,13 +17,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #030712;
+    --foreground: #f1f5f9;
+    --accent-muted: rgba(45, 212, 191, 0.08);
+    --glow-violet: rgba(129, 140, 248, 0.06);
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 100% 80% at 50% -30%, var(--accent-muted), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, var(--glow-violet), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 20%, var(--glow-violet), transparent 45%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 15px;
@@ -28,17 +38,57 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* Portfolio table: compact headers, aligned with numeric columns */
+/* Portfolio holdings table */
+.portfolio-holdings-table .ant-table {
+  background: transparent;
+}
+
 .portfolio-holdings-table .ant-table-thead > tr > th {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #71717a;
+  color: #0f766e;
+  background: linear-gradient(
+    to bottom,
+    rgba(240, 253, 250, 0.98),
+    rgba(236, 253, 245, 0.88)
+  ) !important;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.15) !important;
+}
+
+.portfolio-holdings-table .ant-table-tbody > tr > td {
+  border-color: rgba(15, 118, 110, 0.06) !important;
+}
+
+.portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: rgba(240, 253, 250, 0.35);
+}
+
+.portfolio-holdings-table .ant-table-tbody > tr:hover > td {
+  background: rgba(167, 243, 208, 0.45) !important;
 }
 
 @media (prefers-color-scheme: dark) {
   .portfolio-holdings-table .ant-table-thead > tr > th {
-    color: #a1a1aa;
+    color: #5eead4;
+    background: linear-gradient(
+      to bottom,
+      rgba(6, 78, 59, 0.55),
+      rgba(4, 47, 46, 0.72)
+    ) !important;
+    border-bottom-color: rgba(45, 212, 191, 0.2) !important;
+  }
+
+  .portfolio-holdings-table .ant-table-tbody > tr > td {
+    border-color: rgba(45, 212, 191, 0.08) !important;
+  }
+
+  .portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+    background: rgba(6, 78, 59, 0.22);
+  }
+
+  .portfolio-holdings-table .ant-table-tbody > tr:hover > td {
+    background: rgba(15, 118, 110, 0.35) !important;
   }
 }

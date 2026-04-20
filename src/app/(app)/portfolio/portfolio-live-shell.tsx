@@ -2,8 +2,8 @@
 
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import type { FloorPivot } from "@/lib/pivot-floor";
-import { PortfolioColumnNotesEditor } from "@/components/portfolio/portfolio-column-notes-editor";
-import { Alert, Typography } from "antd";
+import { PortfolioTradingPlaybook } from "@/components/portfolio/portfolio-trading-playbook";
+import { Alert } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
 
@@ -83,31 +83,38 @@ export function PortfolioLiveShell({
   const marketWarning = liveLspError ?? (!hasPolled ? initialMarketError : null);
 
   return (
-    <div className="space-y-6">
-      <PortfolioColumnNotesEditor />
-
-      {marketWarning ? (
-        <Alert
-          type="warning"
-          showIcon
-          title="Could not load or refresh DSE price table"
-          description={marketWarning}
-        />
-      ) : null}
+    <div className="flex flex-col gap-8 sm:gap-10">
+      <PortfolioHoldingsTable holdings={rows} />
 
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Typography.Text type="secondary" className="text-sm">
+        <span className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur-sm dark:border-teal-800/50 dark:bg-zinc-900/80 dark:text-teal-100">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
+          </span>
           {updatedAt
-            ? `Market prices last updated: ${updatedAt.toLocaleTimeString(undefined, {
+            ? `Live prices · ${updatedAt.toLocaleTimeString(undefined, {
                 hour: "2-digit",
                 minute: "2-digit",
                 second: "2-digit",
               })}`
-            : "Fetching fresh prices shortly…"}
-        </Typography.Text>
+            : "Connecting to live prices…"}
+        </span>
       </div>
 
-      <PortfolioHoldingsTable holdings={rows} />
+      {marketWarning ? (
+        <div className="overflow-hidden rounded-2xl ring-1 ring-amber-500/20">
+          <Alert
+            type="warning"
+            showIcon
+            title="Could not load or refresh DSE price table"
+            description={marketWarning}
+            className="border-amber-200/60 bg-amber-50/90 dark:border-amber-900/40 dark:bg-amber-950/40"
+          />
+        </div>
+      ) : null}
+
+      <PortfolioTradingPlaybook />
     </div>
   );
 }

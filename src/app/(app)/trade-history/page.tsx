@@ -23,12 +23,12 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-5xl text-left">
-    <TradeHistorySection
-      key={dayParam ?? "last-7-days"}
-      rows={historyRows}
-      activeDay={dayParam}
-      loadError={txRes.error}
-    />
+      <TradeHistorySection
+        key={dayParam ?? "last-7-days"}
+        rows={historyRows}
+        activeDay={dayParam}
+        loadError={txRes.error}
+      />
     </div>
   );
 }

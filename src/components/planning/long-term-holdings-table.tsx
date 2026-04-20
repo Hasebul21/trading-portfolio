@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteLongTermHolding } from "@/app/(app)/planning-actions";
+import { tablePagination } from "@/lib/table-pagination";
 import { Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
@@ -54,10 +55,11 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
 
   return (
     <Table<Row>
-      className="mt-4 max-w-2xl"
+      className="max-w-2xl"
       columns={columns}
       dataSource={data}
-      pagination={false}
+      locale={{ emptyText: "No symbols yet." }}
+      pagination={tablePagination("symbols", { hideOnSinglePage: false })}
       size="middle"
       bordered
     />

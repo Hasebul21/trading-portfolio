@@ -53,7 +53,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
       <form
         ref={formRef}
         action={formAction}
-        className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+        className="flex flex-col gap-5 rounded-2xl border border-teal-200/50 bg-white/90 p-6 shadow-lg shadow-teal-950/5 ring-1 ring-black/[0.03] backdrop-blur-sm dark:border-teal-900/40 dark:bg-zinc-900/75 dark:shadow-black/30 dark:ring-white/[0.05]"
       >
         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Symbol (DSE trading code)
@@ -115,7 +115,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal-600/30 transition hover:brightness-110 disabled:opacity-60 dark:from-teal-500 dark:to-emerald-500"
         >
           {pending ? "Saving…" : "Save transaction"}
         </button>

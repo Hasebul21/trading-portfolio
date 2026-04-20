@@ -2,6 +2,7 @@
 
 import { AppPageHeader } from "@/components/app-page-header";
 import { formatBdt } from "@/lib/format-bdt";
+import { tablePagination } from "@/lib/table-pagination";
 import type { TransactionRow } from "@/lib/portfolio";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -19,8 +20,8 @@ export function TradeHistorySection({ rows, activeDay, loadError }: Props) {
   const [dayInput, setDayInput] = useState(activeDay ?? "");
 
   const subtitle = activeDay
-    ? `Showing ${activeDay} (Asia/Dhaka), newest first.`
-    : "Last 7 days, newest first.";
+    ? `${activeDay} · Dhaka · newest first`
+    : "Last 7 days · newest first";
 
   function applyDaySearch(e: React.FormEvent) {
     e.preventDefault();
@@ -94,36 +95,37 @@ export function TradeHistorySection({ rows, activeDay, loadError }: Props) {
   ];
 
   return (
-    <div>
+    <div className="flex flex-col gap-8 sm:gap-10">
       <AppPageHeader title="Trade history" />
-      <Typography.Paragraph type="secondary" className="mb-6 text-sm leading-relaxed">
-        {subtitle} Filter by calendar day (Dhaka).
-      </Typography.Paragraph>
+      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
 
-      <Card size="small" className="mb-6 max-w-2xl border-zinc-200 dark:border-zinc-800">
+      <Card
+        size="small"
+        className="max-w-md rounded-xl border-teal-200/50 bg-white/85 py-1 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/70"
+        styles={{ body: { padding: "10px 12px" } }}
+      >
         <form onSubmit={applyDaySearch}>
-          <Space wrap align="end" size="middle">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              <span className="mb-1 block">Date</span>
-              <input
-                type="date"
-                value={dayInput}
-                onChange={(e) => setDayInput(e.target.value)}
-                className="rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-              />
-            </label>
-            <Button type="primary" htmlType="submit">
-              Load day
+          <Space wrap align="center" size="small">
+            <input
+              type="date"
+              value={dayInput}
+              onChange={(e) => setDayInput(e.target.value)}
+              className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <Button type="primary" htmlType="submit" size="small">
+              Go
             </Button>
             {activeDay ? (
-              <Button href="/trade-history">Last 7 days</Button>
+              <Button href="/trade-history" size="small">
+                7d
+              </Button>
             ) : null}
           </Space>
         </form>
       </Card>
 
       {loadError ? (
-        <Typography.Paragraph type="danger" className="mb-4 rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
+        <Typography.Paragraph type="danger" className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
           {loadError}
         </Typography.Paragraph>
       ) : null}
@@ -134,7 +136,7 @@ export function TradeHistorySection({ rows, activeDay, loadError }: Props) {
         <Table<Row>
           columns={columns}
           dataSource={data}
-          pagination={false}
+          pagination={tablePagination("rows")}
           size="middle"
           bordered
         />

@@ -1,7 +1,8 @@
 import { AppPageHeader } from "@/components/app-page-header";
+import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
 import Link from "next/link";
-import { Card, Empty, Typography } from "antd";
+import { Card, Empty } from "antd";
 import { PortfolioLiveShell } from "./portfolio-live-shell";
 
 /** Refresh portfolio + DSE market fetch cache (seconds). */
@@ -17,17 +18,17 @@ export default async function PortfolioPage() {
       );
 
     return (
-      <div className="mx-auto max-w-2xl text-left">
+      <AppPageStack className="mx-auto max-w-2xl text-left">
         <AppPageHeader title="Portfolio" />
-        <Typography.Paragraph type="danger" className="rounded-lg bg-red-50 px-3 py-2 dark:bg-red-950/40">
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error}
-        </Typography.Paragraph>
+        </p>
         {missingTable ? (
-          <div className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <div className="max-w-xl text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
             <p className="font-medium text-zinc-900 dark:text-zinc-100">
               Create the tables in Supabase (one time)
             </p>
-            <ol className="mt-2 list-decimal space-y-2 pl-5">
+            <ol className="mt-3 list-decimal space-y-3 pl-5">
               <li>
                 Open{" "}
                 <a
@@ -51,27 +52,30 @@ export default async function PortfolioPage() {
             </ol>
           </div>
         ) : (
-          <Typography.Paragraph type="secondary" className="mt-2 text-sm">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Check{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">.env.local</code> points at
             this project and run{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code> in
             the SQL Editor if tables are missing.
-          </Typography.Paragraph>
+          </p>
         )}
-      </div>
+      </AppPageStack>
     );
   }
 
   return (
-    <div>
+    <AppPageStack>
       <AppPageHeader title="Portfolio" />
 
       {holdings.length === 0 ? (
-        <Card className="border-dashed border-zinc-300 dark:border-zinc-700">
+        <Card
+          variant="outlined"
+          className="mx-auto max-w-lg border-2 border-dashed border-teal-300/70 bg-gradient-to-b from-white/90 to-teal-50/40 shadow-inner dark:border-teal-700/50 dark:from-zinc-900/90 dark:to-teal-950/20"
+        >
           <Empty
             description={
-              <Typography.Text type="secondary" className="text-base">
+              <span className="text-base text-zinc-600 dark:text-zinc-400">
                 No open positions yet.{" "}
                 <Link
                   href="/record"
@@ -80,18 +84,18 @@ export default async function PortfolioPage() {
                   Record a buy
                 </Link>{" "}
                 to see it here.
-              </Typography.Text>
+              </span>
             }
           />
         </Card>
       ) : (
-        <div className="mt-2 text-left">
+        <div className="text-left">
           <PortfolioLiveShell
             initialHoldings={holdings}
             initialMarketError={marketError}
           />
         </div>
       )}
-    </div>
+    </AppPageStack>
   );
 }
