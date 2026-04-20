@@ -10,11 +10,11 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/portfolio", label: "Holdings" },
-  { href: "/record", label: "Log" },
-  { href: "/trade-history", label: "Ledger" },
+  { href: "/record", label: "Transaction" },
+  { href: "/trade-history", label: "Transaction History" },
   { href: "/invested", label: "Capital" },
-  { href: "/long-term", label: "Long Term" },
-  { href: "/trade-plans", label: "Instant Trade Action" },
+  { href: "/long-term", label: "Long-horizon plan" },
+  { href: "/trade-plans", label: "Quick-trade board" },
   { href: "/knowledge", label: "Knowledge" },
 ] as const;
 

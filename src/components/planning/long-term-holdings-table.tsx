@@ -299,28 +299,21 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
 
   return (
     <div className="w-full min-w-0 max-w-full">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <p className="text-[15px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-          Buy Amount and Sell Amount come from today’s DSE latest-price table (same math as Holdings). Use Edit table to
-          change Avg cost / Total only; saving also refreshes stored amounts from the latest DSE snapshot when your symbol
-          appears in that table. Remove is disabled while editing.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          {!editing ? (
-            <Button type="default" size="middle" onClick={beginEdit}>
-              Edit table
+      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+        {!editing ? (
+          <Button type="default" size="middle" onClick={beginEdit}>
+            Edit table
+          </Button>
+        ) : (
+          <>
+            <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
+              Save changes
             </Button>
-          ) : (
-            <>
-              <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
-                Save changes
-              </Button>
-              <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
-                Cancel
-              </Button>
-            </>
-          )}
-        </div>
+            <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
+              Cancel
+            </Button>
+          </>
+        )}
       </div>
       {saveError ? (
         <Alert type="error" showIcon className="mb-3" title="Could not save" description={saveError} />

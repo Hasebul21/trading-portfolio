@@ -1,11 +1,9 @@
 "use client";
 
 import { addLongTermHolding } from "@/app/(app)/planning-actions";
-import { siteTextLinkTealClass } from "@/lib/site-typography";
 import { SymbolField } from "@/components/symbol-field";
 import type { SymbolFieldInstrument } from "@/components/symbol-field";
 import { Alert, Button } from "antd";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
@@ -49,14 +47,6 @@ export function AddLongTermForm({
   return (
     <div className={toolbarShell}>
       <div className="flex flex-col gap-2">
-        <p className="text-left text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
-          Add a symbol only. Buy Amount (S1) and Sell Amount (average of first + strong sell zones, (R1+R2)/2) are filled
-          from today’s DSE latest-price page—the same inputs as your{" "}
-          <Link href="/portfolio" className={siteTextLinkTealClass}>
-            Holdings
-          </Link>{" "}
-          table.
-        </p>
         {error ? (
           <Alert type="error" showIcon className="text-left" title={error} />
         ) : null}

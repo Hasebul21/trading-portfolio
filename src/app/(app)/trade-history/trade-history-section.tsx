@@ -103,7 +103,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
       render: (_: unknown, record) => (
         <Popconfirm
           title="Remove this row?"
-          description="Deletes this ledger entry. Holdings and Net Gain/Loss will recalc."
+          description="Deletes this row. Holdings and Net Gain/Loss will recalc."
           okText="Remove"
           okButtonProps={{ danger: true }}
           cancelText="Cancel"
