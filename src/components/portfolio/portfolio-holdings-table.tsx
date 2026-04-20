@@ -3,15 +3,39 @@
 import { formatBdt } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import { Card, Table, Typography } from "antd";
+import { Card, Input, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useMemo, useState } from "react";
 
 type Row = PortfolioMarketRow & { key: string };
+
+const { Search } = Input;
 
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
   if (n > 0) return `+${s}`;
   if (n < 0) return `-${s}`;
+  return s;
+}
+
+function unrealizedTotals(holdings: PortfolioMarketRow[]) {
+  let sum = 0;
+  let withQuote = 0;
+  for (const h of holdings) {
+    const pl = h.unrealizedPl;
+    if (pl !== null && Number.isFinite(pl)) {
+      sum += pl;
+      withQuote += 1;
+    }
+  }
+  return { sum, withQuote, positions: holdings.length };
+}
+
+function sumTotalInvested(holdings: PortfolioMarketRow[]) {
+  let s = 0;
+  for (const h of holdings) {
+    if (Number.isFinite(h.totalCost)) s += h.totalCost;
+  }
   return s;
 }
 
@@ -30,7 +54,17 @@ function fmtPivotCell(n: number | null | undefined) {
 }
 
 export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarketRow[] }) {
-  const data: Row[] = holdings.map((h) => ({ ...h, key: h.symbol }));
+  const [symbolQuery, setSymbolQuery] = useState("");
+
+  const { sum: totalUnrealized, withQuote, positions } = unrealizedTotals(holdings);
+  const totalInvested = sumTotalInvested(holdings);
+
+  const data: Row[] = useMemo(() => {
+    const q = symbolQuery.trim().toUpperCase();
+    return holdings
+      .filter((h) => !q || h.symbol.toUpperCase().includes(q))
+      .map((h) => ({ ...h, key: h.symbol }));
+  }, [holdings, symbolQuery]);
 
   const columns: ColumnsType<Row> = [
     {
@@ -49,24 +83,9 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
       key: "avgPrice",
       width: 128,
       align: "right",
-      render: (_: unknown, row) => {
-        const feePerSh =
-          row.shares > 0 ? row.feesInPositionBdt / row.shares : 0;
-        const feeLine =
-          row.feesInPositionBdt > 0 && feePerSh > 0
-            ? `incl. ${formatBdt(feePerSh)} commission / sh`
-            : "incl. commission if logged on buys";
-        return (
-          <div className="flex flex-col items-end gap-0.5">
-            <span className="tabular-nums text-[14px] font-medium">
-              {formatBdt(row.avgPrice)}
-            </span>
-            <Typography.Text type="secondary" className="text-[11px] leading-tight">
-              {feeLine}
-            </Typography.Text>
-          </div>
-        );
-      },
+      render: (_: unknown, row) => (
+        <span className="tabular-nums text-[14px] font-medium">{formatBdt(row.avgPrice)}</span>
+      ),
     },
     {
       title: "Shares",
@@ -163,6 +182,58 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
       className="w-full overflow-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
       styles={{ body: { padding: 0 } }}
     >
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-3 sm:gap-3 sm:px-4 dark:border-teal-900/40">
+        <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Total unrealized P/L
+          </div>
+          <div className="mt-0.5 min-h-[1.25rem]">
+            {withQuote === 0 ? (
+              <Typography.Text type="secondary" className="text-[13px]">
+                —
+              </Typography.Text>
+            ) : (
+              <Typography.Text
+                type={totalUnrealized >= 0 ? "success" : "danger"}
+                className="text-[15px] font-semibold tabular-nums sm:text-base"
+              >
+                {fmtSignedBdt(totalUnrealized)}
+              </Typography.Text>
+            )}
+          </div>
+          {withQuote > 0 && withQuote < positions ? (
+            <Typography.Text type="secondary" className="mt-0.5 block text-[10px] leading-tight">
+              {withQuote}/{positions} with last price
+            </Typography.Text>
+          ) : null}
+          {withQuote === 0 && positions > 0 ? (
+            <Typography.Text type="secondary" className="mt-0.5 block text-[10px] leading-tight">
+              Needs DSE last price
+            </Typography.Text>
+          ) : null}
+        </div>
+
+        <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+            Total invested
+          </div>
+          <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-base">
+            {formatBdt(totalInvested)}
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-teal-100/80 px-3 py-2 sm:px-4 dark:border-teal-900/40">
+        <Search
+          allowClear
+          placeholder="Search symbol…"
+          value={symbolQuery}
+          onChange={(e) => setSymbolQuery(e.target.value)}
+          className="max-w-sm"
+          size="middle"
+        />
+      </div>
+
       <Table<Row>
         className="portfolio-holdings-table"
         columns={columns}
@@ -171,6 +242,9 @@ export function PortfolioHoldingsTable({ holdings }: { holdings: PortfolioMarket
         size="middle"
         bordered={false}
         tableLayout="auto"
+        locale={{
+          emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
+        }}
       />
     </Card>
   );

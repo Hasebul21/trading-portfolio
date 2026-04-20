@@ -23,6 +23,7 @@ export async function recordTransaction(
   const side = String(formData.get("side") ?? "").toLowerCase();
   const quantityRaw = String(formData.get("quantity") ?? "").trim();
   const priceRaw = String(formData.get("price_per_share") ?? "").trim();
+  const feesRaw = String(formData.get("fees_bdt") ?? "").trim();
   if (!symbol) {
     return { error: "Symbol is required." };
   }
@@ -72,7 +73,16 @@ export async function recordTransaction(
     }
   }
 
-  const feesBdt = computeTradeCommissionBdt(quantity, pricePerShare);
+  let feesBdt: number;
+  if (feesRaw === "") {
+    feesBdt = computeTradeCommissionBdt(quantity, pricePerShare);
+  } else {
+    feesBdt = Number(feesRaw);
+    if (!Number.isFinite(feesBdt) || feesBdt < 0) {
+      return { error: "Commission must be a non-negative number." };
+    }
+    feesBdt = Math.round(feesBdt * 100) / 100;
+  }
 
   const { error: insertError } = await supabase.from("transactions").insert({
     user_id: user.id,

@@ -3,7 +3,7 @@
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { recordTransaction, type RecordState } from "../actions";
-import { FeeSummary } from "./fee-summary";
+import { CommissionField } from "./commission-field";
 
 const initial: RecordState = {};
 
@@ -20,6 +20,8 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
   const [quantity, setQuantity] = useState("");
   const [pricePerShare, setPricePerShare] = useState("");
   const [symbolInput, setSymbolInput] = useState("");
+  /** Remount commission block after save so auto-commission resets cleanly. */
+  const [commissionKey, setCommissionKey] = useState(0);
 
   useEffect(() => {
     if (!state.ok) return;
@@ -30,6 +32,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
       setQuantity("");
       setPricePerShare("");
       setSymbolInput("");
+      setCommissionKey((k) => k + 1);
     });
 
     return () => cancelAnimationFrame(id);
@@ -110,7 +113,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
           />
         </label>
 
-        <FeeSummary quantity={quantity} pricePerShare={pricePerShare} />
+        <CommissionField key={commissionKey} quantity={quantity} pricePerShare={pricePerShare} />
 
         <button
           type="submit"

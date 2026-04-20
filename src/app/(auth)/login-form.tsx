@@ -14,9 +14,7 @@ export function LoginForm() {
       <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
         Sign in
       </h1>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Personal trading portfolio
-      </p>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Hasebul Trade</p>
       {state.error ? (
         <p
           className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200"

@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
     "/record",
     "/invested",
     "/long-term",
+    "/knowledge",
     "/trade-plans",
   ];
 

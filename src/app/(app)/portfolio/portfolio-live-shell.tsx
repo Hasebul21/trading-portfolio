@@ -2,7 +2,6 @@
 
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import type { FloorPivot } from "@/lib/pivot-floor";
-import { PortfolioTradingPlaybook } from "@/components/portfolio/portfolio-trading-playbook";
 import { Alert } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
@@ -113,8 +112,6 @@ export function PortfolioLiveShell({
           />
         </div>
       ) : null}
-
-      <PortfolioTradingPlaybook />
     </div>
   );
 }
