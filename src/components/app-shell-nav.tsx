@@ -14,7 +14,6 @@ const LINKS = [
   { href: "/trade-history", label: "Ledger" },
   { href: "/invested", label: "Capital" },
   { href: "/long-term", label: "Long Term" },
-  { href: "/charts", label: "Charts" },
   { href: "/trade-plans", label: "Instant Trade Action" },
   { href: "/knowledge", label: "Knowledge" },
 ] as const;

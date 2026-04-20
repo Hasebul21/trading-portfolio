@@ -55,11 +55,7 @@ export function AddLongTermForm({
           <Link href="/portfolio" className={siteTextLinkTealClass}>
             Holdings
           </Link>{" "}
-          table. Open{" "}
-          <Link href="/charts" className={siteTextLinkTealClass}>
-            Charts
-          </Link>{" "}
-          for a free TradingView chart (DSEBD ticker).
+          table.
         </p>
         {error ? (
           <Alert type="error" showIcon className="text-left" message={error} />
