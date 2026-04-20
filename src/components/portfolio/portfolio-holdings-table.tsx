@@ -19,7 +19,7 @@ type BookDraft = { shares: string; avg: string; total: string };
 const { Search } = Input;
 
 const biasLineColumnTitle = (
-  <span className="block whitespace-normal text-right text-[11px] font-semibold leading-snug">
+  <span className="block whitespace-normal text-right text-[11px] font-normal leading-snug">
     Bias Line
     <span className="block pt-0.5 text-[10px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
       (Buy Above / Sell Below)
@@ -339,7 +339,7 @@ export function PortfolioHoldingsTable({
             }
           : {}),
         render: (v: string) => (
-          <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-bold text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
+          <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-normal text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
             {v}
           </span>
         ),
@@ -464,7 +464,7 @@ export function PortfolioHoldingsTable({
     >
       <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-2 sm:gap-3 sm:px-4 dark:border-teal-900/40">
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <div className="text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Total unrealized P/L
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
@@ -475,7 +475,7 @@ export function PortfolioHoldingsTable({
             ) : (
               <Typography.Text
                 type={totalUnrealized >= 0 ? "success" : "danger"}
-                className="text-[15px] font-semibold tabular-nums sm:text-base"
+                className="text-[15px] font-normal tabular-nums sm:text-base"
               >
                 {fmtSignedBdt(totalUnrealized)}
               </Typography.Text>
@@ -494,10 +494,10 @@ export function PortfolioHoldingsTable({
         </div>
 
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <div className="text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Total invested
           </div>
-          <div className="mt-0.5 text-[15px] font-semibold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-base">
+          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-base">
             {formatBdt(totalInvested)}
           </div>
         </div>
@@ -559,10 +559,10 @@ export function PortfolioHoldingsTable({
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
           <p className="text-left text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Edit shares, average cost, and total invested for any row. Changing <strong>average</strong> updates{" "}
-            <strong>total</strong> (and the other way around); changing <strong>shares</strong> keeps average and
-            updates total. You can save even if total and shares × average differ slightly (e.g. fees or rounding).
-            If all three match your transaction ledger, the manual override for that symbol is removed.
+            Edit shares, average cost, and total invested for any row. Changing average updates total (and the other way
+            around); changing shares keeps average and updates total. You can save even if total and shares × average differ
+            slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that
+            symbol is removed.
           </p>
           {saveError ? (
             <Alert type="error" showIcon message={saveError} className="text-left" />

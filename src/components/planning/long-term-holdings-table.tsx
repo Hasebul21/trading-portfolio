@@ -105,10 +105,7 @@ function rowToPayload(row: LongTermHoldingRow, cell: DraftCell | undefined): Lon
 const costInputClass =
   "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-sm tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
-const pointsLabelClass =
-  "text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-300";
-
-const fieldLabelClass = "text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+const fieldLabelClass = "text-[11px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
 const rowFieldsLayout =
   "flex w-full min-w-0 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4";
@@ -123,27 +120,12 @@ function bdtReadCell(n: number | null) {
   return <span className="tabular-nums text-sm">{formatBdt(n)}</span>;
 }
 
-function bdtReadCellPoints(n: number | null) {
-  if (n === null || !Number.isFinite(n)) {
-    return (
-      <Typography.Text type="secondary" className="text-base">
-        —
-      </Typography.Text>
-    );
-  }
-  return (
-    <span className="tabular-nums text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-lg">
-      {formatBdt(n)}
-    </span>
-  );
-}
-
 function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
   return (
     <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>First Buy Zone (S1)</span>
-        {bdtReadCellPoints(displayFirstBuyZone(row))}
+        <span className={fieldLabelClass}>Buy Amount</span>
+        {bdtReadCell(displayFirstBuyZone(row))}
         {!row.liveZones ? (
           <Typography.Text type="secondary" className="text-[10px] leading-tight">
             Saved value (no live DSE row)
@@ -151,8 +133,8 @@ function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
         ) : null}
       </div>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Avg 1st + strong sell (R1–R2)</span>
-        {bdtReadCellPoints(displaySellBlend(row))}
+        <span className={fieldLabelClass}>Sell Amount</span>
+        {bdtReadCell(displaySellBlend(row))}
         {!row.liveZones ? (
           <Typography.Text type="secondary" className="text-[10px] leading-tight">
             Saved value (no live DSE row)
@@ -183,12 +165,12 @@ function LongTermFieldsEdit({
   return (
     <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>First Buy Zone (S1)</span>
-        {bdtReadCellPoints(displayFirstBuyZone(row))}
+        <span className={fieldLabelClass}>Buy Amount</span>
+        {bdtReadCell(displayFirstBuyZone(row))}
       </div>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Avg 1st + strong sell (R1–R2)</span>
-        {bdtReadCellPoints(displaySellBlend(row))}
+        <span className={fieldLabelClass}>Sell Amount</span>
+        {bdtReadCell(displaySellBlend(row))}
       </div>
       <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
@@ -265,11 +247,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       dataIndex: "symbol",
       width: 96,
       align: "left",
-      render: (v: string) => (
-        <Typography.Text strong className="font-mono">
-          {v}
-        </Typography.Text>
-      ),
+      render: (v: string) => <span className="font-mono text-zinc-900 dark:text-zinc-50">{v}</span>,
     },
     {
       title: "Added",
@@ -281,7 +259,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       ),
     },
     {
-      title: "DSE zones (today) & book overrides",
+      title: "Buy / sell amounts & book overrides",
       key: "edit_row",
       align: "left",
       render: (_: unknown, r) => {
@@ -322,29 +300,21 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     <div className="w-full min-w-0 max-w-full">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          <strong>First Buy Zone</strong> and <strong>avg sell zones</strong> come from today’s DSE latest-price table (same
-          math as Holdings). Use <strong>Edit table</strong> to change <strong>Avg cost</strong> / <strong>Total</strong> only;
-          saving also refreshes stored zone values from the latest DSE snapshot when your symbol appears in that table.{" "}
-          <strong>Remove</strong> is disabled while editing.
+          Buy Amount and Sell Amount come from today’s DSE latest-price table (same math as Holdings). Use Edit table to
+          change Avg cost / Total only; saving also refreshes stored amounts from the latest DSE snapshot when your symbol
+          appears in that table. Remove is disabled while editing.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {!editing ? (
-            <Button type="default" size="middle" className="font-semibold" onClick={beginEdit}>
+            <Button type="default" size="middle" onClick={beginEdit}>
               Edit table
             </Button>
           ) : (
             <>
-              <Button
-                type="primary"
-                size="middle"
-                className="font-semibold"
-                loading={saving}
-                disabled={saving}
-                onClick={() => void handleSave()}
-              >
+              <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
                 Save changes
               </Button>
-              <Button type="default" size="middle" className="font-semibold" disabled={saving} onClick={cancelEdit}>
+              <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
                 Cancel
               </Button>
             </>

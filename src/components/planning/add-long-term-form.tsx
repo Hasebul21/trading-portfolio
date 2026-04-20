@@ -49,13 +49,13 @@ export function AddLongTermForm({
     <div className={toolbarShell}>
       <div className="flex flex-col gap-2">
         <p className="text-left text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">
-          Add a symbol only. <strong>First Buy Zone</strong> (S1) and <strong>sell blend</strong> (average of first + strong
-          sell zones, i.e. (R1+R2)/2) are filled from today’s DSE latest-price page—the same inputs as your{" "}
-          <Link href="/portfolio" className="font-medium text-teal-800 underline dark:text-teal-300">
+          Add a symbol only. Buy Amount (S1) and Sell Amount (average of first + strong sell zones, (R1+R2)/2) are filled
+          from today’s DSE latest-price page—the same inputs as your{" "}
+          <Link href="/portfolio" className="font-normal text-teal-800 underline dark:text-teal-300">
             Holdings
           </Link>{" "}
-          bias line table. Open{" "}
-          <Link href="/charts" className="font-medium text-teal-800 underline dark:text-teal-300">
+          table. Open{" "}
+          <Link href="/charts" className="font-normal text-teal-800 underline dark:text-teal-300">
             Charts
           </Link>{" "}
           for a free TradingView chart (DSEBD ticker).

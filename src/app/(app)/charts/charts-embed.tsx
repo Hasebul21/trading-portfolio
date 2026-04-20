@@ -71,7 +71,7 @@ export function ChartsEmbed() {
         </Button>
       </div>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Showing <span className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">{tvSymbol}</span>
+        Showing <span className="font-mono font-normal text-zinc-800 dark:text-zinc-200">{tvSymbol}</span>
       </p>
       <div className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
         <iframe
