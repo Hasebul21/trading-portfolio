@@ -52,7 +52,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
         action={formAction}
         className="flex flex-col gap-5 rounded-2xl border border-teal-200/50 bg-white/90 p-6 shadow-lg shadow-teal-950/5 ring-1 ring-black/[0.03] backdrop-blur-sm dark:border-teal-900/40 dark:bg-zinc-900/75 dark:shadow-black/30 dark:ring-white/[0.05]"
       >
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
           Symbol (DSE trading code)
           <SymbolField
             instruments={instruments}
@@ -63,7 +63,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             onValueChange={setSymbolInput}
           />
         </label>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
           Side
           <select
             name="side"
@@ -72,13 +72,13 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             onChange={(e) =>
               setSide(e.target.value === "sell" ? "sell" : "buy")
             }
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           >
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
           </select>
         </label>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
           Quantity (shares)
           <input
             name="quantity"
@@ -89,10 +89,10 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             required
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </label>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
           Price per share
           <input
             name="price_per_share"
@@ -103,7 +103,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             required
             value={pricePerShare}
             onChange={(e) => setPricePerShare(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </label>
 
@@ -112,7 +112,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-teal-600/30 transition hover:brightness-110 disabled:opacity-60 dark:from-teal-500 dark:to-emerald-500"
+          className="rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-3 text-[15px] font-normal text-white shadow-md shadow-teal-600/30 transition hover:brightness-110 disabled:opacity-60 dark:from-teal-500 dark:to-emerald-500"
         >
           {pending ? "Saving…" : "Save transaction"}
         </button>

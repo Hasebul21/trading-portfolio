@@ -49,15 +49,15 @@ export default async function LongTermPage() {
           {error.message}
         </p>
         {missingLtColumns ? (
-          <div className="rounded-lg border border-amber-200/80 bg-amber-50/95 p-3 text-sm text-amber-950 shadow-sm dark:border-amber-800/50 dark:bg-amber-950/35 dark:text-amber-100">
-            <p className="font-medium">Add the missing columns (safe to re-run)</p>
-            <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-200/90">
+          <div className="rounded-lg border border-amber-200/80 bg-amber-50/95 p-3 text-[15px] font-normal leading-snug text-amber-950 shadow-sm dark:border-amber-800/50 dark:bg-amber-950/35 dark:text-amber-100">
+            <p>Add the missing columns (safe to re-run)</p>
+            <p className="mt-1 text-[15px] font-normal text-amber-900/90 dark:text-amber-200/90">
               Supabase Dashboard → SQL Editor → New query → paste → Run. Then reload this page.
             </p>
-            <pre className="mt-2 overflow-x-auto rounded-md bg-zinc-900 p-3 font-mono text-[11px] leading-relaxed text-zinc-100">
+            <pre className="mt-2 overflow-x-auto rounded-md bg-zinc-900 p-3 font-mono text-[15px] font-normal leading-relaxed text-zinc-100">
               {LONG_TERM_SCHEMA_PATCH}
             </pre>
-            <p className="mt-2 text-xs text-amber-900/85 dark:text-amber-200/80">
+            <p className="mt-2 text-[15px] font-normal text-amber-900/85 dark:text-amber-200/80">
               Same block is at the bottom of{" "}
               <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/50">
                 supabase/schema.sql
@@ -74,7 +74,7 @@ export default async function LongTermPage() {
             </p>
           </div>
         ) : (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Run{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
               supabase/migrations/20260209120000_planning_tables.sql

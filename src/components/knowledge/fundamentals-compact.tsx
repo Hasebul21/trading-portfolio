@@ -56,15 +56,15 @@ export function FundamentalsCompact() {
           key={t.n}
           className="rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-3 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900/55 sm:px-4"
         >
-          <h3 className="text-[13px] font-bold leading-snug text-zinc-900 dark:text-zinc-50">
+          <h3 className="text-[15px] font-normal leading-snug text-teal-800 dark:text-teal-200">
             {t.n}. {t.title}
           </h3>
-          <p className="mt-2 text-[12px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">The simple version: </span>
+          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <span className="text-teal-800 dark:text-teal-200">The simple version: </span>
             {t.simple}
           </p>
-          <p className="mt-2 text-[12px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">How it affects you: </span>
+          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <span className="text-teal-800 dark:text-teal-200">How it affects you: </span>
             {t.affects}
           </p>
         </article>

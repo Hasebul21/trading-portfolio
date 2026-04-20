@@ -57,16 +57,27 @@ b {
   font-weight: 400 !important;
 }
 
-/* Portfolio holdings table */
-.portfolio-holdings-table .ant-table {
+/* Tailwind weight utilities → single weight (no bold). */
+.font-medium,
+.font-semibold,
+.font-bold,
+.font-extrabold,
+.font-black {
+  font-weight: 400 !important;
+}
+
+/* Portfolio + long-term tables (shared chrome) */
+.portfolio-holdings-table .ant-table,
+.long-term-holdings-table .ant-table {
   background: transparent;
 }
 
-.portfolio-holdings-table .ant-table-thead > tr > th {
-  font-size: 11px;
+.portfolio-holdings-table .ant-table-thead > tr > th,
+.long-term-holdings-table .ant-table-thead > tr > th {
+  font-size: 15px;
   font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  text-transform: none;
   color: #0f766e;
   background: linear-gradient(
     to bottom,
@@ -76,20 +87,24 @@ b {
   border-bottom: 1px solid rgba(13, 148, 136, 0.15) !important;
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr > td {
+.portfolio-holdings-table .ant-table-tbody > tr > td,
+.long-term-holdings-table .ant-table-tbody > tr > td {
   border-color: rgba(15, 118, 110, 0.06) !important;
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+.portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td,
+.long-term-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
   background: rgba(240, 253, 250, 0.35);
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr:hover > td {
+.portfolio-holdings-table .ant-table-tbody > tr:hover > td,
+.long-term-holdings-table .ant-table-tbody > tr:hover > td {
   background: rgba(167, 243, 208, 0.45) !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  .portfolio-holdings-table .ant-table-thead > tr > th {
+  .portfolio-holdings-table .ant-table-thead > tr > th,
+  .long-term-holdings-table .ant-table-thead > tr > th {
     color: #5eead4;
     background: linear-gradient(
       to bottom,
@@ -99,15 +114,18 @@ b {
     border-bottom-color: rgba(45, 212, 191, 0.2) !important;
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr > td {
+  .portfolio-holdings-table .ant-table-tbody > tr > td,
+  .long-term-holdings-table .ant-table-tbody > tr > td {
     border-color: rgba(45, 212, 191, 0.08) !important;
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+  .portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td,
+  .long-term-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
     background: rgba(6, 78, 59, 0.22);
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr:hover > td {
+  .portfolio-holdings-table .ant-table-tbody > tr:hover > td,
+  .long-term-holdings-table .ant-table-tbody > tr:hover > td {
     background: rgba(15, 118, 110, 0.35) !important;
   }
 }

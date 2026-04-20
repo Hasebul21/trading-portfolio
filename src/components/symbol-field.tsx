@@ -25,10 +25,10 @@ type Props = {
 };
 
 const defaultInputClass =
-  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
+  "mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
 
 const smInputClass =
-  "mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 font-mono text-xs text-zinc-900 outline-none ring-zinc-400 focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
+  "mt-1 w-full rounded-md border border-zinc-300 bg-white px-2 py-1.5 font-mono text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-1 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
 
 /**
  * Text input + datalist of DSE trading codes (type to filter in supporting browsers).
@@ -83,7 +83,7 @@ export function SymbolField({
         </datalist>
       ) : null}
       {loadError ? (
-        <p className="mt-1 text-[11px] leading-snug text-amber-800 dark:text-amber-200/90">
+        <p className="mt-1 text-[15px] font-normal leading-snug text-amber-800 dark:text-amber-200/90">
           {size === "sm"
             ? "Symbol list offline — type code manually."
             : `Could not load the DSE symbol list (${loadError}). You can still type a trading code manually.`}

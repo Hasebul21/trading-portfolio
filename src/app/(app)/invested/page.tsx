@@ -22,7 +22,7 @@ export default async function InvestedPage() {
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
           Run the latest SQL in{" "}
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code> or{" "}
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
@@ -50,25 +50,25 @@ export default async function InvestedPage() {
             required
             aria-label="Amount"
             placeholder="0"
-            className="box-border h-9 w-[6.5rem] shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 w-[6.5rem] shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
           <input
             name="note"
             aria-label="Note (optional)"
             placeholder="Note"
-            className="box-border h-9 min-w-0 flex-1 basis-[8rem] rounded-md border border-zinc-300/90 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 min-w-0 flex-1 basis-[8rem] rounded-md border border-zinc-300/90 bg-white px-3 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
-          <Button type="primary" htmlType="submit" className="h-9 shrink-0 px-4 text-sm">
+          <Button type="primary" htmlType="submit" className="h-9 shrink-0 px-4 text-[15px] font-normal">
             Add
           </Button>
         </form>
-        <p className="mt-3 border-t border-zinc-200/70 pt-3 text-base tabular-nums leading-snug text-zinc-600 dark:border-zinc-700/50 dark:text-zinc-300 sm:text-lg">
+        <p className="mt-3 border-t border-zinc-200/70 pt-3 text-[15px] font-normal tabular-nums leading-snug text-zinc-600 dark:border-zinc-700/50 dark:text-zinc-300">
           Total{" "}
-          <span className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <span className="tracking-normal text-teal-800 dark:text-teal-200">
             {formatBdt(total)}
           </span>
           <span className="mx-1.5 text-zinc-400 dark:text-zinc-500">·</span>
-          <span className="font-medium text-zinc-800 dark:text-zinc-100">
+          <span className="text-zinc-800 dark:text-zinc-100">
             {list.length} contribution{list.length === 1 ? "" : "s"}
           </span>
         </p>

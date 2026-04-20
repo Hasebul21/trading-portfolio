@@ -19,9 +19,9 @@ type BookDraft = { shares: string; avg: string; total: string };
 const { Search } = Input;
 
 const biasLineColumnTitle = (
-  <span className="block whitespace-normal text-right text-[11px] font-normal leading-snug">
+  <span className="block whitespace-normal text-right text-[15px] font-normal leading-snug">
     Bias Line
-    <span className="block pt-0.5 text-[10px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
+    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
       (Buy Above / Sell Below)
     </span>
   </span>
@@ -79,7 +79,7 @@ function bookFingerprint(rows: PortfolioMarketRow[]) {
 }
 
 const bookInputClass =
-  "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[13px] tabular-nums text-zinc-900 outline-none ring-teal-500/25 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+  "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none ring-teal-500/25 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 function sortNullableNumber(
   pick: (r: Row) => number | null | undefined,
@@ -268,7 +268,7 @@ export function PortfolioHoldingsTable({
           sorter: (a, b) => a.avgPrice - b.avgPrice,
           showSorterTooltip: { title: "Sort by average cost" },
           render: (_: unknown, row) => (
-            <span className="tabular-nums text-[14px] font-medium">{formatBdt(row.avgPrice)}</span>
+            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
           ),
         };
 
@@ -295,7 +295,7 @@ export function PortfolioHoldingsTable({
           sorter: (a, b) => a.shares - b.shares,
           showSorterTooltip: { title: "Sort by shares" },
           render: (v: number) => (
-            <span className="tabular-nums text-[14px]">{formatNumberMax2Decimals(v)}</span>
+            <span className="tabular-nums text-[15px] font-normal">{formatNumberMax2Decimals(v)}</span>
           ),
         };
 
@@ -322,7 +322,7 @@ export function PortfolioHoldingsTable({
           sorter: (a, b) => a.totalCost - b.totalCost,
           showSorterTooltip: { title: "Sort by total invested" },
           render: (_: unknown, row) => (
-            <span className="tabular-nums text-[14px]">{formatBdt(row.totalCost)}</span>
+            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
           ),
         };
 
@@ -364,7 +364,7 @@ export function PortfolioHoldingsTable({
           ) : (
             <Typography.Text
               type={v >= 0 ? "success" : "danger"}
-              className="tabular-nums text-[14px]"
+              className="tabular-nums text-[15px] font-normal"
             >
               {fmtSignedBdt(v)}
             </Typography.Text>
@@ -385,7 +385,7 @@ export function PortfolioHoldingsTable({
           v === null ? (
             <Typography.Text type="secondary">—</Typography.Text>
           ) : (
-            <span className="tabular-nums text-[14px]">{formatBdt(v)}</span>
+            <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
           ),
       },
       {
@@ -464,40 +464,40 @@ export function PortfolioHoldingsTable({
     >
       <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-2 sm:gap-3 sm:px-4 dark:border-teal-900/40">
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Total unrealized P/L
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
             {withQuote === 0 ? (
-              <Typography.Text type="secondary" className="text-[13px]">
+              <Typography.Text type="secondary" className="text-[15px] font-normal">
                 —
               </Typography.Text>
             ) : (
               <Typography.Text
                 type={totalUnrealized >= 0 ? "success" : "danger"}
-                className="text-[15px] font-normal tabular-nums sm:text-base"
+                className="text-[15px] font-normal tabular-nums"
               >
                 {fmtSignedBdt(totalUnrealized)}
               </Typography.Text>
             )}
           </div>
           {withQuote > 0 && withQuote < positions ? (
-            <Typography.Text type="secondary" className="mt-0.5 block text-[10px] leading-tight">
+            <Typography.Text type="secondary" className="mt-0.5 block text-[15px] font-normal leading-snug">
               {withQuote}/{positions} with last price
             </Typography.Text>
           ) : null}
           {withQuote === 0 && positions > 0 ? (
-            <Typography.Text type="secondary" className="mt-0.5 block text-[10px] leading-tight">
+            <Typography.Text type="secondary" className="mt-0.5 block text-[15px] font-normal leading-snug">
               Needs DSE last price
             </Typography.Text>
           ) : null}
         </div>
 
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[10px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Total invested
           </div>
-          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-base">
+          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
             {formatBdt(totalInvested)}
           </div>
         </div>
@@ -558,7 +558,7 @@ export function PortfolioHoldingsTable({
 
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
-          <p className="text-left text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-left text-[15px] font-normal leading-relaxed text-zinc-500 dark:text-zinc-400">
             Edit shares, average cost, and total invested for any row. Changing average updates total (and the other way
             around); changing shares keeps average and updates total. You can save even if total and shares × average differ
             slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that

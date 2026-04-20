@@ -27,11 +27,11 @@ function RuleLine({ tone, label, text }: { tone: Tone; label: string; text: stri
   return (
     <div className="flex gap-2 rounded-lg border border-zinc-200/70 bg-white/60 p-2 dark:border-zinc-700/50 dark:bg-zinc-950/50">
       <span
-        className={`h-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase leading-tight tracking-wide ${TONE[tone]}`}
+        className={`h-fit shrink-0 rounded px-2 py-1 text-[15px] font-normal leading-snug tracking-normal ${TONE[tone]}`}
       >
         {label}
       </span>
-      <p className="min-w-0 flex-1 text-left text-[11px] leading-snug text-zinc-700 dark:text-zinc-300">{text}</p>
+      <p className="min-w-0 flex-1 text-left text-[15px] font-normal leading-snug text-zinc-700 dark:text-zinc-300">{text}</p>
     </div>
   );
 }
@@ -48,9 +48,9 @@ function PlaybookSection({
   return (
     <section className="flex flex-col overflow-hidden rounded-xl border border-teal-200/40 bg-gradient-to-b from-white/95 to-teal-50/25 shadow-sm ring-1 ring-teal-500/[0.06] dark:border-teal-900/35 dark:from-zinc-900/90 dark:to-teal-950/20 dark:ring-teal-500/10">
       <div className="border-b border-teal-200/35 bg-teal-600/8 px-2.5 py-2 dark:border-teal-800/40 dark:bg-teal-500/10">
-        <h3 className="text-left text-sm font-bold leading-tight text-zinc-900 dark:text-zinc-50">{title}</h3>
+        <h3 className="text-left text-[15px] font-normal leading-snug text-zinc-900 dark:text-zinc-50">{title}</h3>
         {subtitle ? (
-          <p className="mt-0.5 text-left text-[10px] font-medium leading-snug text-teal-900/85 dark:text-teal-200/80">
+          <p className="mt-0.5 text-left text-[15px] font-normal leading-snug text-teal-900/85 dark:text-teal-200/80">
             {subtitle}
           </p>
         ) : null}

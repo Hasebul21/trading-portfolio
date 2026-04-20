@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  siteNavLinkActiveClass,
+  siteNavLinkBaseClass,
+  siteNavLinkIdleClass,
+} from "@/lib/site-typography";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,12 +15,7 @@ const LINKS = [
   { href: "/invested", label: "Capital" },
   { href: "/long-term", label: "Long Term" },
   { href: "/charts", label: "Charts" },
-  {
-    href: "/trade-plans",
-    label: "Instant Trade Action",
-    linkClassName:
-      "px-3 py-2 text-[12px] font-normal leading-snug sm:px-3.5 sm:py-2.5 sm:text-[13px] sm:leading-tight",
-  },
+  { href: "/trade-plans", label: "Instant Trade Action" },
   { href: "/knowledge", label: "Knowledge" },
 ] as const;
 
@@ -29,20 +29,10 @@ export function AppShellNav() {
     <nav aria-label="Main" className={stripClass}>
       {LINKS.map((item) => {
         const { href, label } = item;
-        const linkClassName = "linkClassName" in item ? item.linkClassName : undefined;
         const active = pathname === href || pathname.startsWith(`${href}/`);
-        const base = linkClassName
-          ? linkClassName
-          : "px-3.5 py-2.5 text-[13px] font-normal tracking-tight sm:px-4 sm:py-3 sm:text-sm";
-        const state = active
-          ? "bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-600/30 ring-1 ring-white/25 dark:from-teal-500 dark:to-emerald-500 dark:shadow-teal-950/50"
-          : "text-zinc-600 hover:bg-white/90 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-50";
+        const state = active ? siteNavLinkActiveClass : siteNavLinkIdleClass;
         return (
-          <Link
-            key={href}
-            href={href}
-            className={`rounded-lg transition duration-200 ${base} ${state}`}
-          >
+          <Link key={href} href={href} className={`${siteNavLinkBaseClass} ${state}`}>
             {label}
           </Link>
         );

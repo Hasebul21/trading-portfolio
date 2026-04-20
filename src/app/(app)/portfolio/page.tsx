@@ -1,5 +1,6 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
+import { siteTextLinkNeutralClass } from "@/lib/site-typography";
 import Link from "next/link";
 import { Card, Empty } from "antd";
 import { PortfolioLiveShell } from "./portfolio-live-shell";
@@ -22,8 +23,8 @@ export default async function PortfolioPage() {
           {error}
         </p>
         {missingTable ? (
-          <div className="max-w-xl text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-            <p className="font-medium text-zinc-900 dark:text-zinc-100">
+          <div className="max-w-xl text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="text-[15px] font-normal text-teal-800 dark:text-teal-200">
               Create the tables in Supabase (one time)
             </p>
             <ol className="mt-3 list-decimal space-y-3 pl-5">
@@ -31,7 +32,7 @@ export default async function PortfolioPage() {
                 Open{" "}
                 <a
                   href="https://supabase.com/dashboard"
-                  className="font-medium text-zinc-900 underline dark:text-zinc-100"
+                  className={siteTextLinkNeutralClass}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -50,7 +51,7 @@ export default async function PortfolioPage() {
             </ol>
           </div>
         ) : (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Check{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">.env.local</code> points at
             this project and run{" "}
@@ -71,12 +72,9 @@ export default async function PortfolioPage() {
         >
           <Empty
             description={
-              <span className="text-base text-zinc-600 dark:text-zinc-400">
+              <span className="text-[15px] text-zinc-600 dark:text-zinc-400">
                 No open positions yet.{" "}
-                <Link
-                  href="/record"
-                  className="font-medium text-zinc-900 underline dark:text-zinc-100"
-                >
+                <Link href="/record" className={siteTextLinkNeutralClass}>
                   Record a buy
                 </Link>{" "}
                 to see it here.

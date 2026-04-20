@@ -1,6 +1,7 @@
 "use client";
 
 import { addLongTermHolding } from "@/app/(app)/planning-actions";
+import { siteTextLinkTealClass } from "@/lib/site-typography";
 import { SymbolField } from "@/components/symbol-field";
 import type { SymbolFieldInstrument } from "@/components/symbol-field";
 import { Alert, Button } from "antd";
@@ -9,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 const symbolInputClass =
-  "box-border h-7 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[11px] leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+  "box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[15px] font-normal leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 export function AddLongTermForm({
   instruments,
@@ -48,14 +49,14 @@ export function AddLongTermForm({
   return (
     <div className={toolbarShell}>
       <div className="flex flex-col gap-2">
-        <p className="text-left text-[11px] leading-snug text-zinc-600 dark:text-zinc-400">
+        <p className="text-left text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
           Add a symbol only. Buy Amount (S1) and Sell Amount (average of first + strong sell zones, (R1+R2)/2) are filled
           from today’s DSE latest-price page—the same inputs as your{" "}
-          <Link href="/portfolio" className="font-normal text-teal-800 underline dark:text-teal-300">
+          <Link href="/portfolio" className={siteTextLinkTealClass}>
             Holdings
           </Link>{" "}
           table. Open{" "}
-          <Link href="/charts" className="font-normal text-teal-800 underline dark:text-teal-300">
+          <Link href="/charts" className={siteTextLinkTealClass}>
             Charts
           </Link>{" "}
           for a free TradingView chart (DSEBD ticker).
@@ -78,7 +79,7 @@ export function AddLongTermForm({
               className={symbolInputClass}
             />
           </div>
-          <Button type="primary" size="middle" className="h-9 shrink-0 px-4 text-sm" loading={busy} onClick={() => void submit()}>
+          <Button type="primary" size="middle" className="h-9 shrink-0 px-4 text-[15px] font-normal" loading={busy} onClick={() => void submit()}>
             Add
           </Button>
         </div>

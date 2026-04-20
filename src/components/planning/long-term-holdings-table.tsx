@@ -103,9 +103,10 @@ function rowToPayload(row: LongTermHoldingRow, cell: DraftCell | undefined): Lon
 }
 
 const costInputClass =
-  "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-sm tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+  "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
-const fieldLabelClass = "text-[11px] font-normal uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+const fieldLabelClass =
+  "text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400";
 
 const rowFieldsLayout =
   "flex w-full min-w-0 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4";
@@ -117,7 +118,7 @@ function bdtReadCell(n: number | null) {
   if (n === null || !Number.isFinite(n)) {
     return <Typography.Text type="secondary">—</Typography.Text>;
   }
-  return <span className="tabular-nums text-sm">{formatBdt(n)}</span>;
+  return <span className="tabular-nums text-[15px] font-normal">{formatBdt(n)}</span>;
 }
 
 function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
@@ -127,7 +128,7 @@ function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
         <span className={fieldLabelClass}>Buy Amount</span>
         {bdtReadCell(displayFirstBuyZone(row))}
         {!row.liveZones ? (
-          <Typography.Text type="secondary" className="text-[10px] leading-tight">
+          <Typography.Text type="secondary" className="text-[15px] font-normal leading-snug">
             Saved value (no live DSE row)
           </Typography.Text>
         ) : null}
@@ -136,7 +137,7 @@ function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
         <span className={fieldLabelClass}>Sell Amount</span>
         {bdtReadCell(displaySellBlend(row))}
         {!row.liveZones ? (
-          <Typography.Text type="secondary" className="text-[10px] leading-tight">
+          <Typography.Text type="secondary" className="text-[15px] font-normal leading-snug">
             Saved value (no live DSE row)
           </Typography.Text>
         ) : null}
@@ -299,7 +300,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   return (
     <div className="w-full min-w-0 max-w-full">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+        <p className="text-[15px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
           Buy Amount and Sell Amount come from today’s DSE latest-price table (same math as Holdings). Use Edit table to
           change Avg cost / Total only; saving also refreshes stored amounts from the latest DSE snapshot when your symbol
           appears in that table. Remove is disabled while editing.

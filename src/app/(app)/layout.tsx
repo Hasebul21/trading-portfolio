@@ -20,7 +20,7 @@ export default function AppLayout({
             <form action={signOut} className="shrink-0">
               <button
                 type="submit"
-                className="rounded-full border border-zinc-300/90 bg-white px-3 py-1.5 text-xs font-normal text-zinc-700 shadow-sm transition hover:border-teal-500/40 hover:bg-teal-50/80 hover:text-teal-900 sm:px-3.5 sm:py-2 sm:text-sm dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-200 dark:hover:border-teal-500/30 dark:hover:bg-teal-950/50 dark:hover:text-teal-100"
+                className="rounded-full border border-zinc-300/90 bg-white px-3 py-1.5 text-[15px] font-normal text-zinc-700 shadow-sm transition hover:border-teal-500/40 hover:bg-teal-50/80 hover:text-teal-900 sm:px-3.5 sm:py-2 dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-200 dark:hover:border-teal-500/30 dark:hover:bg-teal-950/50 dark:hover:text-teal-100"
               >
                 Log out
               </button>

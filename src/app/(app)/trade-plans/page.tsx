@@ -23,7 +23,7 @@ export default async function TradePlansPage() {
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
           Run{" "}
           <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
             supabase/migrations/20260209120000_planning_tables.sql
@@ -48,14 +48,14 @@ export default async function TradePlansPage() {
               aria-label="Symbol (DSE code)"
               placeholder="Symbol"
               size="sm"
-              className="box-border h-7 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[11px] leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+              className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[15px] font-normal leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
           </div>
           <select
             name="side"
             required
             aria-label="Buy or sell"
-            className="box-border h-7 w-[4.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1 text-[11px] text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+            className="box-border h-9 w-[4.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1 text-[15px] font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
           >
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
@@ -69,9 +69,9 @@ export default async function TradePlansPage() {
             required
             aria-label="Target price"
             placeholder="Target"
-            className="box-border h-7 w-[5.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[11px] text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 w-[5.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
-          <Button type="primary" htmlType="submit" size="small" className="h-7 shrink-0 px-2.5 text-[11px] leading-none">
+          <Button type="primary" htmlType="submit" size="middle" className="h-9 shrink-0 px-3 text-[15px] font-normal leading-none">
             Add
           </Button>
         </form>
