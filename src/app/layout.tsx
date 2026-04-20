@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hasebul Trade",
+  title: "Portfolio",
   description: "Personal buy/sell ledger and holdings",
 };
 

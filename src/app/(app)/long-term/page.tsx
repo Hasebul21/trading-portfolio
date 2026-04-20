@@ -1,21 +1,17 @@
-import { addLongTermHolding } from "../planning-actions";
 import { AppPageStack } from "@/components/app-page-stack";
-import { SymbolField } from "@/components/symbol-field";
-import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
-import { fetchUserHoldings } from "@/lib/holdings";
-import { createClient } from "@/lib/supabase/server";
+import { AddLongTermForm } from "@/components/planning/add-long-term-form";
 import {
   LongTermHoldingsTable,
   type LongTermHoldingRow,
 } from "@/components/planning/long-term-holdings-table";
-import { Button } from "antd";
+import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
+import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
+import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
+import { fetchUserHoldings } from "@/lib/holdings";
+import { createClient } from "@/lib/supabase/server";
 
 const toolbarShell =
   "rounded-md border border-teal-200/60 bg-white/92 px-2 py-1 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
-
-/** Add-row buy / sell: wider, easier to read than compact cost fields. */
-const addRowPointsNum =
-  "box-border h-9 min-h-9 min-w-[6rem] flex-1 basis-[7rem] rounded-md border border-teal-200/90 bg-white px-2.5 text-right text-sm tabular-nums text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-teal-800/55 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500 sm:max-w-[11rem]";
 
 /** Idempotent patch when `long_term_holdings` predates newer columns. */
 const LONG_TERM_SCHEMA_PATCH = `alter table public.long_term_holdings
@@ -26,7 +22,7 @@ const LONG_TERM_SCHEMA_PATCH = `alter table public.long_term_holdings
 
 export default async function LongTermPage() {
   const supabase = await createClient();
-  const [{ instruments, error: instrumentsError }, holdingsRes, listRes] =
+  const [{ instruments, error: instrumentsError }, holdingsRes, listRes, lspRes] =
     await Promise.all([
       getCachedDseInstruments(),
       fetchUserHoldings(),
@@ -36,6 +32,7 @@ export default async function LongTermPage() {
           "id, created_at, symbol, buy_point_bdt, sell_point_bdt, manual_avg_cost_bdt, manual_total_invested_bdt",
         )
         .order("symbol", { ascending: true }),
+      fetchDseLspQuoteMap(),
     ]);
 
   const { data: rows, error } = listRes;
@@ -96,6 +93,8 @@ export default async function LongTermPage() {
   const list: LongTermHoldingRow[] = (rows ?? []).map((row) => {
     const sym = String(row.symbol).trim().toUpperCase();
     const h = bySymbol.get(sym);
+    const quote = lspRes.bySymbol.get(sym);
+    const liveZones = quote ? zoneLevelsFromLspQuote(quote) : null;
     return {
       id: row.id,
       created_at: row.created_at,
@@ -106,49 +105,17 @@ export default async function LongTermPage() {
       manual_total_invested_bdt: row.manual_total_invested_bdt,
       portfolio_avg_cost_bdt: h ? h.avgPrice : null,
       portfolio_total_invested_bdt: h ? h.totalCost : null,
+      liveZones,
     };
   });
 
   return (
     <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full max-w-7xl text-left">
-      <div className={toolbarShell}>
-        <form action={addLongTermHolding} className="flex flex-wrap items-center gap-1.5">
-          <div className="min-w-0 flex-1 basis-[7.5rem] sm:max-w-xs">
-            <SymbolField
-              instruments={instruments}
-              loadError={instrumentsError}
-              required
-              aria-label="Symbol (DSE code)"
-              placeholder="Symbol"
-              size="sm"
-              className="box-border h-7 w-full rounded border border-zinc-300/90 bg-white px-2 font-mono text-[11px] leading-none text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
-            />
-          </div>
-          <input
-            name="buy_point_bdt"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            aria-label="Buy point (optional)"
-            placeholder="Buy pt"
-            className={addRowPointsNum}
-          />
-          <input
-            name="sell_point_bdt"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            aria-label="Sell point (optional)"
-            placeholder="Sell pt"
-            className={addRowPointsNum}
-          />
-          <Button type="primary" htmlType="submit" size="middle" className="h-9 shrink-0 px-3 text-sm">
-            Add
-          </Button>
-        </form>
-      </div>
+      <AddLongTermForm
+        instruments={instruments}
+        instrumentsError={instrumentsError}
+        toolbarShell={toolbarShell}
+      />
 
       <LongTermHoldingsTable rows={list} />
     </AppPageStack>

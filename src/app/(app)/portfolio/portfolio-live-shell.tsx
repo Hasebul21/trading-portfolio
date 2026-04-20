@@ -91,13 +91,7 @@ export function PortfolioLiveShell({
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <PortfolioHoldingsTable
-        holdings={rows}
-        enableBookEdit
-        onAfterBookSave={refresh}
-      />
-
-      <div className="flex flex-wrap items-center justify-center gap-2">
+      <div className="flex flex-wrap items-center justify-start gap-2">
         <span className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur-sm dark:border-teal-800/50 dark:bg-zinc-900/80 dark:text-teal-100">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
@@ -112,6 +106,12 @@ export function PortfolioLiveShell({
             : "Connecting to live prices…"}
         </span>
       </div>
+
+      <PortfolioHoldingsTable
+        holdings={rows}
+        enableBookEdit
+        onAfterBookSave={refresh}
+      />
 
       {marketWarning ? (
         <div className="overflow-hidden rounded-2xl ring-1 ring-amber-500/20">

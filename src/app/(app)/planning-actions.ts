@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
+import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { revalidatePath } from "next/cache";
 
 function normalizeSymbol(raw: string): string {
@@ -47,37 +49,63 @@ export async function deleteCapitalContribution(formData: FormData) {
   revalidatePath("/invested");
 }
 
-export async function addLongTermHolding(formData: FormData) {
+export async function addLongTermHolding(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false, error: "Not signed in" };
 
   const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
 
-  if (!symbol) return;
+  if (!symbol) return { ok: false, error: "Enter a symbol." };
 
-  const buyRaw = String(formData.get("buy_point_bdt") ?? "").trim();
-  const sellRaw = String(formData.get("sell_point_bdt") ?? "").trim();
-  const buyPoint =
-    buyRaw === "" ? null : Number(buyRaw);
-  const sellPoint =
-    sellRaw === "" ? null : Number(sellRaw);
-  const buy_point_bdt =
-    buyPoint !== null && Number.isFinite(buyPoint) && buyPoint >= 0 ? buyPoint : null;
-  const sell_point_bdt =
-    sellPoint !== null && Number.isFinite(sellPoint) && sellPoint >= 0 ? sellPoint : null;
+  const { data: dup } = await supabase
+    .from("long_term_holdings")
+    .select("id")
+    .eq("user_id", user.id)
+    .ilike("symbol", symbol)
+    .limit(1)
+    .maybeSingle();
 
-  await supabase.from("long_term_holdings").insert({
+  if (dup) {
+    return { ok: false, error: `${symbol} is already in your long-term list.` };
+  }
+
+  const lsp = await fetchDseLspQuoteMapFresh();
+  const quote = lsp.bySymbol.get(symbol);
+  if (!quote) {
+    const hint = lsp.error
+      ? ` DSE price table: ${lsp.error}`
+      : " No row for this code in today’s DSE latest-price table.";
+    return {
+      ok: false,
+      error: `Could not load live session high/low/close for ${symbol}.${hint}`,
+    };
+  }
+
+  const zones = zoneLevelsFromLspQuote(quote);
+  if (!zones) {
+    return { ok: false, error: `Could not compute zones for ${symbol} (invalid high/low/close).` };
+  }
+
+  const { error } = await supabase.from("long_term_holdings").insert({
     user_id: user.id,
     symbol,
     notes: null,
-    buy_point_bdt,
-    sell_point_bdt,
+    buy_point_bdt: zones.firstBuyZone,
+    sell_point_bdt: zones.sellZoneBlend,
   });
 
+  if (error) {
+    console.error("addLongTermHolding", error.message);
+    return { ok: false, error: error.message };
+  }
+
   revalidatePath("/long-term");
+  return { ok: true };
 }
 
 export async function deleteLongTermHolding(formData: FormData) {
@@ -101,8 +129,8 @@ export async function deleteLongTermHolding(formData: FormData) {
 
 export type LongTermRowSavePayload = {
   id: string;
-  buy_point_bdt: number | null;
-  sell_point_bdt: number | null;
+  /** Used to refresh DSE zone columns from the same LSP snapshot as the portfolio page. */
+  symbol: string;
   manual_avg_cost_bdt: number | null;
   manual_total_invested_bdt: number | null;
 };
@@ -128,23 +156,31 @@ export async function saveLongTermTable(
     return { ok: true };
   }
 
+  const lsp = await fetchDseLspQuoteMapFresh();
+
   for (const u of updates) {
     const id = String(u.id ?? "").trim();
     if (!id) continue;
 
-    const buy_point_bdt = sanitizeLongTermNumber(u.buy_point_bdt);
-    const sell_point_bdt = sanitizeLongTermNumber(u.sell_point_bdt);
+    const sym = normalizeSymbol(String(u.symbol ?? ""));
     const manual_avg_cost_bdt = sanitizeLongTermNumber(u.manual_avg_cost_bdt);
     const manual_total_invested_bdt = sanitizeLongTermNumber(u.manual_total_invested_bdt);
 
+    const quote = sym ? lsp.bySymbol.get(sym) : undefined;
+    const zones = quote ? zoneLevelsFromLspQuote(quote) : null;
+
+    const patch: Record<string, unknown> = {
+      manual_avg_cost_bdt,
+      manual_total_invested_bdt,
+    };
+    if (zones) {
+      patch.buy_point_bdt = zones.firstBuyZone;
+      patch.sell_point_bdt = zones.sellZoneBlend;
+    }
+
     const { error } = await supabase
       .from("long_term_holdings")
-      .update({
-        buy_point_bdt,
-        sell_point_bdt,
-        manual_avg_cost_bdt,
-        manual_total_invested_bdt,
-      })
+      .update(patch)
       .eq("id", id)
       .eq("user_id", user.id);
 

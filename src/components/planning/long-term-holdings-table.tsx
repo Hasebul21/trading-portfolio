@@ -5,6 +5,7 @@ import {
   saveLongTermTable,
   type LongTermRowSavePayload,
 } from "@/app/(app)/planning-actions";
+import type { DseSessionZones } from "@/lib/market/dse-zone-levels";
 import { formatBdt, formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import { Alert, Button, Table, Typography } from "antd";
@@ -23,11 +24,13 @@ export type LongTermHoldingRow = {
   /** From open portfolio position for this symbol, if any. */
   portfolio_avg_cost_bdt: number | null;
   portfolio_total_invested_bdt: number | null;
+  /** Today’s DSE LSP snapshot (same as Holdings table). Null if symbol missing from LSP. */
+  liveZones: DseSessionZones | null;
 };
 
 type Row = LongTermHoldingRow & { key: string };
 
-type DraftCell = { buy: string; sell: string; avg: string; total: string };
+type DraftCell = { avg: string; total: string };
 
 function numOrNull(v: number | string | null | undefined): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -52,12 +55,20 @@ function effectiveTotal(r: LongTermHoldingRow): number | null {
   return r.portfolio_total_invested_bdt;
 }
 
+function displayFirstBuyZone(r: LongTermHoldingRow): number | null {
+  if (r.liveZones) return r.liveZones.firstBuyZone;
+  return numOrNull(r.buy_point_bdt);
+}
+
+function displaySellBlend(r: LongTermHoldingRow): number | null {
+  if (r.liveZones) return r.liveZones.sellZoneBlend;
+  return numOrNull(r.sell_point_bdt);
+}
+
 function buildDraftFromRows(rows: LongTermHoldingRow[]): Record<string, DraftCell> {
   const d: Record<string, DraftCell> = {};
   for (const r of rows) {
     d[r.id] = {
-      buy: strForInput(numOrNull(r.buy_point_bdt)),
-      sell: strForInput(numOrNull(r.sell_point_bdt)),
       avg: strForInput(effectiveAvg(r)),
       total: strForInput(effectiveTotal(r)),
     };
@@ -77,23 +88,19 @@ function rowToPayload(row: LongTermHoldingRow, cell: DraftCell | undefined): Lon
   const d =
     cell ??
     ({
-      buy: strForInput(numOrNull(row.buy_point_bdt)),
-      sell: strForInput(numOrNull(row.sell_point_bdt)),
       avg: strForInput(effectiveAvg(row)),
       total: strForInput(effectiveTotal(row)),
     } satisfies DraftCell);
+  const sym = String(row.symbol ?? "")
+    .trim()
+    .toUpperCase();
   return {
     id: row.id,
-    buy_point_bdt: parseFieldToNullableNumber(d.buy),
-    sell_point_bdt: parseFieldToNullableNumber(d.sell),
+    symbol: sym,
     manual_avg_cost_bdt: parseFieldToNullableNumber(d.avg),
     manual_total_invested_bdt: parseFieldToNullableNumber(d.total),
   };
 }
-
-/** Buy / sell points: larger tap targets and type. */
-const pointsInputClass =
-  "box-border h-11 min-h-[2.75rem] w-full min-w-[4.5rem] rounded-md border border-teal-200/90 bg-white px-3 py-2 text-right text-base tabular-nums leading-tight text-zinc-900 outline-none ring-teal-500/20 focus:ring-2 dark:border-teal-800/60 dark:bg-zinc-950 dark:text-zinc-50";
 
 const costInputClass =
   "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-sm tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
@@ -135,12 +142,22 @@ function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
   return (
     <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Buy pt</span>
-        {bdtReadCellPoints(numOrNull(row.buy_point_bdt))}
+        <span className={pointsLabelClass}>First Buy Zone (S1)</span>
+        {bdtReadCellPoints(displayFirstBuyZone(row))}
+        {!row.liveZones ? (
+          <Typography.Text type="secondary" className="text-[10px] leading-tight">
+            Saved value (no live DSE row)
+          </Typography.Text>
+        ) : null}
       </div>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Sell pt</span>
-        {bdtReadCellPoints(numOrNull(row.sell_point_bdt))}
+        <span className={pointsLabelClass}>Avg 1st + strong sell (R1–R2)</span>
+        {bdtReadCellPoints(displaySellBlend(row))}
+        {!row.liveZones ? (
+          <Typography.Text type="secondary" className="text-[10px] leading-tight">
+            Saved value (no live DSE row)
+          </Typography.Text>
+        ) : null}
       </div>
       <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
@@ -166,30 +183,12 @@ function LongTermFieldsEdit({
   return (
     <div className={`${rowFieldsLayout} py-0.5`}>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Buy pt</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={values.buy}
-          onChange={(e) => onPatch({ buy: e.target.value })}
-          placeholder="—"
-          aria-label={`${row.symbol} buy point, empty to clear`}
-          title="Buy point, empty to clear"
-          className={pointsInputClass}
-        />
+        <span className={pointsLabelClass}>First Buy Zone (S1)</span>
+        {bdtReadCellPoints(displayFirstBuyZone(row))}
       </div>
       <div className={pointsFieldShell}>
-        <span className={pointsLabelClass}>Sell pt</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={values.sell}
-          onChange={(e) => onPatch({ sell: e.target.value })}
-          placeholder="—"
-          aria-label={`${row.symbol} sell point, empty to clear`}
-          title="Sell point, empty to clear"
-          className={pointsInputClass}
-        />
+        <span className={pointsLabelClass}>Avg 1st + strong sell (R1–R2)</span>
+        {bdtReadCellPoints(displaySellBlend(row))}
       </div>
       <div className={costFieldShell}>
         <span className={fieldLabelClass}>Avg cost</span>
@@ -282,7 +281,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       ),
     },
     {
-      title: "Buy / sell points & cost overrides",
+      title: "DSE zones (today) & book overrides",
       key: "edit_row",
       align: "left",
       render: (_: unknown, r) => {
@@ -323,9 +322,10 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     <div className="w-full min-w-0 max-w-full">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          Use <strong>Edit table</strong> to change all rows, then <strong>Save changes</strong>.{" "}
-          <strong>Cancel</strong> discards edits. Clear <strong>Avg cost</strong> or <strong>Total</strong> and save to
-          use your open portfolio numbers again. <strong>Remove</strong> is disabled while editing.
+          <strong>First Buy Zone</strong> and <strong>avg sell zones</strong> come from today’s DSE latest-price table (same
+          math as Holdings). Use <strong>Edit table</strong> to change <strong>Avg cost</strong> / <strong>Total</strong> only;
+          saving also refreshes stored zone values from the latest DSE snapshot when your symbol appears in that table.{" "}
+          <strong>Remove</strong> is disabled while editing.
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {!editing ? (

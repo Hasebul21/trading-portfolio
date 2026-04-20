@@ -11,11 +11,12 @@ export default function AppLayout({
     <AntdAppProvider>
     <div className="app-shell flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/75 shadow-sm shadow-zinc-900/5 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/75 dark:shadow-black/20">
-        <div className="mx-auto flex w-full max-w-[min(100%,1920px)] flex-col gap-1.5 px-4 py-2 sm:gap-2 sm:px-6 sm:py-2.5 lg:px-8">
-          <div className="flex items-center justify-between gap-3">
-            <p className="truncate text-left text-base font-bold tracking-tight text-zinc-900 sm:text-lg dark:text-zinc-50">
-              Hasebul Trade
-            </p>
+        <div className="mx-auto flex w-full max-w-[min(100%,1920px)] items-center gap-3 px-4 py-2 sm:px-6 sm:py-2.5 lg:px-8">
+          <div className="min-w-0 flex-1" aria-hidden />
+          <div className="flex min-w-0 shrink justify-center">
+            <AppShellNav />
+          </div>
+          <div className="flex min-w-0 flex-1 justify-end">
             <form action={signOut} className="shrink-0">
               <button
                 type="submit"
@@ -25,19 +26,14 @@ export default function AppLayout({
               </button>
             </form>
           </div>
-          <div className="flex justify-center">
-            <AppShellNav />
-          </div>
         </div>
       </header>
       <main className="relative mx-auto w-full max-w-[min(100%,1920px)] flex-1 px-4 py-5 pb-10 text-center text-[15px] leading-relaxed text-zinc-800 sm:px-6 sm:py-6 lg:px-8 dark:text-zinc-200">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_90%_50%_at_50%_-20%,rgba(20,184,166,0.12),transparent_55%)] dark:bg-[radial-gradient(ellipse_80%_45%_at_50%_-15%,rgba(45,212,191,0.08),transparent_50%)]" aria-hidden />
         {children}
       </main>
-      <footer className="mt-6 border-t border-zinc-200/80 bg-gradient-to-b from-white/90 to-zinc-50 py-5 text-center text-xs text-zinc-500 dark:border-zinc-800/80 dark:from-zinc-950/90 dark:to-zinc-950 dark:text-zinc-500">
-        <div className="mx-auto max-w-[min(100%,1920px)] px-4 sm:px-6 lg:px-8">
-          <span className="text-zinc-500 dark:text-zinc-500">Hasebul Trade</span>
-        </div>
+      <footer className="mt-6 border-t border-zinc-200/80 bg-gradient-to-b from-white/90 to-zinc-50 py-4 dark:border-zinc-800/80 dark:from-zinc-950/90 dark:to-zinc-950">
+        <div className="mx-auto max-w-[min(100%,1920px)] px-4 sm:px-6 lg:px-8" aria-hidden />
       </footer>
     </div>
     </AntdAppProvider>
