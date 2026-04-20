@@ -453,7 +453,7 @@ export function PortfolioHoldingsTable({
       className="w-full overflow-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
       styles={{ body: { padding: 0 } }}
     >
-      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-3 sm:gap-3 sm:px-4 dark:border-teal-900/40">
+      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-2 sm:gap-3 sm:px-4 dark:border-teal-900/40">
         <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Total unrealized P/L
@@ -534,7 +534,11 @@ export function PortfolioHoldingsTable({
         className="portfolio-holdings-table"
         columns={columns}
         dataSource={data}
-        pagination={tablePagination("positions", { hideOnSinglePage: false })}
+        pagination={tablePagination("positions", {
+          hideOnSinglePage: false,
+          pageSize: 15,
+          pageSizeOptions: [10, 15, 20, 50],
+        })}
         size="middle"
         bordered={false}
         tableLayout="auto"

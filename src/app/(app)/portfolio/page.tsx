@@ -63,7 +63,7 @@ export default async function PortfolioPage() {
   }
 
   return (
-    <AppPageStack>
+    <AppPageStack gapClass="gap-4 sm:gap-5" className="-mt-2 sm:-mt-4">
       {holdings.length === 0 ? (
         <Card
           variant="outlined"

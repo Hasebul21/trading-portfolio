@@ -90,7 +90,7 @@ export function PortfolioLiveShell({
   const marketWarning = liveLspError ?? (!hasPolled ? initialMarketError : null);
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-10">
+    <div className="flex flex-col gap-4 sm:gap-5">
       <PortfolioHoldingsTable
         holdings={rows}
         enableBookEdit
