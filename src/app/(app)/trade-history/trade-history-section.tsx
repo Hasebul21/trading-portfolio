@@ -1,6 +1,6 @@
 "use client";
 
-import { formatBdt } from "@/lib/format-bdt";
+import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { TransactionRow } from "@/lib/portfolio";
 import { Table, Typography } from "antd";
@@ -53,7 +53,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
       align: "right",
       render: (v: string | number) => (
         <span className="tabular-nums">
-          {Number(v).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+          {formatNumberMax2Decimals(Number(v))}
         </span>
       ),
     },

@@ -6,6 +6,7 @@ import {
   marketValueBdt,
   roundBdt,
 } from "@/lib/fees/trade-commission";
+import { formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { useState } from "react";
 
 type Props = {
@@ -40,21 +41,11 @@ export function CommissionField({ quantity, pricePerShare }: Props) {
       <dl className="mt-3 grid grid-cols-2 gap-2 text-zinc-700 dark:text-zinc-300">
         <dt className="text-zinc-500 dark:text-zinc-400">Gross (qty × price)</dt>
         <dd className="text-right tabular-nums font-medium">
-          {valid
-            ? mv.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            : "—"}
+          {valid ? formatNumberMax2Decimals(mv) : "—"}
         </dd>
         <dt className="text-zinc-500 dark:text-zinc-400">Auto ({pctLabel})</dt>
         <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-50">
-          {valid
-            ? autoFees.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            : "—"}
+          {valid ? formatNumberMax2Decimals(autoFees) : "—"}
         </dd>
       </dl>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">

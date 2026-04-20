@@ -1,7 +1,11 @@
 "use client";
 
 import { savePortfolioPositions, type PortfolioSaveRow } from "@/app/(app)/actions";
-import { formatBdt } from "@/lib/format-bdt";
+import {
+  formatBdt,
+  formatNumberMax2Decimals,
+  formatPlainNumberMax2Decimals,
+} from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Alert, Button, Card, Input, Table, Typography } from "antd";
@@ -47,14 +51,7 @@ function fmtPivotCell(n: number | null | undefined) {
   if (n === null || n === undefined || !Number.isFinite(n)) {
     return <Typography.Text type="secondary">—</Typography.Text>;
   }
-  return (
-    <span className="tabular-nums">
-      {n.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}
-    </span>
-  );
+  return <span className="tabular-nums">{formatNumberMax2Decimals(n)}</span>;
 }
 
 function parseBookNumber(raw: string): number | null {
@@ -67,7 +64,7 @@ function bookFingerprint(rows: PortfolioMarketRow[]) {
   return rows
     .map(
       (h) =>
-        `${h.symbol}:${h.shares}:${h.avgPrice.toFixed(6)}:${h.totalCost.toFixed(2)}`,
+        `${h.symbol}:${Number(h.shares.toFixed(2))}:${Number(h.avgPrice.toFixed(2))}:${Number(h.totalCost.toFixed(2))}`,
     )
     .sort()
     .join("|");
@@ -90,6 +87,7 @@ export function PortfolioHoldingsTable({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
+  const [bookEditorOpen, setBookEditorOpen] = useState(false);
 
   const fp = useMemo(() => bookFingerprint(holdings), [holdings]);
   const prevFp = useRef(fp);
@@ -101,10 +99,14 @@ export function PortfolioHoldingsTable({
       setDirty(false);
       setSaveError(null);
       setSaveOk(false);
+      setBookEditorOpen(false);
     }
   }, [fp]);
 
+  const bookEditing = enableBookEdit && bookEditorOpen;
+
   const displayHoldings = useMemo(() => {
+    if (!bookEditing) return holdings;
     return holdings.map((h) => {
       const d = draft[h.symbol];
       if (!d) return h;
@@ -119,7 +121,7 @@ export function PortfolioHoldingsTable({
           : null;
       return { ...h, shares: sh, avgPrice: av, totalCost: tot, unrealizedPl };
     });
-  }, [holdings, draft]);
+  }, [holdings, draft, bookEditing]);
 
   const { sum: totalUnrealized, withQuote, positions } = unrealizedTotals(displayHoldings);
   const totalInvested = sumTotalInvested(displayHoldings);
@@ -132,15 +134,16 @@ export function PortfolioHoldingsTable({
   }, [displayHoldings, symbolQuery]);
 
   function patchDraft(symbol: string, field: keyof BookDraft, value: string) {
+    if (!bookEditing) return;
     setDirty(true);
     setSaveOk(false);
     setSaveError(null);
     setDraft((prev) => {
       const base = holdings.find((h) => h.symbol === symbol);
       const cur = prev[symbol] ?? {
-        shares: base ? String(base.shares) : "",
-        avg: base ? String(base.avgPrice) : "",
-        total: base ? String(base.totalCost) : "",
+        shares: base ? formatPlainNumberMax2Decimals(base.shares) : "",
+        avg: base ? formatPlainNumberMax2Decimals(base.avgPrice) : "",
+        total: base ? formatPlainNumberMax2Decimals(base.totalCost) : "",
       };
       return {
         ...prev,
@@ -182,6 +185,7 @@ export function PortfolioHoldingsTable({
       setSaveOk(true);
       setDirty(false);
       setDraft({});
+      setBookEditorOpen(false);
       router.refresh();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
@@ -191,7 +195,7 @@ export function PortfolioHoldingsTable({
   };
 
   const columns: ColumnsType<Row> = (() => {
-    const avgCol: ColumnsType<Row>[0] = enableBookEdit
+    const avgCol: ColumnsType<Row>[0] = bookEditing
       ? {
           title: "Average cost / share",
           key: "avgPrice",
@@ -201,7 +205,7 @@ export function PortfolioHoldingsTable({
             <input
               aria-label={`${row.symbol} average cost per share`}
               className={bookInputClass}
-              value={draft[row.symbol]?.avg ?? String(row.avgPrice)}
+              value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
               onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
             />
           ),
@@ -216,7 +220,7 @@ export function PortfolioHoldingsTable({
           ),
         };
 
-    const sharesCol: ColumnsType<Row>[0] = enableBookEdit
+    const sharesCol: ColumnsType<Row>[0] = bookEditing
       ? {
           title: "Shares",
           dataIndex: "shares",
@@ -226,7 +230,7 @@ export function PortfolioHoldingsTable({
             <input
               aria-label={`${row.symbol} shares`}
               className={bookInputClass}
-              value={draft[row.symbol]?.shares ?? String(row.shares)}
+              value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
               onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
             />
           ),
@@ -237,13 +241,11 @@ export function PortfolioHoldingsTable({
           width: 80,
           align: "right",
           render: (v: number) => (
-            <span className="tabular-nums text-[14px]">
-              {v.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-            </span>
+            <span className="tabular-nums text-[14px]">{formatNumberMax2Decimals(v)}</span>
           ),
         };
 
-    const totalCol: ColumnsType<Row>[0] = enableBookEdit
+    const totalCol: ColumnsType<Row>[0] = bookEditing
       ? {
           title: "Total invested",
           dataIndex: "totalCost",
@@ -256,7 +258,7 @@ export function PortfolioHoldingsTable({
             <input
               aria-label={`${row.symbol} total invested`}
               className={bookInputClass}
-              value={draft[row.symbol]?.total ?? String(row.totalCost)}
+              value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
               onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
             />
           ),
@@ -403,7 +405,7 @@ export function PortfolioHoldingsTable({
         </div>
       </div>
 
-      <div className="border-b border-teal-100/80 px-3 py-2 sm:px-4 dark:border-teal-900/40">
+      <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4 dark:border-teal-900/40">
         <Search
           allowClear
           placeholder="Search symbol…"
@@ -412,6 +414,30 @@ export function PortfolioHoldingsTable({
           className="max-w-sm"
           size="middle"
         />
+        {enableBookEdit ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {!bookEditorOpen ? (
+              <Button type="default" size="middle" onClick={() => setBookEditorOpen(true)}>
+                Edit book
+              </Button>
+            ) : (
+              <Button
+                type="default"
+                size="middle"
+                disabled={saving}
+                onClick={() => {
+                  setBookEditorOpen(false);
+                  setDraft({});
+                  setDirty(false);
+                  setSaveError(null);
+                  setSaveOk(false);
+                }}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <Table<Row>
@@ -427,7 +453,7 @@ export function PortfolioHoldingsTable({
         }}
       />
 
-      {enableBookEdit ? (
+      {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
           <p className="text-left text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
             Edit shares, average cost, and total invested for any row. Values must satisfy{" "}

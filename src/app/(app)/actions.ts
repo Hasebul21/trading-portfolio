@@ -12,6 +12,7 @@ import {
   tripletMatchesLedger,
   validateCostTriplet,
 } from "@/lib/portfolio-overrides";
+import { formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -127,7 +128,7 @@ export async function recordTransaction(
   const qtyLabel = quantity % 1 === 0 ? String(quantity) : String(quantity);
   return {
     ok: true,
-    summary: `${symbol} · ${side} · ${qtyLabel} sh @ ${pricePerShare.toLocaleString(undefined, { maximumFractionDigits: 4 })} BDT`,
+    summary: `${symbol} · ${side} · ${qtyLabel} sh @ ${formatPlainNumberMax2Decimals(pricePerShare)} BDT`,
   };
 }
 

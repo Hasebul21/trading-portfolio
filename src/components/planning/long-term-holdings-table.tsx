@@ -1,9 +1,11 @@
 "use client";
 
 import { deleteLongTermHolding, updateLongTermRow } from "@/app/(app)/planning-actions";
+import { formatBdt, formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import { Button, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useState } from "react";
 
 export type LongTermHoldingRow = {
   id: string;
@@ -28,7 +30,7 @@ function numOrNull(v: number | string | null | undefined): number | null {
 
 function strForInput(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return "";
-  return String(n);
+  return formatPlainNumberMax2Decimals(n);
 }
 
 function effectiveAvg(r: LongTermHoldingRow): number | null {
@@ -58,7 +60,46 @@ const inputClass =
 
 const fieldLabelClass = "text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
-function LongTermRowEditor({ row }: { row: LongTermHoldingRow }) {
+function bdtReadCell(n: number | null) {
+  if (n === null || !Number.isFinite(n)) {
+    return <Typography.Text type="secondary">—</Typography.Text>;
+  }
+  return <span className="tabular-nums text-[13px]">{formatBdt(n)}</span>;
+}
+
+function LongTermRowReadOnly({
+  row,
+  onEdit,
+}: {
+  row: LongTermHoldingRow;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-0.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Buy pt</span>
+        {bdtReadCell(numOrNull(row.buy_point_bdt))}
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Sell pt</span>
+        {bdtReadCell(numOrNull(row.sell_point_bdt))}
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Avg cost</span>
+        {bdtReadCell(effectiveAvg(row))}
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className={fieldLabelClass}>Total</span>
+        {bdtReadCell(effectiveTotal(row))}
+      </div>
+      <Button type="default" size="small" className="h-8 shrink-0 px-3 text-xs font-semibold" onClick={onEdit}>
+        Edit
+      </Button>
+    </div>
+  );
+}
+
+function LongTermRowEditor({ row, onCancel }: { row: LongTermHoldingRow; onCancel: () => void }) {
   return (
     <form action={updateLongTermRow} className="flex flex-wrap items-end gap-x-3 gap-y-2 py-0.5">
       <input type="hidden" name="id" value={row.id} />
@@ -114,14 +155,20 @@ function LongTermRowEditor({ row }: { row: LongTermHoldingRow }) {
           className={inputClass}
         />
       </div>
-      <Button type="primary" size="small" htmlType="submit" className="h-8 shrink-0 px-3 text-xs font-semibold">
-        Save
-      </Button>
+      <div className="flex shrink-0 gap-2">
+        <Button type="default" size="small" className="h-8 px-3 text-xs font-semibold" htmlType="button" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="primary" size="small" htmlType="submit" className="h-8 px-3 text-xs font-semibold">
+          Save
+        </Button>
+      </div>
     </form>
   );
 }
 
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const data: Row[] = rows.map((r) => ({ ...r, key: r.id }));
 
   const columns: ColumnsType<Row> = [
@@ -151,7 +198,12 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       title: "Buy / sell points & cost overrides",
       key: "edit_row",
       align: "left",
-      render: (_: unknown, r) => <LongTermRowEditor key={rowRefreshKey(r)} row={r} />,
+      render: (_: unknown, r) =>
+        editingRowId === r.id ? (
+          <LongTermRowEditor key={rowRefreshKey(r)} row={r} onCancel={() => setEditingRowId(null)} />
+        ) : (
+          <LongTermRowReadOnly row={r} onEdit={() => setEditingRowId(r.id)} />
+        ),
     },
     {
       title: "",
@@ -172,9 +224,9 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   return (
     <div className="max-w-full">
       <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-        Edit fields in a row, then click that row&apos;s <strong>Save</strong> once. Clear <strong>Avg cost</strong> or{" "}
-        <strong>Total</strong> and save to use your open portfolio numbers again (plain numbers, e.g.{" "}
-        <span className="font-mono">142.5</span>).
+        Click <strong>Edit</strong> on a row to change buy/sell points or cost overrides, then <strong>Save</strong>.{" "}
+        <strong>Cancel</strong> discards unsaved changes. Clear <strong>Avg cost</strong> or <strong>Total</strong> and save
+        to use your open portfolio numbers again.
       </p>
       <Table<Row>
         className="long-term-holdings-table"
