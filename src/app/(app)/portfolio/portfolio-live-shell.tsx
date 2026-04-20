@@ -83,7 +83,7 @@ export function PortfolioLiveShell({
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
-      <PortfolioHoldingsTable holdings={rows} />
+      <PortfolioHoldingsTable holdings={rows} enableBookEdit />
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <span className="inline-flex items-center gap-2 rounded-full border border-teal-200/60 bg-white/80 px-4 py-2 text-sm font-medium text-teal-900 shadow-sm backdrop-blur-sm dark:border-teal-800/50 dark:bg-zinc-900/80 dark:text-teal-100">

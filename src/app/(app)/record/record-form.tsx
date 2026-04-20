@@ -1,9 +1,10 @@
 "use client";
 
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { recordTransaction, type RecordState } from "../actions";
 import { CommissionField } from "./commission-field";
+import { Alert } from "antd";
 
 const initial: RecordState = {};
 
@@ -15,6 +16,7 @@ type Props = {
 export function RecordForm({ instruments, instrumentsError }: Props) {
   const [state, formAction, pending] = useActionState(recordTransaction, initial);
   const formRef = useRef<HTMLFormElement>(null);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [quantity, setQuantity] = useState("");
@@ -38,21 +40,13 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
     return () => cancelAnimationFrame(id);
   }, [state.ok]);
 
+  useLayoutEffect(() => {
+    if (!state.error && !(state.ok && !pending)) return;
+    feedbackRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [state.error, state.ok, pending]);
+
   return (
     <div className="max-w-lg">
-      {state.error ? (
-        <p
-          className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200"
-          role="alert"
-        >
-          {state.error}
-        </p>
-      ) : null}
-      {state.ok && !pending ? (
-        <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Saved.
-        </p>
-      ) : null}
       <form
         ref={formRef}
         action={formAction}
@@ -122,6 +116,28 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
         >
           {pending ? "Saving…" : "Save transaction"}
         </button>
+
+        <div ref={feedbackRef} className="min-h-0 scroll-mt-24">
+          {state.error ? (
+            <Alert
+              type="error"
+              showIcon
+              message="Could not save"
+              description={state.error}
+              className="text-left"
+              role="alert"
+            />
+          ) : null}
+          {state.ok && !pending ? (
+            <Alert
+              type="success"
+              showIcon
+              message="Saved"
+              description={state.summary ?? "Transaction was recorded."}
+              className="text-left"
+            />
+          ) : null}
+        </div>
       </form>
     </div>
   );

@@ -2,7 +2,16 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { computeTradeCommissionBdt } from "@/lib/fees/trade-commission";
-import { type TransactionRow, sharesAvailableForSymbol } from "@/lib/portfolio";
+import {
+  aggregateHoldings,
+  type TransactionRow,
+} from "@/lib/portfolio";
+import {
+  fetchPositionOverrides,
+  mergeLedgerWithOverrides,
+  tripletMatchesLedger,
+  validateCostTriplet,
+} from "@/lib/portfolio-overrides";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -13,7 +22,14 @@ export async function signOut() {
   redirect("/login");
 }
 
-export type RecordState = { error?: string; ok?: boolean };
+export type RecordState = { error?: string; ok?: boolean; summary?: string };
+
+export type PortfolioSaveRow = {
+  symbol: string;
+  shares: number;
+  avgPrice: number;
+  totalCost: number;
+};
 
 export async function recordTransaction(
   _prev: RecordState,
@@ -65,7 +81,14 @@ export async function recordTransaction(
   const txs = (rows ?? []) as TransactionRow[];
 
   if (side === "sell") {
-    const available = sharesAvailableForSymbol(txs, symbol);
+    const ledger = aggregateHoldings(txs);
+    const { rows: overrides, error: ovErr } = await fetchPositionOverrides(supabase);
+    if (ovErr) {
+      return { error: ovErr };
+    }
+    const merged = mergeLedgerWithOverrides(ledger, overrides);
+    const holding = merged.find((h) => h.symbol === symbol);
+    const available = holding?.shares ?? 0;
     if (quantity > available) {
       return {
         error: `Cannot sell ${quantity} shares of ${symbol}; you only hold ${available}.`,
@@ -101,5 +124,83 @@ export async function recordTransaction(
   revalidatePath("/portfolio");
   revalidatePath("/record");
   revalidatePath("/trade-history");
+  const qtyLabel = quantity % 1 === 0 ? String(quantity) : String(quantity);
+  return {
+    ok: true,
+    summary: `${symbol} · ${side} · ${qtyLabel} sh @ ${pricePerShare.toLocaleString(undefined, { maximumFractionDigits: 4 })} BDT`,
+  };
+}
+
+export async function savePortfolioPositions(
+  rows: PortfolioSaveRow[],
+): Promise<{ error?: string; ok?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { data: txRows, error: fetchError } = await supabase
+    .from("transactions")
+    .select(
+      "id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt",
+    )
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (fetchError) {
+    return { error: fetchError.message };
+  }
+
+  const ledger = aggregateHoldings((txRows ?? []) as TransactionRow[]);
+
+  for (const raw of rows) {
+    const sym = raw.symbol.trim().toUpperCase();
+    if (!sym) continue;
+    const tripletErr = validateCostTriplet(raw.shares, raw.avgPrice, raw.totalCost);
+    if (tripletErr) {
+      return { error: `${sym}: ${tripletErr}` };
+    }
+  }
+
+  for (const raw of rows) {
+    const sym = raw.symbol.trim().toUpperCase();
+    const ledgerRow = ledger.find((h) => h.symbol === sym);
+    const matches =
+      ledgerRow &&
+      tripletMatchesLedger(raw.shares, raw.avgPrice, raw.totalCost, ledgerRow);
+
+    if (matches) {
+      const { error: delErr } = await supabase
+        .from("portfolio_position_overrides")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("symbol", sym);
+      if (delErr) {
+        return { error: delErr.message };
+      }
+      continue;
+    }
+
+    const { error: upErr } = await supabase.from("portfolio_position_overrides").upsert(
+      {
+        user_id: user.id,
+        symbol: sym,
+        shares: raw.shares,
+        avg_price_bdt: raw.avgPrice,
+        total_cost_bdt: raw.totalCost,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,symbol" },
+    );
+    if (upErr) {
+      return { error: upErr.message };
+    }
+  }
+
+  revalidatePath("/portfolio");
   return { ok: true };
 }

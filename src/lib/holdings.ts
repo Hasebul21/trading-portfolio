@@ -1,26 +1,30 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  aggregateHoldings,
-  sortHoldingsByTotalInvestedDesc,
-  type TransactionRow,
-} from "@/lib/portfolio";
+import { aggregateHoldings, type TransactionRow } from "@/lib/portfolio";
+import { fetchPositionOverrides, mergeLedgerWithOverrides } from "@/lib/portfolio-overrides";
 
 export async function fetchUserHoldings() {
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
-    .from("transactions")
-    .select(
-      "id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt",
-    )
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
+  const [txRes, ovRes] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(
+        "id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt",
+      )
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
+    fetchPositionOverrides(supabase),
+  ]);
 
-  if (error) {
-    return { error: error.message, holdings: [] as ReturnType<typeof aggregateHoldings> };
+  if (txRes.error) {
+    return { error: txRes.error.message, holdings: [] as ReturnType<typeof aggregateHoldings> };
   }
 
-  const holdings = sortHoldingsByTotalInvestedDesc(
-    aggregateHoldings((rows ?? []) as TransactionRow[]),
-  );
+  if (ovRes.error) {
+    return { error: ovRes.error, holdings: [] as ReturnType<typeof aggregateHoldings> };
+  }
+
+  const ledger = aggregateHoldings((txRes.data ?? []) as TransactionRow[]);
+  const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
+
   return { error: null as string | null, holdings };
 }
