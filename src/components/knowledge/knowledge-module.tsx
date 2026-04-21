@@ -100,9 +100,6 @@ const PAGE_SIZE = 8;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const shell =
-  "rounded-md border border-teal-200/60 bg-white/92 px-3 py-2 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
-
 function sourceLabel(e: Entry) {
   if (e.kind === "user") return { label: "My note", color: "purple" as const };
   if (e.source === "fundamental") return { label: "Fundamental", color: "blue" as const };
@@ -125,7 +122,6 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [showAdd, setShowAdd] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addBody, setAddBody] = useState("");
   const [addBusy, setAddBusy] = useState(false);
@@ -168,7 +164,6 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
     }
     setAddTitle("");
     setAddBody("");
-    setShowAdd(false);
     router.refresh();
   }, [addTitle, addBody, router]);
 
@@ -190,62 +185,72 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
   );
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-6">
 
-      {/* ── Toolbar: search + add ── */}
-      <div className={`${shell} flex flex-col gap-3`}>
-        <div className="flex flex-wrap items-center gap-2">
-          <Input.Search
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onSearch={handleSearchChange}
-            placeholder="Search by keyword — e.g. EPS, NAV, pivot, ROE…"
-            allowClear
-            className="max-w-lg flex-1"
-            aria-label="Search knowledge entries"
-          />
-          <Button
-            type="primary"
-            onClick={() => { setShowAdd((v) => !v); setAddError(null); }}
-          >
-            {showAdd ? "Cancel" : "+ Add note"}
-          </Button>
+      {/* ── Add note card ── */}
+      <div className="overflow-hidden rounded-2xl border border-teal-200/60 bg-gradient-to-br from-white to-teal-50/40 shadow-md ring-1 ring-teal-500/10 dark:border-teal-900/50 dark:from-zinc-900 dark:to-teal-950/30 dark:ring-teal-500/10">
+        {/* Card header */}
+        <div className="border-b border-teal-200/50 bg-teal-600/8 px-5 py-3.5 dark:border-teal-800/50 dark:bg-teal-500/10">
+          <h2 className="text-[17px] font-normal leading-snug text-teal-900 dark:text-teal-100">
+            Add a knowledge note
+          </h2>
+          <p className="mt-0.5 text-[14px] font-normal text-teal-800/70 dark:text-teal-300/70">
+            Save anything you want to remember — concepts, rules, personal observations.
+          </p>
         </div>
-
-        {showAdd ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-zinc-200/80 bg-zinc-50/70 p-3 dark:border-zinc-700/60 dark:bg-zinc-900/60">
-            <p className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">New knowledge note</p>
+        {/* Card body */}
+        <div className="flex flex-col gap-4 px-5 py-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">
+              Title
+            </label>
             <input
               type="text"
               value={addTitle}
               onChange={(e) => setAddTitle(e.target.value)}
-              placeholder="Title (e.g. P/B Ratio, EPS growth rule)"
+              placeholder="e.g. EPS growth rule, P/B Ratio, Support bounce setup…"
               maxLength={200}
-              className="box-border w-full rounded-md border border-zinc-300/90 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+              className="box-border w-full rounded-lg border border-zinc-300/90 bg-white px-4 py-2.5 text-[15px] font-normal text-zinc-900 outline-none focus:ring-2 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">
+              Note
+            </label>
             <textarea
               value={addBody}
               onChange={(e) => setAddBody(e.target.value)}
-              placeholder="Write your note here…"
-              rows={4}
-              className="box-border w-full resize-y rounded-md border border-zinc-300/90 bg-white px-3 py-2 text-[15px] font-normal leading-relaxed text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+              placeholder="Write your note here — explain the concept, share a rule, or describe when to apply it…"
+              rows={5}
+              className="box-border w-full resize-y rounded-lg border border-zinc-300/90 bg-white px-4 py-2.5 text-[15px] font-normal leading-relaxed text-zinc-900 outline-none focus:ring-2 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-            {addError ? (
-              <Alert type="error" showIcon message={addError} />
-            ) : null}
-            <div className="flex justify-end">
-              <Button
-                type="primary"
-                loading={addBusy}
-                disabled={addBusy || !addTitle.trim() || !addBody.trim()}
-                onClick={() => void handleAdd()}
-              >
-                Save note
-              </Button>
-            </div>
           </div>
-        ) : null}
+          {addError ? <Alert type="error" showIcon message={addError} /> : null}
+          <div className="flex justify-end">
+            <Button
+              type="primary"
+              size="large"
+              loading={addBusy}
+              disabled={addBusy || !addTitle.trim() || !addBody.trim()}
+              onClick={() => void handleAdd()}
+              className="px-8"
+            >
+              Add note
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {/* ── Search bar ── */}
+      <Input.Search
+        value={search}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onSearch={handleSearchChange}
+        placeholder="Search by keyword — e.g. EPS, NAV, pivot, ROE…"
+        allowClear
+        size="large"
+        aria-label="Search knowledge entries"
+      />
 
       {/* ── Results summary ── */}
       <p className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">

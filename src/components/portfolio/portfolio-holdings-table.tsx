@@ -8,6 +8,7 @@ import {
 } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
+import type { WatchlistClassification } from "@/lib/watchlist-classification";
 import { Alert, Button, Card, Input, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -96,15 +97,37 @@ function sortNullableNumber(
   };
 }
 
+function ClassificationDot({ c }: { c: WatchlistClassification }) {
+  if (c === "BLUE") {
+    return (
+      <span
+        title="Blue chip"
+        className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400"
+      />
+    );
+  }
+  if (c === "GREEN") {
+    return (
+      <span
+        title="Green chip"
+        className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400"
+      />
+    );
+  }
+  return null;
+}
+
 export function PortfolioHoldingsTable({
   holdings,
   totalRealizedBdt = 0,
+  classificationMap = {},
   enableBookEdit = false,
   onAfterBookSave,
 }: {
   holdings: PortfolioMarketRow[];
   /** Sell-only net: Σ (sell price − avg at sell) × qty − sell fees (from ledger). */
   totalRealizedBdt?: number;
+  classificationMap?: Record<string, WatchlistClassification>;
   enableBookEdit?: boolean;
   onAfterBookSave?: () => void | Promise<void>;
 }) {
@@ -342,8 +365,11 @@ export function PortfolioHoldingsTable({
             }
           : {}),
         render: (v: string) => (
-          <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-normal text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
-            {v}
+          <span className="flex items-center gap-1.5">
+            <ClassificationDot c={classificationMap[v] ?? null} />
+            <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-normal text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
+              {v}
+            </span>
           </span>
         ),
       },
@@ -457,7 +483,7 @@ export function PortfolioHoldingsTable({
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
       },
     ];
-  }, [bookEditing, draft, patchDraft]);
+  }, [bookEditing, classificationMap, draft, patchDraft]);
 
   return (
     <Card

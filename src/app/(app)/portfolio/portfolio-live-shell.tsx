@@ -1,6 +1,7 @@
 "use client";
 
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
+import type { WatchlistClassification } from "@/lib/watchlist-classification";
 import { Alert } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
@@ -24,10 +25,12 @@ export function PortfolioLiveShell({
   initialHoldings,
   initialMarketError,
   initialTotalRealizedBdt,
+  classificationMap = {},
 }: {
   initialHoldings: PortfolioMarketRow[];
   initialMarketError: string | null;
   initialTotalRealizedBdt: number;
+  classificationMap?: Record<string, WatchlistClassification>;
 }) {
   const [rows, setRows] = useState(initialHoldings);
   const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
@@ -118,6 +121,7 @@ export function PortfolioLiveShell({
       <PortfolioHoldingsTable
         holdings={rows}
         totalRealizedBdt={totalRealizedBdt}
+        classificationMap={classificationMap}
         enableBookEdit
         onAfterBookSave={refresh}
       />

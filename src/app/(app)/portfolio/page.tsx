@@ -1,6 +1,8 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
+import { normalizeWatchlistClassification, type WatchlistClassification } from "@/lib/watchlist-classification";
 import { siteTextLinkNeutralClass } from "@/lib/site-typography";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, Empty } from "antd";
 import { PortfolioLiveShell } from "./portfolio-live-shell";
@@ -9,8 +11,32 @@ import { PortfolioLiveShell } from "./portfolio-live-shell";
 export const revalidate = 60;
 
 export default async function PortfolioPage() {
-  const { error, holdings, marketError, totalRealizedBdt } =
-    await fetchPortfolioWithDseMarket();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [portfolioRes, classificationRes] = await Promise.all([
+    fetchPortfolioWithDseMarket(),
+    user
+      ? supabase
+          .from("long_term_holdings")
+          .select("symbol, classification")
+          .eq("user_id", user.id)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const { error, holdings, marketError, totalRealizedBdt } = portfolioRes;
+
+  const classificationMap: Record<string, WatchlistClassification> = {};
+  for (const row of classificationRes.data ?? []) {
+    const sym = String((row as { symbol: string }).symbol ?? "")
+      .trim()
+      .toUpperCase();
+    classificationMap[sym] = normalizeWatchlistClassification(
+      (row as { classification: unknown }).classification,
+    );
+  }
 
   if (error) {
     const missingTable =
@@ -89,6 +115,7 @@ export default async function PortfolioPage() {
             initialHoldings={holdings}
             initialMarketError={marketError}
             initialTotalRealizedBdt={totalRealizedBdt}
+            classificationMap={classificationMap}
           />
         </div>
       )}
