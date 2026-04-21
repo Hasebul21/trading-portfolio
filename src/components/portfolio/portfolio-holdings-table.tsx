@@ -462,11 +462,11 @@ export function PortfolioHoldingsTable({
   return (
     <Card
       variant="outlined"
-      className="w-full overflow-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
+      className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
       styles={{ body: { padding: 0 } }}
     >
-      <div className="flex flex-wrap items-center justify-center gap-2 border-b border-teal-100/80 px-3 py-2 sm:gap-3 sm:px-4 dark:border-teal-900/40">
-        <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+      <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4 dark:border-teal-900/40">
+        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Total unrealized P/L
           </div>
@@ -496,7 +496,7 @@ export function PortfolioHoldingsTable({
           ) : null}
         </div>
 
-        <div className="min-w-[10.5rem] max-w-[15rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[15rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Net Gain/Loss
           </div>
@@ -510,7 +510,7 @@ export function PortfolioHoldingsTable({
           </div>
         </div>
 
-        <div className="min-w-[10.5rem] max-w-[13rem] flex-1 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm dark:border-teal-800/50 dark:bg-teal-950/25">
+        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
             Total invested
           </div>
@@ -526,7 +526,7 @@ export function PortfolioHoldingsTable({
           placeholder="Search symbol…"
           value={symbolQuery}
           onChange={(e) => setSymbolQuery(e.target.value)}
-          className="max-w-sm"
+          className="w-full max-w-full sm:max-w-sm"
           size="middle"
         />
         {enableBookEdit ? (
@@ -560,6 +560,7 @@ export function PortfolioHoldingsTable({
         className="portfolio-holdings-table"
         columns={columns}
         dataSource={data}
+        scroll={{ x: "max-content" }}
         pagination={tablePagination("positions", {
           hideOnSinglePage: false,
           pageSize: 15,

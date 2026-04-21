@@ -38,9 +38,12 @@ export default async function InvestedPage() {
   const total = list.reduce((s, r) => s + Number(r.amount_bdt), 0);
 
   return (
-    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-2xl text-left">
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto min-w-0 max-w-2xl text-left">
       <div className={toolbarShell}>
-        <form action={addCapitalContribution} className="flex flex-wrap items-center gap-1.5">
+        <form
+          action={addCapitalContribution}
+          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5"
+        >
           <input
             name="amount_bdt"
             type="number"
@@ -50,15 +53,19 @@ export default async function InvestedPage() {
             required
             aria-label="Amount"
             placeholder="0"
-            className="box-border h-9 w-[6.5rem] shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 w-full shrink-0 rounded-md border border-zinc-300/90 bg-white px-2.5 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 sm:w-[6.5rem] dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
           <input
             name="note"
             aria-label="Note (optional)"
             placeholder="Note"
-            className="box-border h-9 min-w-0 flex-1 basis-[8rem] rounded-md border border-zinc-300/90 bg-white px-3 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 min-w-0 w-full flex-1 rounded-md border border-zinc-300/90 bg-white px-3 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-teal-500/30 sm:basis-[8rem] dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
-          <Button type="primary" htmlType="submit" className="h-9 shrink-0 px-4 text-[15px] font-normal">
+          <Button
+            type="primary"
+            htmlType="submit"
+            className="h-9 w-full shrink-0 px-4 text-[15px] font-normal sm:w-auto"
+          >
             Add
           </Button>
         </form>

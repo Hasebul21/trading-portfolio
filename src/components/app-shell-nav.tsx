@@ -18,8 +18,9 @@ const LINKS = [
   { href: "/knowledge", label: "Knowledge" },
 ] as const;
 
+/** Mobile: one row, horizontal scroll. `md+`: wrap and cap width like a pill cluster. */
 const stripClass =
-  "flex w-full max-w-3xl flex-wrap items-center justify-center gap-1 rounded-lg border border-zinc-200/90 bg-zinc-50/90 p-1 shadow-inner shadow-zinc-900/[0.03] dark:border-zinc-700/80 dark:bg-zinc-900/55 dark:shadow-black/20";
+  "inline-flex w-max max-w-none flex-nowrap items-stretch gap-0.5 rounded-lg border border-zinc-200/90 bg-zinc-50/90 p-0.5 shadow-inner shadow-zinc-900/[0.03] dark:border-zinc-700/80 dark:bg-zinc-900/55 dark:shadow-black/20 md:flex md:w-full md:max-w-3xl md:flex-wrap md:items-center md:justify-center md:gap-1 md:p-1";
 
 export function AppShellNav() {
   const pathname = usePathname() ?? "";

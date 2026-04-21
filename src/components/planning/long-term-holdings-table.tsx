@@ -298,7 +298,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   ];
 
   return (
-    <div className="w-full min-w-0 max-w-full">
+    <div className="w-full min-w-0 max-w-full overflow-x-auto">
       <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
         {!editing ? (
           <Button type="default" size="middle" onClick={beginEdit}>
@@ -322,6 +322,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
         className="long-term-holdings-table"
         columns={columns}
         dataSource={data}
+        scroll={{ x: "max-content" }}
         locale={{ emptyText: "No symbols yet." }}
         pagination={tablePagination("symbols", {
           hideOnSinglePage: false,

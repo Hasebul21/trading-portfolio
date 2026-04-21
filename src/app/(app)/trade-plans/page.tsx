@@ -19,7 +19,7 @@ export default async function TradePlansPage() {
 
   if (error) {
     return (
-      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
+      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto min-w-0 max-w-4xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
@@ -37,10 +37,13 @@ export default async function TradePlansPage() {
   const list = rows ?? [];
 
   return (
-    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto max-w-4xl text-left">
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto min-w-0 max-w-4xl text-left">
       <div className={toolbarShell}>
-        <form action={addTradePlan} className="flex flex-wrap items-center gap-1.5">
-          <div className="min-w-0 flex-1 basis-[7.5rem] sm:basis-[9.5rem]">
+        <form
+          action={addTradePlan}
+          className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5"
+        >
+          <div className="min-w-0 w-full sm:flex-1 sm:basis-[9.5rem]">
             <SymbolField
               instruments={instruments}
               loadError={instrumentsError}
@@ -55,7 +58,7 @@ export default async function TradePlansPage() {
             name="side"
             required
             aria-label="Buy or sell"
-            className="box-border h-9 w-[4.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1 text-[15px] font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+            className="box-border h-9 w-full shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 sm:w-[4.25rem] sm:px-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
           >
             <option value="buy">Buy</option>
             <option value="sell">Sell</option>
@@ -69,9 +72,14 @@ export default async function TradePlansPage() {
             required
             aria-label="Target price"
             placeholder="Target"
-            className="box-border h-9 w-[5.25rem] shrink-0 rounded border border-zinc-300/90 bg-white px-1.5 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+            className="box-border h-9 w-full min-w-0 shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 sm:w-[5.25rem] sm:px-1.5 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
-          <Button type="primary" htmlType="submit" size="middle" className="h-9 shrink-0 px-3 text-[15px] font-normal leading-none">
+          <Button
+            type="primary"
+            htmlType="submit"
+            size="middle"
+            className="h-9 w-full shrink-0 px-3 text-[15px] font-normal leading-none sm:w-auto"
+          >
             Add
           </Button>
         </form>

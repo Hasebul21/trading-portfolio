@@ -7,7 +7,7 @@ export default async function RecordPage() {
 
   return (
     <AppPageStack>
-      <div className="mx-auto max-w-xl text-left">
+      <div className="mx-auto min-w-0 max-w-xl text-left">
         <RecordForm instruments={instruments} instrumentsError={error} />
       </div>
     </AppPageStack>

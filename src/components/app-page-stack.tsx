@@ -16,7 +16,7 @@ export function AppPageStack({
   ...rest
 }: AppPageStackProps) {
   return (
-    <div className={`flex flex-col ${gapClass} ${className}`.trim()} {...rest}>
+    <div className={`flex min-w-0 flex-col ${gapClass} ${className}`.trim()} {...rest}>
       {children}
     </div>
   );

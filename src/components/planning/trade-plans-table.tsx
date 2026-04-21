@@ -63,9 +63,10 @@ export function TradePlansTable({ rows }: { rows: TradePlanRow[] }) {
 
   return (
     <Table<Row>
-      className=""
+      className="w-full min-w-0"
       columns={columns}
       dataSource={data}
+      scroll={{ x: "max-content" }}
       locale={{ emptyText: "No targets yet." }}
       pagination={tablePagination("targets", { hideOnSinglePage: false })}
       size="middle"

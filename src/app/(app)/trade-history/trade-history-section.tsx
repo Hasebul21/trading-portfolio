@@ -146,6 +146,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
         <Table<Row>
           columns={columns}
           dataSource={data}
+          scroll={{ x: "max-content" }}
           pagination={tablePagination("rows", {
             hideOnSinglePage: false,
             pageSize: 15,

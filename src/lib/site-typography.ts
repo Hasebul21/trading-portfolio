@@ -7,7 +7,7 @@ const uiType = "text-[15px] font-normal leading-snug tracking-normal";
 
 /** Header strip: layout + type (pair with active / idle classes). */
 export const siteNavLinkBaseClass =
-  `inline-flex items-center justify-center rounded-lg px-3 py-2 ${uiType} transition duration-200 sm:px-3.5 sm:py-2.5`;
+  `inline-flex items-center justify-center whitespace-nowrap rounded-lg px-2 py-1.5 ${uiType} transition duration-200 sm:px-3.5 sm:py-2.5`;
 
 export const siteNavLinkActiveClass =
   "bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md shadow-teal-600/30 ring-1 ring-white/25 no-underline hover:text-white hover:no-underline dark:from-teal-500 dark:to-emerald-500 dark:shadow-teal-950/50";

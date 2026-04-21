@@ -22,7 +22,7 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
     : filterTransactionsLastNDays(txRes.rows, 7);
 
   return (
-    <div className="mx-auto max-w-5xl text-left">
+    <div className="mx-auto min-w-0 max-w-5xl text-left">
       <TradeHistorySection
         key={dayParam ?? "last-7-days"}
         rows={historyRows}

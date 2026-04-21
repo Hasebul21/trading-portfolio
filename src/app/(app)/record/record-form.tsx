@@ -46,7 +46,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
   }, [state.error, state.ok, pending]);
 
   return (
-    <div className="max-w-lg">
+    <div className="min-w-0 max-w-lg">
       <form
         ref={formRef}
         action={formAction}

@@ -68,9 +68,10 @@ export function InvestedContributionsTable({ rows }: { rows: ContributionRow[] }
 
   return (
     <Table<Row>
-      className="max-w-2xl"
+      className="w-full min-w-0 max-w-2xl"
       columns={columns}
       dataSource={data}
+      scroll={{ x: "max-content" }}
       locale={{ emptyText: "No entries yet." }}
       pagination={tablePagination("entries", { hideOnSinglePage: false })}
       size="middle"

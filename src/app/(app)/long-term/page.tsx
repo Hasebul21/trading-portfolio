@@ -44,7 +44,7 @@ export default async function LongTermPage() {
       );
 
     return (
-      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full max-w-7xl text-left">
+      <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full min-w-0 max-w-7xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error.message}
         </p>
@@ -110,7 +110,7 @@ export default async function LongTermPage() {
   });
 
   return (
-    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full max-w-7xl text-left">
+    <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full min-w-0 max-w-7xl text-left">
       <AddLongTermForm
         instruments={instruments}
         instrumentsError={instrumentsError}

@@ -11,12 +11,14 @@ export default function AppLayout({
     <AntdAppProvider>
     <div className="app-shell flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/75 shadow-sm shadow-zinc-900/5 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/75 dark:shadow-black/20">
-        <div className="mx-auto flex w-full max-w-[min(100%,1920px)] items-center gap-3 px-4 py-2 sm:px-6 sm:py-2.5 lg:px-8">
-          <div className="min-w-0 flex-1" aria-hidden />
-          <div className="flex min-w-0 shrink justify-center">
-            <AppShellNav />
+        <div className="mx-auto flex w-full max-w-[min(100%,1920px)] flex-col gap-2 px-3 py-2 sm:px-6 sm:py-2.5 md:flex-row md:items-center md:gap-3 lg:px-8">
+          <div className="hidden min-w-0 flex-1 md:block" aria-hidden />
+          <div className="min-w-0 w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] md:flex md:flex-1 md:justify-center md:overflow-visible">
+            <div className="flex min-w-0 justify-start md:justify-center">
+              <AppShellNav />
+            </div>
           </div>
-          <div className="flex min-w-0 flex-1 justify-end">
+          <div className="flex min-w-0 shrink-0 justify-end md:flex-1">
             <form action={signOut} className="shrink-0">
               <button
                 type="submit"
@@ -28,7 +30,7 @@ export default function AppLayout({
           </div>
         </div>
       </header>
-      <main className="relative mx-auto w-full max-w-[min(100%,1920px)] flex-1 px-4 py-5 pb-10 text-center text-[15px] leading-relaxed text-zinc-800 sm:px-6 sm:py-6 lg:px-8 dark:text-zinc-200">
+      <main className="relative mx-auto w-full min-w-0 max-w-[min(100%,1920px)] flex-1 px-3 py-4 pb-10 text-center text-[15px] leading-relaxed text-zinc-800 sm:px-6 sm:py-6 lg:px-8 dark:text-zinc-200">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_90%_50%_at_50%_-20%,rgba(20,184,166,0.12),transparent_55%)] dark:bg-[radial-gradient(ellipse_80%_45%_at_50%_-15%,rgba(45,212,191,0.08),transparent_50%)]" aria-hidden />
         {children}
       </main>

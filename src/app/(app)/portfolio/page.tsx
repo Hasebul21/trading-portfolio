@@ -19,7 +19,7 @@ export default async function PortfolioPage() {
       );
 
     return (
-      <AppPageStack className="mx-auto max-w-2xl text-left">
+      <AppPageStack className="mx-auto min-w-0 max-w-2xl text-left">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           {error}
         </p>
@@ -65,7 +65,7 @@ export default async function PortfolioPage() {
   }
 
   return (
-    <AppPageStack gapClass="gap-4 sm:gap-5" className="-mt-2 sm:-mt-4">
+    <AppPageStack gapClass="gap-4 sm:gap-5" className="-mt-2 min-w-0 sm:-mt-4">
       {holdings.length === 0 ? (
         <Card
           variant="outlined"
@@ -84,7 +84,7 @@ export default async function PortfolioPage() {
           />
         </Card>
       ) : (
-        <div className="text-left">
+        <div className="min-w-0 text-left">
           <PortfolioLiveShell
             initialHoldings={holdings}
             initialMarketError={marketError}
