@@ -28,9 +28,9 @@ const NAV_ITEMS: NavItem[] = [
   { type: "link", href: "/knowledge",     label: "Knowledge" },
 ];
 
-/** Mobile: one row, horizontal scroll. md+: wrapping pill cluster. */
+/** Mobile: one row, horizontal scroll. md+: full-width pill spanning the header. */
 const stripClass =
-  "inline-flex w-max max-w-none flex-nowrap items-center gap-0.5 rounded-xl border border-zinc-200/90 bg-zinc-50/90 p-1 shadow-inner shadow-zinc-900/[0.03] dark:border-zinc-700/80 dark:bg-zinc-900/55 dark:shadow-black/20 md:flex md:w-full md:max-w-4xl md:flex-wrap md:justify-center md:gap-0.5 md:p-1";
+  "inline-flex w-max flex-nowrap items-center gap-0.5 rounded-xl border border-zinc-200/90 bg-zinc-50/90 p-1 shadow-inner shadow-zinc-900/[0.03] dark:border-zinc-700/80 dark:bg-zinc-900/55 dark:shadow-black/20 md:w-full md:flex-wrap md:justify-between md:gap-0.5";
 
 const dividerClass =
   "mx-0.5 hidden h-5 w-px shrink-0 rounded-full bg-zinc-300/80 dark:bg-zinc-700/80 md:block";
