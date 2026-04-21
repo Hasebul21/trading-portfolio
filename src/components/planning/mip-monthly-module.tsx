@@ -329,12 +329,24 @@ export function MipMonthlyModule({
             View
           </Button>
         </div>
-        <Typography.Text type="secondary" className="text-[15px] sm:ml-auto">
-          Viewing:{" "}
-          <Link href={`/mip?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
-            {ymToDisplayTitle(viewYm)}
-          </Link>
-        </Typography.Text>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:ml-auto">
+          <Typography.Text type="secondary" className="text-[15px]">
+            Viewing:{" "}
+            <Link href={`/mip?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
+              {ymToDisplayTitle(viewYm)}
+            </Link>
+          </Typography.Text>
+          {header ? (
+            <span className="text-[15px] font-normal text-zinc-700 dark:text-zinc-200">
+              Remaining:{" "}
+              <span className="tabular-nums font-medium text-teal-700 dark:text-teal-300">
+                {remainingPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
+                {" · "}
+                {formatBdt(remainingBdt)} BDT
+              </span>
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {!header && canSubmitThisMonth ? (
@@ -400,36 +412,6 @@ export function MipMonthlyModule({
 
       {header ? (
         <>
-          <div className={shell}>
-            <Typography.Title level={5} className="!mb-2 !mt-0 !text-[15px] !font-normal text-zinc-800 dark:text-zinc-100">
-              Setup (locked)
-            </Typography.Title>
-            <dl className="grid grid-cols-1 gap-2 text-[15px] sm:grid-cols-2">
-              <div className="flex justify-between gap-4 border-b border-zinc-200/80 py-1 dark:border-zinc-700/60">
-                <dt className="text-zinc-500 dark:text-zinc-400">Plan date</dt>
-                <dd className="tabular-nums text-zinc-900 dark:text-zinc-50">{header.plan_date}</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-zinc-200/80 py-1 dark:border-zinc-700/60">
-                <dt className="text-zinc-500 dark:text-zinc-400">Base monthly (BDT)</dt>
-                <dd className="tabular-nums text-zinc-900 dark:text-zinc-50">{formatBdt(Number(header.base_amount_bdt))}</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-zinc-200/80 py-1 dark:border-zinc-700/60">
-                <dt className="text-zinc-500 dark:text-zinc-400">Carried from prior month (BDT)</dt>
-                <dd className="tabular-nums text-zinc-900 dark:text-zinc-50">
-                  {formatBdt(Number(header.carried_forward_bdt))}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-zinc-200/80 py-1 dark:border-zinc-700/60">
-                <dt className="text-zinc-500 dark:text-zinc-400">Effective total (BDT)</dt>
-                <dd className="tabular-nums text-teal-900 dark:text-teal-100">{formatBdt(effective)}</dd>
-              </div>
-            </dl>
-            <p className="mt-2 text-[14px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-              Unallocated amount (when locked rows total under 100%) is carried into next month&apos;s effective total
-              automatically when you submit the next MIP.
-            </p>
-          </div>
-
           <div>
             <Typography.Title
               level={5}
@@ -437,13 +419,7 @@ export function MipMonthlyModule({
             >
               {ymToDisplayTitle(header.year_month)}
             </Typography.Title>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <Typography.Text className="text-[15px] text-zinc-700 dark:text-zinc-200">
-                Remaining after locked rows:{" "}
-                <span className="tabular-nums text-teal-800 dark:text-teal-200">
-                  {remainingPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}% · {formatBdt(remainingBdt)} BDT
-                </span>
-              </Typography.Text>
+            <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
               <Button
                 type="default"
                 size="middle"
