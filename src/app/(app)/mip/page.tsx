@@ -25,14 +25,41 @@ export default async function MipPage({ searchParams }: PageProps) {
   } = await supabase.auth.getUser();
   const { instruments, error: instrumentsError } = await getCachedDseInstruments();
 
-  const headerRes = user
-    ? await supabase
-        .from("mip_monthly_headers")
-        .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
-        .eq("user_id", user.id)
-        .eq("year_month", viewYm)
-        .maybeSingle()
-    : { data: null, error: null };
+  const needCurrentSeparately = user && viewYm !== currentYmDhaka;
+
+  const [headerRes, currentHeaderRes, allHeadersRes, allLockedRowsRes] = await Promise.all([
+    user
+      ? supabase
+          .from("mip_monthly_headers")
+          .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
+          .eq("user_id", user.id)
+          .eq("year_month", viewYm)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    needCurrentSeparately
+      ? supabase
+          .from("mip_monthly_headers")
+          .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
+          .eq("user_id", user!.id)
+          .eq("year_month", currentYmDhaka)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    // All-time total invested (sum of base_amount_bdt)
+    user
+      ? supabase
+          .from("mip_monthly_headers")
+          .select("base_amount_bdt")
+          .eq("user_id", user.id)
+      : Promise.resolve({ data: null, error: null }),
+    // All-time total allocated (sum of locked calculated_amount_bdt via RLS)
+    user
+      ? supabase
+          .from("mip_monthly_rows")
+          .select("calculated_amount_bdt, mip_monthly_headers!inner(user_id)")
+          .eq("locked", true)
+          .eq("mip_monthly_headers.user_id", user.id)
+      : Promise.resolve({ data: null, error: null }),
+  ]);
 
   const { data: headerRow, error: headerErr } = headerRes;
 
@@ -62,6 +89,9 @@ export default async function MipPage({ searchParams }: PageProps) {
   }
 
   const header = headerRow as MipMonthlyHeaderDTO | null;
+  const currentHeader = needCurrentSeparately
+    ? (currentHeaderRes.data as MipMonthlyHeaderDTO | null)
+    : header;
 
   let rows: MipMonthlyRowDTO[] = [];
   if (header) {
@@ -76,6 +106,29 @@ export default async function MipPage({ searchParams }: PageProps) {
     }
   }
 
+  let currentRows: MipMonthlyRowDTO[] = [];
+  if (needCurrentSeparately && currentHeader) {
+    const { data: rowData } = await supabase
+      .from("mip_monthly_rows")
+      .select("id, header_id, sort_order, symbol, percentage, calculated_amount_bdt, locked")
+      .eq("header_id", currentHeader.id)
+      .order("sort_order", { ascending: true });
+    if (rowData) currentRows = rowData as MipMonthlyRowDTO[];
+  } else {
+    currentRows = rows;
+  }
+
+  // Running wallet: total invested minus total allocated across all months
+  const totalInvestedBdt = (allHeadersRes.data ?? []).reduce(
+    (s, h) => s + Number((h as { base_amount_bdt: unknown }).base_amount_bdt ?? 0),
+    0,
+  );
+  const totalAllocatedBdt = (allLockedRowsRes.data ?? []).reduce(
+    (s, r) => s + Number((r as { calculated_amount_bdt: unknown }).calculated_amount_bdt ?? 0),
+    0,
+  );
+  const totalBalanceBdt = Math.round((totalInvestedBdt - totalAllocatedBdt) * 100) / 100;
+
   const canSubmitThisMonth =
     !header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
 
@@ -88,6 +141,9 @@ export default async function MipPage({ searchParams }: PageProps) {
         currentYmDhaka={currentYmDhaka}
         header={header}
         rows={rows}
+        currentHeader={currentHeader}
+        currentRows={currentRows}
+        totalBalanceBdt={totalBalanceBdt}
         instruments={instruments}
         instrumentsError={instrumentsError}
         canSubmitThisMonth={canSubmitThisMonth}

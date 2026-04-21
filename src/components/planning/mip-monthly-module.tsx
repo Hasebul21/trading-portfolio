@@ -62,6 +62,9 @@ export function MipMonthlyModule({
   currentYmDhaka,
   header,
   rows,
+  currentHeader,
+  currentRows,
+  totalBalanceBdt,
   instruments,
   instrumentsError,
   canSubmitThisMonth,
@@ -70,6 +73,11 @@ export function MipMonthlyModule({
   currentYmDhaka: string;
   header: MipMonthlyHeaderDTO | null;
   rows: MipMonthlyRowDTO[];
+  /** Header for the current Dhaka month (may differ from viewed month). */
+  currentHeader: MipMonthlyHeaderDTO | null;
+  currentRows: MipMonthlyRowDTO[];
+  /** Running wallet: SUM(all base_amount_bdt) − SUM(all locked calculated_amount_bdt). */
+  totalBalanceBdt: number;
   instruments: SymbolFieldInstrument[];
   instrumentsError: string | null;
   canSubmitThisMonth: boolean;
@@ -108,11 +116,19 @@ export function MipMonthlyModule({
       })
     : 0;
 
-  const lockedSumPct = useMemo(() => sumLockedPercentages(rows), [rows]);
-  const remainingPct = Math.max(0, Math.round((100 - lockedSumPct) * 10000) / 10000);
-  const remainingBdt =
-    header && effective > 0
-      ? Math.round((remainingPct / 100) * effective * 100) / 100
+  // Balance for the current Dhaka month — shown in the header bar regardless of which month is viewed.
+  const currentEffective = useMemo(() => {
+    if (!currentHeader) return 0;
+    return effectiveMonthlyTotalBdt({
+      base_amount_bdt: Number(currentHeader.base_amount_bdt),
+      carried_forward_bdt: Number(currentHeader.carried_forward_bdt),
+    });
+  }, [currentHeader]);
+  const currentLockedSumPct = useMemo(() => sumLockedPercentages(currentRows), [currentRows]);
+  const currentRemainingPct = Math.max(0, Math.round((100 - currentLockedSumPct) * 10000) / 10000);
+  const currentRemainingBdt =
+    currentHeader && currentEffective > 0
+      ? Math.round((currentRemainingPct / 100) * currentEffective * 100) / 100
       : 0;
 
   const applySearch = useCallback(() => {
@@ -300,6 +316,36 @@ export function MipMonthlyModule({
 
   return (
     <div className="flex min-w-0 flex-col gap-5 text-left">
+
+      {/* ── Total Balance card ── */}
+      <div className={`${shell} flex flex-col items-center gap-1 py-4 text-center sm:flex-row sm:items-center sm:justify-between sm:py-3 sm:text-left`}>
+        <div>
+          <p className="text-[13px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+            Total Balance
+          </p>
+          <p className={`mt-0.5 text-3xl font-semibold tabular-nums leading-none ${totalBalanceBdt < 0 ? "text-red-600 dark:text-red-400" : "text-teal-700 dark:text-teal-300"}`}>
+            {formatBdt(totalBalanceBdt)} <span className="text-lg font-normal text-zinc-400 dark:text-zinc-500">BDT</span>
+          </p>
+          <p className="mt-1 text-[13px] font-normal text-zinc-400 dark:text-zinc-500">
+            All investments minus all stock allocations
+          </p>
+        </div>
+        {currentHeader ? (
+          <div className="mt-2 rounded-md border border-teal-200/70 bg-teal-50/60 px-4 py-2 text-center dark:border-teal-800/50 dark:bg-teal-950/40 sm:mt-0 sm:text-right">
+            <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
+              {ymToDisplayTitle(currentYmDhaka)} remaining
+            </p>
+            <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
+              {formatBdt(currentRemainingBdt)} BDT
+            </p>
+            <p className="text-[12px] tabular-nums text-teal-600 dark:text-teal-400">
+              {currentRemainingPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}% unallocated
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {/* ── Month search bar ── */}
       <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
@@ -329,24 +375,12 @@ export function MipMonthlyModule({
             View
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:ml-auto">
-          <Typography.Text type="secondary" className="text-[15px]">
-            Viewing:{" "}
-            <Link href={`/mip?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
-              {ymToDisplayTitle(viewYm)}
-            </Link>
-          </Typography.Text>
-          {header ? (
-            <span className="text-[15px] font-normal text-zinc-700 dark:text-zinc-200">
-              Remaining:{" "}
-              <span className="tabular-nums font-medium text-teal-700 dark:text-teal-300">
-                {remainingPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
-                {" · "}
-                {formatBdt(remainingBdt)} BDT
-              </span>
-            </span>
-          ) : null}
-        </div>
+        <Typography.Text type="secondary" className="text-[15px] sm:ml-auto">
+          Viewing:{" "}
+          <Link href={`/mip?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
+            {ymToDisplayTitle(viewYm)}
+          </Link>
+        </Typography.Text>
       </div>
 
       {!header && canSubmitThisMonth ? (
