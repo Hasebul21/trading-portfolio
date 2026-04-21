@@ -13,7 +13,8 @@ const LINKS = [
   { href: "/record", label: "Transaction" },
   { href: "/trade-history", label: "Transaction History" },
   { href: "/invested", label: "Capital" },
-  { href: "/long-term", label: "Long-horizon plan" },
+  { href: "/long-term", label: "Watchlist" },
+  { href: "/mip", label: "MIP" },
   { href: "/trade-plans", label: "Quick-trade board" },
   { href: "/knowledge", label: "Knowledge" },
 ] as const;

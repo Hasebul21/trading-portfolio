@@ -71,7 +71,7 @@ export async function addLongTermHolding(
     .maybeSingle();
 
   if (dup) {
-    return { ok: false, error: `${symbol} is already in your long-term list.` };
+    return { ok: false, error: `${symbol} is already in your watchlist.` };
   }
 
   const lsp = await fetchDseLspQuoteMapFresh();
@@ -238,4 +238,123 @@ export async function deleteTradePlan(formData: FormData) {
     .eq("user_id", user.id);
 
   revalidatePath("/trade-plans");
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function sanitizeMipAmount(raw: string): number | null {
+  const n = Number(String(raw ?? "").trim().replace(/,/g, ""));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
+export async function addMipPlan(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
+  const amount = sanitizeMipAmount(String(formData.get("total_investment_plan_bdt") ?? ""));
+
+  if (!symbol) return { ok: false, error: "Enter a symbol." };
+  if (amount === null) return { ok: false, error: "Enter a positive total investment amount." };
+
+  const { data: dup } = await supabase
+    .from("mip_plans")
+    .select("id")
+    .eq("user_id", user.id)
+    .ilike("symbol", symbol)
+    .limit(1)
+    .maybeSingle();
+
+  if (dup) {
+    return { ok: false, error: `${symbol} is already in your MIP list.` };
+  }
+
+  const { error } = await supabase.from("mip_plans").insert({
+    user_id: user.id,
+    symbol,
+    total_investment_plan_bdt: amount,
+  });
+
+  if (error) {
+    if (/duplicate key|unique constraint/i.test(error.message)) {
+      return { ok: false, error: `${symbol} is already in your MIP list.` };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/mip");
+  return { ok: true };
+}
+
+export async function updateMipPlan(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!UUID_RE.test(id)) return { ok: false, error: "Invalid row id." };
+
+  const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
+  const amount = sanitizeMipAmount(String(formData.get("total_investment_plan_bdt") ?? ""));
+
+  if (!symbol) return { ok: false, error: "Enter a symbol." };
+  if (amount === null) return { ok: false, error: "Enter a positive total investment amount." };
+
+  const { data: dup } = await supabase
+    .from("mip_plans")
+    .select("id")
+    .eq("user_id", user.id)
+    .ilike("symbol", symbol)
+    .neq("id", id)
+    .limit(1)
+    .maybeSingle();
+
+  if (dup) {
+    return { ok: false, error: `Another row already uses ${symbol}.` };
+  }
+
+  const { error } = await supabase
+    .from("mip_plans")
+    .update({
+      symbol,
+      total_investment_plan_bdt: amount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    if (/duplicate key|unique constraint/i.test(error.message)) {
+      return { ok: false, error: `Another row already uses ${symbol}.` };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/mip");
+  return { ok: true };
+}
+
+export async function deleteMipPlan(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+
+  await supabase.from("mip_plans").delete().eq("id", id).eq("user_id", user.id);
+
+  revalidatePath("/mip");
 }
