@@ -105,7 +105,7 @@ b {
 
 .portfolio-holdings-table .ant-table-tbody > tr:hover > td,
 .long-term-holdings-table .ant-table-tbody > tr:hover > td {
-  background: rgba(167, 243, 208, 0.45) !important;
+  background: rgba(113, 113, 122, 0.09) !important;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -132,6 +132,6 @@ b {
 
   .portfolio-holdings-table .ant-table-tbody > tr:hover > td,
   .long-term-holdings-table .ant-table-tbody > tr:hover > td {
-    background: rgba(15, 118, 110, 0.35) !important;
+    background: rgba(161, 161, 170, 0.13) !important;
   }
 }
