@@ -1,40 +1,58 @@
 import { AppPageHeader } from "@/components/app-page-header";
 import { AppPageStack } from "@/components/app-page-stack";
-import { MipPlansSection } from "@/components/planning/mip-plans-section";
+import {
+  MipMonthlyModule,
+  type MipMonthlyHeaderDTO,
+  type MipMonthlyRowDTO,
+} from "@/components/planning/mip-monthly-module";
 import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
+import { isTodayDhakaInSubmissionWindowForYm, yearMonthDhaka } from "@/lib/mip-monthly";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function MipPage() {
+type PageProps = {
+  searchParams: Promise<{ ym?: string }>;
+};
+
+export default async function MipPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const currentYmDhaka = yearMonthDhaka(new Date());
+  const ymParam = typeof sp.ym === "string" && /^\d{4}-\d{2}$/.test(sp.ym) ? sp.ym : null;
+  const viewYm = ymParam ?? currentYmDhaka;
+
   const supabase = await createClient();
-  const [{ instruments, error: instrumentsError }, listRes] = await Promise.all([
-    getCachedDseInstruments(),
-    supabase
-      .from("mip_plans")
-      .select("id, created_at, symbol, total_investment_plan_bdt")
-      .order("symbol", { ascending: true }),
-  ]);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { instruments, error: instrumentsError } = await getCachedDseInstruments();
 
-  const { data: rows, error: listError } = listRes;
+  const headerRes = user
+    ? await supabase
+        .from("mip_monthly_headers")
+        .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
+        .eq("user_id", user.id)
+        .eq("year_month", viewYm)
+        .maybeSingle()
+    : { data: null, error: null };
 
-  if (listError) {
+  const { data: headerRow, error: headerErr } = headerRes;
+
+  if (headerErr) {
     const missing =
-      /could not find the table|does not exist|schema cache|relation.*mip_plans/i.test(
-        listError.message,
-      );
+      /could not find the table|does not exist|schema cache|relation.*mip_monthly/i.test(headerErr.message);
 
     return (
       <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-2xl text-left">
         <AppPageHeader title="MIP" />
         <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
-          {listError.message}
+          {headerErr.message}
         </p>
         {missing ? (
           <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Run{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">
-              supabase/migrations/20260420120000_mip_plans.sql
+              supabase/migrations/20260421120000_mip_monthly_module.sql
             </code>{" "}
-            in the Supabase SQL Editor (or merge the block from{" "}
+            in the Supabase SQL Editor (or merge from{" "}
             <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code>
             ), then reload.
           </p>
@@ -43,14 +61,36 @@ export default async function MipPage() {
     );
   }
 
+  const header = headerRow as MipMonthlyHeaderDTO | null;
+
+  let rows: MipMonthlyRowDTO[] = [];
+  if (header) {
+    const { data: rowData, error: rowErr } = await supabase
+      .from("mip_monthly_rows")
+      .select("id, header_id, sort_order, symbol, percentage, calculated_amount_bdt, locked")
+      .eq("header_id", header.id)
+      .order("sort_order", { ascending: true });
+
+    if (!rowErr && rowData) {
+      rows = rowData as MipMonthlyRowDTO[];
+    }
+  }
+
+  const canSubmitThisMonth =
+    !header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
+
   return (
-    <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-3xl text-left">
+    <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-4xl text-left">
       <AppPageHeader title="MIP" />
-      <MipPlansSection
-        rows={rows ?? []}
-        loadError={null}
+      <MipMonthlyModule
+        key={viewYm}
+        viewYm={viewYm}
+        currentYmDhaka={currentYmDhaka}
+        header={header}
+        rows={rows}
         instruments={instruments}
         instrumentsError={instrumentsError}
+        canSubmitThisMonth={canSubmitThisMonth}
       />
     </AppPageStack>
   );

@@ -3,20 +3,29 @@
 import {
   deleteLongTermHolding,
   saveLongTermTable,
+  setWatchlistClassification,
   type LongTermRowSavePayload,
 } from "@/app/(app)/planning-actions";
 import type { DseSessionZones } from "@/lib/market/dse-zone-levels";
 import { formatBdt, formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
-import { Alert, Button, Table, Typography } from "antd";
+import {
+  WATCHLIST_CLASS_FILTER_OPTIONS,
+  type WatchlistClassFilter,
+  type WatchlistClassification,
+} from "@/lib/watchlist-classification";
+import { Alert, Button, Dropdown, Input, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
+import type { MenuProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 export type LongTermHoldingRow = {
   id: string;
   created_at: string;
   symbol: string;
+  /** Stored as BLUE | GREEN | null (unclassified). */
+  classification: WatchlistClassification;
   buy_point_bdt?: number | string | null;
   sell_point_bdt?: number | string | null;
   manual_avg_cost_bdt?: number | string | null;
@@ -203,6 +212,12 @@ function LongTermFieldsEdit({
   );
 }
 
+function rowMeetsClassFilter(r: LongTermHoldingRow, filter: WatchlistClassFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "NONE") return r.classification === null;
+  return r.classification === filter;
+}
+
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -210,7 +225,71 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const data: Row[] = rows.map((r) => ({ ...r, key: r.id }));
+  const [searchText, setSearchText] = useState("");
+  const [classFilter, setClassFilter] = useState<WatchlistClassFilter>("ALL");
+  const [classBusyId, setClassBusyId] = useState<string | null>(null);
+  const [classError, setClassError] = useState<string | null>(null);
+
+  const filteredRows = useMemo(() => {
+    const q = searchText.trim().toUpperCase();
+    return rows.filter((r) => {
+      if (!rowMeetsClassFilter(r, classFilter)) return false;
+      if (!q) return true;
+      const sym = String(r.symbol ?? "")
+        .trim()
+        .toUpperCase();
+      return sym.includes(q);
+    });
+  }, [rows, searchText, classFilter]);
+
+  const data: Row[] = useMemo(
+    () => filteredRows.map((r) => ({ ...r, key: r.id })),
+    [filteredRows],
+  );
+
+  const applyClassification = useCallback(
+    async (rowId: string, next: WatchlistClassification) => {
+      setClassError(null);
+      setClassBusyId(rowId);
+      const res = await setWatchlistClassification(rowId, next);
+      setClassBusyId(null);
+      if (!res.ok) {
+        setClassError(res.error);
+        return;
+      }
+      router.refresh();
+    },
+    [router],
+  );
+
+  const classificationMenu = useCallback(
+    (r: Row): MenuProps["items"] => [
+      {
+        key: "blue",
+        label: "Set as blue chip",
+        onClick: () => {
+          void applyClassification(r.id, "BLUE");
+        },
+      },
+      {
+        key: "green",
+        label: "Set as green chip",
+        onClick: () => {
+          void applyClassification(r.id, "GREEN");
+        },
+      },
+      { type: "divider" },
+      {
+        key: "clear",
+        label: "Remove classification",
+        disabled: r.classification === null,
+        onClick: () => {
+          void applyClassification(r.id, null);
+        },
+      },
+    ],
+    [applyClassification],
+  );
 
   const beginEdit = useCallback(() => {
     setSaveError(null);
@@ -246,9 +325,43 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     {
       title: "Symbol",
       dataIndex: "symbol",
-      width: 96,
+      width: 112,
       align: "left",
-      render: (v: string) => <span className="font-mono text-zinc-900 dark:text-zinc-50">{v}</span>,
+      render: (v: string) => (
+        <span className="font-mono text-[15px] font-normal text-zinc-900 dark:text-zinc-50">{v}</span>
+      ),
+    },
+    {
+      title: "Classification",
+      key: "classification",
+      width: 200,
+      align: "left",
+      render: (_: unknown, r) => (
+        <Space direction="vertical" size={6} className="w-full py-0.5">
+          {r.classification === "BLUE" ? (
+            <Tooltip title="Blue chip (your own grouping). Shown with a blue accent on the row.">
+              <Tag color="blue">Blue chip</Tag>
+            </Tooltip>
+          ) : r.classification === "GREEN" ? (
+            <Tooltip title="Green chip (your own grouping). Shown with a green accent on the row.">
+              <Tag color="green">Green chip</Tag>
+            </Tooltip>
+          ) : (
+            <Tooltip title="No chip label — neutral row styling.">
+              <Tag>Unclassified</Tag>
+            </Tooltip>
+          )}
+          <Dropdown
+            trigger={["click"]}
+            disabled={editing}
+            menu={{ items: classificationMenu(r) }}
+          >
+            <Button size="small" type="default" loading={classBusyId === r.id} disabled={editing}>
+              Set classification
+            </Button>
+          </Dropdown>
+        </Space>
+      ),
     },
     {
       title: "Added",
@@ -299,22 +412,52 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-auto">
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-        {!editing ? (
-          <Button type="default" size="middle" onClick={beginEdit}>
-            Edit table
-          </Button>
-        ) : (
-          <>
-            <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
-              Save changes
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Space wrap className="w-full min-w-0 sm:w-auto">
+          <Input
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder="Search by symbol"
+            aria-label="Filter watchlist by symbol"
+            className="max-w-[16rem]"
+          />
+          <Select<WatchlistClassFilter>
+            value={classFilter}
+            onChange={setClassFilter}
+            options={WATCHLIST_CLASS_FILTER_OPTIONS}
+            aria-label="Filter by chip classification"
+            className="min-w-[11rem]"
+          />
+        </Space>
+        <div className="flex flex-wrap justify-end gap-2">
+          {!editing ? (
+            <Button type="default" size="middle" onClick={beginEdit}>
+              Edit table
             </Button>
-            <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
-              Cancel
-            </Button>
-          </>
-        )}
+          ) : (
+            <>
+              <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
+                Save changes
+              </Button>
+              <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
+                Cancel
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+      {classError ? (
+        <Alert
+          type="error"
+          showIcon
+          closable
+          className="mb-3"
+          title="Could not update classification"
+          description={classError}
+          onClose={() => setClassError(null)}
+        />
+      ) : null}
       {saveError ? (
         <Alert type="error" showIcon className="mb-3" title="Could not save" description={saveError} />
       ) : null}
@@ -322,6 +465,15 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
         className="long-term-holdings-table"
         columns={columns}
         dataSource={data}
+        rowClassName={(record) => {
+          if (record.classification === "BLUE") {
+            return "watchlist-row-blue border-l-[4px] border-l-blue-600 bg-blue-50/70 dark:border-l-blue-500 dark:bg-blue-950/30";
+          }
+          if (record.classification === "GREEN") {
+            return "watchlist-row-green border-l-[4px] border-l-emerald-600 bg-emerald-50/70 dark:border-l-emerald-500 dark:bg-emerald-950/30";
+          }
+          return "";
+        }}
         scroll={{ x: "max-content" }}
         locale={{ emptyText: "No symbols yet." }}
         pagination={tablePagination("symbols", {

@@ -1,6 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  calculatedAllocationBdt,
+  carryForwardBdtFromPrevious,
+  effectiveMonthlyTotalBdt,
+  isTodayDhakaInSubmissionWindowForYm,
+  prevYearMonth,
+  sumLockedPercentages,
+} from "@/lib/mip-monthly";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { revalidatePath } from "next/cache";
@@ -242,13 +250,54 @@ export async function deleteTradePlan(formData: FormData) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function sanitizeMipAmount(raw: string): number | null {
+/** Single nullable field: BLUE, GREEN, or unclassified (null). */
+export async function setWatchlistClassification(
+  rowId: string,
+  classification: "BLUE" | "GREEN" | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(rowId)) return { ok: false, error: "Invalid row." };
+  if (classification !== null && classification !== "BLUE" && classification !== "GREEN") {
+    return { ok: false, error: "Invalid classification." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const { error } = await supabase
+    .from("long_term_holdings")
+    .update({ classification })
+    .eq("id", rowId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("setWatchlistClassification", error.message);
+    return { ok: false, error: error.message };
+  }
+
+  revalidatePath("/long-term");
+  return { ok: true };
+}
+
+function parseYmdDhakaCalendar(dateStr: string): { ym: string; day: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr ?? "").trim());
+  if (!m) return null;
+  const ym = `${m[1]}-${m[2]}`;
+  const day = Number(m[3]);
+  if (!Number.isFinite(day)) return null;
+  return { ym, day };
+}
+
+function sanitizePositiveAmount(raw: string): number | null {
   const n = Number(String(raw ?? "").trim().replace(/,/g, ""));
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n * 100) / 100;
 }
 
-export async function addMipPlan(
+/** One-time monthly setup (date + base amount), days 5–25 Dhaka, same calendar month only. */
+export async function submitMipMonthlySetup(
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
@@ -257,42 +306,149 @@ export async function addMipPlan(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
-  const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
-  const amount = sanitizeMipAmount(String(formData.get("total_investment_plan_bdt") ?? ""));
+  const dateStr = String(formData.get("plan_date") ?? "").trim();
+  const parsed = parseYmdDhakaCalendar(dateStr);
+  if (!parsed) return { ok: false, error: "Use a valid plan date (YYYY-MM-DD)." };
 
-  if (!symbol) return { ok: false, error: "Enter a symbol." };
-  if (amount === null) return { ok: false, error: "Enter a positive total investment amount." };
-
-  const { data: dup } = await supabase
-    .from("mip_plans")
-    .select("id")
-    .eq("user_id", user.id)
-    .ilike("symbol", symbol)
-    .limit(1)
-    .maybeSingle();
-
-  if (dup) {
-    return { ok: false, error: `${symbol} is already in your MIP list.` };
+  const { ym, day } = parsed;
+  if (day < 5 || day > 25) {
+    return { ok: false, error: "Plan date must fall between the 5th and 25th of the month." };
   }
 
-  const { error } = await supabase.from("mip_plans").insert({
-    user_id: user.id,
-    symbol,
-    total_investment_plan_bdt: amount,
+  if (!isTodayDhakaInSubmissionWindowForYm(ym)) {
+    return {
+      ok: false,
+      error:
+        "You can submit only once per month, between the 5th and 25th (Asia/Dhaka), for the current month.",
+    };
+  }
+
+  const base = sanitizePositiveAmount(String(formData.get("base_amount_bdt") ?? ""));
+  if (base === null) return { ok: false, error: "Enter a positive total monthly investment amount." };
+
+  const { data: existing } = await supabase
+    .from("mip_monthly_headers")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("year_month", ym)
+    .maybeSingle();
+
+  if (existing) {
+    return { ok: false, error: `An MIP for ${ym} already exists.` };
+  }
+
+  const prevYm = prevYearMonth(ym);
+  let carried = 0;
+  if (prevYm) {
+    const { data: prevHeader } = await supabase
+      .from("mip_monthly_headers")
+      .select("id, base_amount_bdt, carried_forward_bdt")
+      .eq("user_id", user.id)
+      .eq("year_month", prevYm)
+      .maybeSingle();
+
+    if (prevHeader) {
+      const { data: prevRows } = await supabase
+        .from("mip_monthly_rows")
+        .select("locked, percentage")
+        .eq("header_id", prevHeader.id);
+
+      const lockedRows = (prevRows ?? []).filter((r) => r.locked);
+      carried = carryForwardBdtFromPrevious(
+        {
+          base_amount_bdt: Number(prevHeader.base_amount_bdt),
+          carried_forward_bdt: Number(prevHeader.carried_forward_bdt),
+        },
+        lockedRows,
+      );
+    }
+  }
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("mip_monthly_headers")
+    .insert({
+      user_id: user.id,
+      year_month: ym,
+      plan_date: dateStr,
+      base_amount_bdt: base,
+      carried_forward_bdt: carried,
+      locked_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (insErr || !inserted) {
+    if (/duplicate key|unique constraint/i.test(insErr?.message ?? "")) {
+      return { ok: false, error: `An MIP for ${ym} already exists.` };
+    }
+    return { ok: false, error: insErr?.message ?? "Could not create MIP." };
+  }
+
+  const { error: rowErr } = await supabase.from("mip_monthly_rows").insert({
+    header_id: inserted.id,
+    sort_order: 0,
+    symbol: null,
+    percentage: null,
+    calculated_amount_bdt: null,
+    locked: false,
   });
 
-  if (error) {
-    if (/duplicate key|unique constraint/i.test(error.message)) {
-      return { ok: false, error: `${symbol} is already in your MIP list.` };
-    }
-    return { ok: false, error: error.message };
+  if (rowErr) {
+    await supabase.from("mip_monthly_headers").delete().eq("id", inserted.id);
+    return { ok: false, error: rowErr.message };
   }
 
   revalidatePath("/mip");
   return { ok: true };
 }
 
-export async function updateMipPlan(
+export async function addMipMonthlyRow(
+  headerId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(headerId)) return { ok: false, error: "Invalid header." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: header } = await supabase
+    .from("mip_monthly_headers")
+    .select("id")
+    .eq("id", headerId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!header) return { ok: false, error: "Plan not found." };
+
+  const { data: orders, error: cErr } = await supabase
+    .from("mip_monthly_rows")
+    .select("sort_order")
+    .eq("header_id", headerId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  if (cErr) return { ok: false, error: cErr.message };
+  const nextOrder = ((orders?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+  if (nextOrder >= 6) return { ok: false, error: "Maximum 6 rows allowed." };
+
+  const { error } = await supabase.from("mip_monthly_rows").insert({
+    header_id: headerId,
+    sort_order: nextOrder,
+    symbol: null,
+    percentage: null,
+    calculated_amount_bdt: null,
+    locked: false,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/mip");
+  return { ok: true };
+}
+
+export async function lockMipMonthlyRow(
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
@@ -301,60 +457,77 @@ export async function updateMipPlan(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
-  const id = String(formData.get("id") ?? "").trim();
-  if (!UUID_RE.test(id)) return { ok: false, error: "Invalid row id." };
+  const rowId = String(formData.get("row_id") ?? "").trim();
+  if (!UUID_RE.test(rowId)) return { ok: false, error: "Invalid row." };
 
   const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
-  const amount = sanitizeMipAmount(String(formData.get("total_investment_plan_bdt") ?? ""));
+  if (!symbol) return { ok: false, error: "Select or enter a DSE stock name." };
 
-  if (!symbol) return { ok: false, error: "Enter a symbol." };
-  if (amount === null) return { ok: false, error: "Enter a positive total investment amount." };
+  const pctRaw = String(formData.get("percentage") ?? "").trim().replace(/,/g, "");
+  const pct = Number(pctRaw);
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+    return { ok: false, error: "Percentage must be between 0 and 100." };
+  }
 
-  const { data: dup } = await supabase
-    .from("mip_plans")
-    .select("id")
-    .eq("user_id", user.id)
-    .ilike("symbol", symbol)
-    .neq("id", id)
-    .limit(1)
+  const { data: row, error: rErr } = await supabase
+    .from("mip_monthly_rows")
+    .select("id, header_id, locked, symbol, percentage")
+    .eq("id", rowId)
     .maybeSingle();
 
-  if (dup) {
-    return { ok: false, error: `Another row already uses ${symbol}.` };
+  if (rErr || !row) return { ok: false, error: "Row not found." };
+  if (row.locked) return { ok: false, error: "This row is already locked." };
+
+  const { data: header, error: hErr } = await supabase
+    .from("mip_monthly_headers")
+    .select("id, user_id, base_amount_bdt, carried_forward_bdt")
+    .eq("id", row.header_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (hErr || !header) return { ok: false, error: "Plan not found." };
+
+  const { data: allRows, error: aErr } = await supabase
+    .from("mip_monthly_rows")
+    .select("id, locked, percentage, symbol")
+    .eq("header_id", header.id);
+
+  if (aErr) return { ok: false, error: aErr.message };
+
+  const others = (allRows ?? []).filter((r) => r.id !== rowId);
+  for (const o of others) {
+    if (o.symbol && String(o.symbol).trim().toUpperCase() === symbol) {
+      return { ok: false, error: `${symbol} is already used in this table.` };
+    }
   }
 
-  const { error } = await supabase
-    .from("mip_plans")
+  const lockedRows = (allRows ?? []).filter((r) => r.id !== rowId && r.locked);
+  const currentSum = sumLockedPercentages(lockedRows);
+  const roundedSum = Math.round((currentSum + pct) * 10000) / 10000;
+  if (roundedSum > 100.0001) {
+    return { ok: false, error: "Total locked percentage cannot exceed 100%." };
+  }
+
+  const effective = effectiveMonthlyTotalBdt({
+    base_amount_bdt: Number(header.base_amount_bdt),
+    carried_forward_bdt: Number(header.carried_forward_bdt),
+  });
+  const calculated = calculatedAllocationBdt(pct, effective);
+
+  const { error: uErr } = await supabase
+    .from("mip_monthly_rows")
     .update({
       symbol,
-      total_investment_plan_bdt: amount,
-      updated_at: new Date().toISOString(),
+      percentage: pct,
+      calculated_amount_bdt: calculated,
+      locked: true,
     })
-    .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("id", rowId)
+    .eq("header_id", header.id)
+    .eq("locked", false);
 
-  if (error) {
-    if (/duplicate key|unique constraint/i.test(error.message)) {
-      return { ok: false, error: `Another row already uses ${symbol}.` };
-    }
-    return { ok: false, error: error.message };
-  }
+  if (uErr) return { ok: false, error: uErr.message };
 
   revalidatePath("/mip");
   return { ok: true };
-}
-
-export async function deleteMipPlan(formData: FormData): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const id = String(formData.get("id") ?? "").trim();
-  if (!id) return;
-
-  await supabase.from("mip_plans").delete().eq("id", id).eq("user_id", user.id);
-
-  revalidatePath("/mip");
 }
