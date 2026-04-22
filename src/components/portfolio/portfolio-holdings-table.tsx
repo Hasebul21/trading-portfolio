@@ -99,6 +99,7 @@ function sortNullableNumber(
 
 function rowMeetsClassFilter(c: WatchlistClassification, filter: WatchlistClassFilter): boolean {
   if (filter === "ALL") return true;
+  if (filter === "CLASSIFIED") return c === "BLUE" || c === "GREEN";
   if (filter === "NONE") return c === null;
   return c === filter;
 }

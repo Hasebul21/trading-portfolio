@@ -214,6 +214,7 @@ function LongTermFieldsEdit({
 
 function rowMeetsClassFilter(r: LongTermHoldingRow, filter: WatchlistClassFilter): boolean {
   if (filter === "ALL") return true;
+  if (filter === "CLASSIFIED") return r.classification === "BLUE" || r.classification === "GREEN";
   if (filter === "NONE") return r.classification === null;
   return r.classification === filter;
 }
