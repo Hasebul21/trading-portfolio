@@ -1,9 +1,8 @@
 "use client";
 
-import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword, updateUserEmail } from "../settings-actions";
-import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
+import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } from "../settings-actions";
 import type { UserSettings } from "../settings-actions";
-import { Alert, Button, Card, Input, InputNumber, Space, Tabs } from "antd";
+import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
 
 type TabKey = "profile" | "email" | "password" | "reports";
@@ -34,11 +33,6 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordOk, setPasswordOk] = useState(false);
-
-  // Send email state
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [sendOk, setSendOk] = useState(false);
 
   const handleSaveProfile = useCallback(async () => {
     setProfileError(null);
@@ -105,25 +99,6 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
       setPasswordSaving(false);
     }
   }, [currentPassword, newPassword, confirmPassword]);
-
-  const handleSendEmail = useCallback(async () => {
-    setSendError(null);
-    setSendOk(false);
-    setSendingEmail(true);
-    try {
-      const res = await sendPortfolioEmailWithUserSettings();
-      if (!res.ok) {
-        setSendError(res.error);
-      } else {
-        setSendOk(true);
-        setTimeout(() => setSendOk(false), 3000);
-      }
-    } catch (e) {
-      setSendError(e instanceof Error ? e.message : "Failed to send email");
-    } finally {
-      setSendingEmail(false);
-    }
-  }, []);
 
   return (
     <Tabs
@@ -292,35 +267,11 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
               >
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
-                      Send Portfolio Report
-                    </h3>
+                    <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Delivery</h3>
                     <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
-                      Manually send a portfolio report now
+                      Reports are sent automatically every month.
                     </p>
                   </div>
-
-                  <Button
-                    type="primary"
-                    size="large"
-                    loading={sendingEmail}
-                    disabled={sendingEmail}
-                    onClick={() => void handleSendEmail()}
-                  >
-                    Send Portfolio Email Now
-                  </Button>
-
-                  {sendError && (
-                    <Alert type="error" showIcon message="Error" description={sendError} />
-                  )}
-                  {sendOk && (
-                    <Alert
-                      type="success"
-                      showIcon
-                      message="Success"
-                      description="Portfolio report sent successfully."
-                    />
-                  )}
                 </div>
               </Card>
 

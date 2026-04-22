@@ -2,7 +2,6 @@
 
 import {
   savePortfolioPositions,
-  sendManualPortfolioReportEmail,
   type PortfolioSaveRow,
 } from "@/app/(app)/actions";
 import {
@@ -149,9 +148,6 @@ export function PortfolioHoldingsTable({
   const [saveOk, setSaveOk] = useState(false);
   const [bookEditorOpen, setBookEditorOpen] = useState(false);
   const [classFilter, setClassFilter] = useState<WatchlistClassFilter>("ALL");
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
 
   const fp = useMemo(() => bookFingerprint(holdings), [holdings]);
   const prevFp = useRef(fp);
@@ -286,24 +282,6 @@ export function PortfolioHoldingsTable({
       setSaving(false);
     }
   };
-
-  async function handleSendEmail() {
-    setEmailStatus(null);
-    setEmailError(null);
-    setSendingEmail(true);
-    try {
-      const res = await sendManualPortfolioReportEmail();
-      if (!res.ok) {
-        setEmailError(res.error);
-        return;
-      }
-      setEmailStatus("Portfolio report email sent.");
-    } catch (e) {
-      setEmailError(e instanceof Error ? e.message : "Could not send portfolio report email.");
-    } finally {
-      setSendingEmail(false);
-    }
-  }
 
   const columns: ColumnsType<Row> = useMemo(() => {
     const avgCol: ColumnsType<Row>[0] = bookEditing
@@ -622,15 +600,6 @@ export function PortfolioHoldingsTable({
         </Space>
         {enableBookEdit ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="default"
-              size="middle"
-              loading={sendingEmail}
-              disabled={sendingEmail}
-              onClick={() => void handleSendEmail()}
-            >
-              Send portfolio email
-            </Button>
             {!bookEditorOpen ? (
               <Button type="default" size="middle" onClick={() => setBookEditorOpen(true)}>
                 Edit book
@@ -673,17 +642,6 @@ export function PortfolioHoldingsTable({
           emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
         }}
       />
-
-      {emailError ? (
-        <div className="px-3 pb-2 sm:px-4">
-          <Alert type="error" showIcon title="Could not send portfolio email" description={emailError} />
-        </div>
-      ) : null}
-      {emailStatus ? (
-        <div className="px-3 pb-2 sm:px-4">
-          <Alert type="success" showIcon title={emailStatus} />
-        </div>
-      ) : null}
 
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
