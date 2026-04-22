@@ -28,12 +28,14 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  let page = pdfDoc.addPage([842, 595]); // A4 landscape
-  const pageWidth = page.getWidth();
-  const pageHeight = page.getHeight();
-  const left = 36;
-  const top = pageHeight - 34;
-  let y = top;
+  // Letter landscape – wider & taller than A4 landscape for breathing room
+  const PW = 1056;
+  const PH = 816;
+  const margin = 50;
+  const tableWidth = PW - margin * 2;
+
+  let page = pdfDoc.addPage([PW, PH]);
+  let y = PH - margin;
 
   const drawText = (
     text: string,
@@ -43,59 +45,82 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
     isBold = false,
     color = rgb(0.12, 0.12, 0.12),
   ) => {
-    page.drawText(text, {
-      x,
-      y: yPos,
-      size,
-      font: isBold ? bold : font,
-      color,
-    });
+    page.drawText(text, { x, y: yPos, size, font: isBold ? bold : font, color });
   };
 
-  drawText("Portfolio Report", left, y, 18, true, rgb(0.02, 0.35, 0.45));
-  y -= 22;
-  drawText(`Type: ${trigger === "monthly" ? "Monthly" : "Manual"}`, left, y, 10);
-  drawText(`Generated: ${new Date().toLocaleString()}`, 230, y, 10);
-  y -= 18;
+  // ── Title ──
+  drawText("Portfolio Report", margin, y, 26, true, rgb(0.02, 0.35, 0.45));
+  y -= 30;
 
-  drawText(`Total unrealized P/L: BDT ${fmt2(summary.totalUnrealized)}`, left, y, 11, true);
-  drawText(`Net Gain/Loss: BDT ${fmt2(summary.totalRealizedBdt)}`, 280, y, 11, true);
-  drawText(`Total invested: BDT ${fmt2(summary.totalInvested)}`, 520, y, 11, true);
+  // Divider line below title
+  page.drawLine({ start: { x: margin, y }, end: { x: PW - margin, y }, thickness: 1.2, color: rgb(0.78, 0.84, 0.88) });
   y -= 24;
 
+  // Meta row
+  const triggerLabel = trigger === "monthly" ? "Monthly" : "Manual";
+  drawText(`Type: ${triggerLabel}`, margin, y, 13);
+  drawText(`Generated: ${new Date().toLocaleString()}`, 300, y, 13);
+  y -= 28;
+
+  // Summary cards row
+  const summaryItems = [
+    { label: "Total Invested", value: `BDT ${fmt2(summary.totalInvested)}` },
+    { label: "Unrealized P/L", value: `BDT ${fmt2(summary.totalUnrealized)}` },
+    { label: "Net Gain/Loss", value: `BDT ${fmt2(summary.totalRealizedBdt)}` },
+  ];
+  const cardW = (tableWidth - 30) / 3;
+  summaryItems.forEach((item, i) => {
+    const cx = margin + i * (cardW + 15);
+    page.drawRectangle({ x: cx, y: y - 10, width: cardW, height: 48, color: rgb(0.95, 0.97, 0.99), borderColor: rgb(0.82, 0.88, 0.92), borderWidth: 0.8 });
+    drawText(item.label, cx + 12, y + 22, 11, false, rgb(0.35, 0.4, 0.45));
+    drawText(item.value, cx + 12, y + 2, 15, true, rgb(0.1, 0.1, 0.1));
+  });
+  y -= 56;
+
+  // Position count
+  drawText(`Open positions: ${summary.totalRows}  ·  With market price: ${summary.quotedCount}`, margin, y, 12, false, rgb(0.4, 0.4, 0.4));
+  y -= 30;
+
+  // ── Table ──
   const columns = [
-    { key: "symbol", title: "Symbol", w: 90 },
-    { key: "shares", title: "Shares", w: 90 },
-    { key: "avg", title: "Avg (BDT)", w: 110 },
-    { key: "total", title: "Invested (BDT)", w: 130 },
-    { key: "upl", title: "Unrealized P/L", w: 150 },
-  ] as const;
+    { title: "Symbol", w: 0.22 },
+    { title: "Shares", w: 0.18 },
+    { title: "Avg (BDT)", w: 0.20 },
+    { title: "Invested (BDT)", w: 0.20 },
+    { title: "Unrealized P/L", w: 0.20 },
+  ];
+  const colWidths = columns.map((c) => c.w * tableWidth);
+  const rowH = 26;
+  const headerH = 30;
+  const fontSize = 13;
+  const headerFontSize = 13;
 
   const drawTableHeader = () => {
-    let x = left;
-    page.drawRectangle({
-      x: left - 4,
-      y: y - 6,
-      width: pageWidth - left * 2 + 8,
-      height: 20,
-      color: rgb(0.92, 0.96, 0.98),
+    // Header bg
+    page.drawRectangle({ x: margin, y: y - 8, width: tableWidth, height: headerH, color: rgb(0.12, 0.35, 0.48) });
+    let x = margin + 10;
+    columns.forEach((c, i) => {
+      drawText(c.title, x, y, headerFontSize, true, rgb(1, 1, 1));
+      x += colWidths[i]!;
     });
-    columns.forEach((c) => {
-      drawText(c.title, x, y, 10, true, rgb(0.05, 0.25, 0.35));
-      x += c.w;
-    });
-    y -= 20;
+    y -= headerH + 4;
   };
 
   drawTableHeader();
 
-  for (const row of payload.rows) {
-    if (y < 36) {
-      page = pdfDoc.addPage([842, 595]);
-      y = page.getHeight() - 34;
+  payload.rows.forEach((row, rIdx) => {
+    if (y < margin + 20) {
+      page = pdfDoc.addPage([PW, PH]);
+      y = PH - margin;
       drawTableHeader();
     }
-    let x = left;
+
+    // Alternate row shading
+    if (rIdx % 2 === 0) {
+      page.drawRectangle({ x: margin, y: y - 6, width: tableWidth, height: rowH, color: rgb(0.97, 0.98, 0.99) });
+    }
+
+    let x = margin + 10;
     const values = [
       row.symbol,
       fmt2(row.shares),
@@ -105,14 +130,25 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
     ];
 
     values.forEach((v, idx) => {
-      const isNum = idx > 0;
-      const text = isNum ? v.padStart(10, " ") : v;
-      drawText(text.slice(0, 22), x, y, 9, false, rgb(0.16, 0.16, 0.16));
-      x += columns[idx]!.w;
+      // Color P/L column
+      let color = rgb(0.14, 0.14, 0.14);
+      if (idx === 4 && v !== "N/A") {
+        const num = parseFloat(v);
+        if (num > 0) color = rgb(0.0, 0.5, 0.2);
+        else if (num < 0) color = rgb(0.75, 0.15, 0.1);
+      }
+      drawText(v.slice(0, 24), x, y, fontSize, idx === 0, color);
+      x += colWidths[idx]!;
     });
 
-    y -= 16;
-  }
+    y -= rowH;
+  });
+
+  // Footer line
+  y -= 10;
+  page.drawLine({ start: { x: margin, y }, end: { x: PW - margin, y }, thickness: 0.6, color: rgb(0.82, 0.86, 0.9) });
+  y -= 18;
+  drawText("Generated by Trading Portfolio", margin, y, 10, false, rgb(0.55, 0.55, 0.55));
 
   return await pdfDoc.save();
 }
