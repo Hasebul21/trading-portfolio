@@ -92,9 +92,13 @@ function createTransport() {
   return { transporter, from };
 }
 
-export async function sendPortfolioReportEmail(payload: ReportPayload, trigger: "manual" | "monthly") {
+export async function sendPortfolioReportEmail(
+  payload: ReportPayload,
+  trigger: "manual" | "monthly",
+  overrideRecipient?: string,
+) {
   const { transporter, from } = createTransport();
-  const recipient = reportRecipient();
+  const recipient = overrideRecipient || reportRecipient();
   const summary = buildSummary(payload);
   const csv = buildCsv(payload);
   const stamp = new Date().toISOString().slice(0, 10);

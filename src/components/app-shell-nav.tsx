@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { type: "link", href: "/trade-history", label: "History" },
   { type: "link", href: "/invested",      label: "Capital" },
   { type: "link", href: "/knowledge",     label: "Knowledge" },
+  { type: "link", href: "/settings",      label: "Settings" },
 ];
 
 /** Mobile: one row, horizontal scroll. md+: full-width pill spanning the header. */

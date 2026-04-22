@@ -41,8 +41,17 @@ export async function sendManualPortfolioReportEmail(): Promise<{ ok: true } | {
   if (!user) return { ok: false, error: "You must be signed in." };
 
   try {
+    // Get user's configured email
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("portfolio_report_email")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const reportEmail = settings?.portfolio_report_email || "hasebulhassan21@gmail.com";
+
     const payload = await buildReportForUser(supabase, user.id);
-    await sendPortfolioReportEmail(payload, "manual");
+    await sendPortfolioReportEmail(payload, "manual", reportEmail);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Could not send portfolio email." };

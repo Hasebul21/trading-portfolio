@@ -42,6 +42,9 @@ export async function updateSession(request: NextRequest) {
     "/long-term",
     "/knowledge",
     "/trade-plans",
+    "/trade-history",
+    "/mip",
+    "/settings",
   ];
 
   if (!user && protectedPrefixes.some((p) => path.startsWith(p))) {
