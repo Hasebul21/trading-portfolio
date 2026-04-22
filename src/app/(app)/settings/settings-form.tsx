@@ -1,6 +1,7 @@
 "use client";
 
 import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } from "../settings-actions";
+import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { UserSettings } from "../settings-actions";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
@@ -33,6 +34,9 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordOk, setPasswordOk] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendOk, setSendOk] = useState(false);
 
   const handleSaveProfile = useCallback(async () => {
     setProfileError(null);
@@ -99,6 +103,25 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
       setPasswordSaving(false);
     }
   }, [currentPassword, newPassword, confirmPassword]);
+
+  const handleSendEmail = useCallback(async () => {
+    setSendError(null);
+    setSendOk(false);
+    setSendingEmail(true);
+    try {
+      const res = await sendPortfolioEmailWithUserSettings();
+      if (!res.ok) {
+        setSendError(res.error);
+      } else {
+        setSendOk(true);
+        setTimeout(() => setSendOk(false), 3000);
+      }
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : "Failed to send email");
+    } finally {
+      setSendingEmail(false);
+    }
+  }, []);
 
   return (
     <Tabs
@@ -269,9 +292,29 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                   <div>
                     <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Delivery</h3>
                     <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
-                      Reports are sent automatically every month.
+                      Reports are sent automatically on the <strong>1st day of every month at 3:00 PM Bangladesh time</strong> (Asia/Dhaka, UTC+6).
                     </p>
                   </div>
+                  <div>
+                    <Button
+                      type="primary"
+                      size="large"
+                      loading={sendingEmail}
+                      disabled={sendingEmail}
+                      onClick={() => void handleSendEmail()}
+                    >
+                      Send Report Now
+                    </Button>
+                  </div>
+                  {sendError ? <Alert type="error" showIcon message="Error" description={sendError} /> : null}
+                  {sendOk ? (
+                    <Alert
+                      type="success"
+                      showIcon
+                      message="Success"
+                      description="Portfolio report sent successfully."
+                    />
+                  ) : null}
                 </div>
               </Card>
 
@@ -289,7 +332,7 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                   Automatic Monthly Reports
                 </p>
                 <p className="mt-1 text-[13px] font-normal text-amber-800 dark:text-amber-300">
-                  A portfolio report is automatically sent on the 1st of each month at 9:00 AM.
+                  Cron schedule: 1st of each month at 09:00 UTC = 3:00 PM Bangladesh time.
                 </p>
               </div>
             </div>
