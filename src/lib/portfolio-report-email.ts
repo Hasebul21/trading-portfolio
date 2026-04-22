@@ -68,8 +68,7 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
     { key: "shares", title: "Shares", w: 90 },
     { key: "avg", title: "Avg (BDT)", w: 110 },
     { key: "total", title: "Invested (BDT)", w: 130 },
-    { key: "ltp", title: "Last Price", w: 110 },
-    { key: "upl", title: "Unrealized P/L", w: 130 },
+    { key: "upl", title: "Unrealized P/L", w: 150 },
   ] as const;
 
   const drawTableHeader = () => {
@@ -102,7 +101,6 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
       fmt2(row.shares),
       fmt2(row.avgPrice),
       fmt2(row.totalCost),
-      row.marketLtp === null ? "N/A" : fmt2(row.marketLtp),
       row.unrealizedPl === null ? "N/A" : fmt2(row.unrealizedPl),
     ];
 
