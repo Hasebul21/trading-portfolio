@@ -26,7 +26,7 @@ export default async function PortfolioPage() {
       : Promise.resolve({ data: null }),
   ]);
 
-  const { error, holdings, marketError, totalRealizedBdt } = portfolioRes;
+  const { error, holdings, marketError, totalRealizedBdt, totalInvestedBdt } = portfolioRes;
 
   const classificationMap: Record<string, WatchlistClassification> = {};
   for (const row of classificationRes.data ?? []) {
@@ -115,6 +115,7 @@ export default async function PortfolioPage() {
             initialHoldings={holdings}
             initialMarketError={marketError}
             initialTotalRealizedBdt={totalRealizedBdt}
+            initialTotalInvestedBdt={totalInvestedBdt}
             classificationMap={classificationMap}
           />
         </div>

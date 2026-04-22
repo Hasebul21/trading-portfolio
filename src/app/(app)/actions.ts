@@ -13,6 +13,7 @@ import {
   validateCostTriplet,
 } from "@/lib/portfolio-overrides";
 import { formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
+import { buildReportForUser, sendPortfolioReportEmail } from "@/lib/portfolio-report-email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -31,6 +32,22 @@ export type PortfolioSaveRow = {
   avgPrice: number;
   totalCost: number;
 };
+
+export async function sendManualPortfolioReportEmail(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "You must be signed in." };
+
+  try {
+    const payload = await buildReportForUser(supabase, user.id);
+    await sendPortfolioReportEmail(payload, "manual");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not send portfolio email." };
+  }
+}
 
 export async function recordTransaction(
   _prev: RecordState,

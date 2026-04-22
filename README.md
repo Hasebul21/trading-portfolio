@@ -22,6 +22,28 @@ On **Record**, broker commission is applied automatically on **both buys and sel
 
 **Portfolio** loads **LTP**, **today’s high / low**, and **unrealized P/L** from DSE’s latest share price page ([`latest_share_price_scroll_l.php`](https://dsebd.org/latest_share_price_scroll_l.php)) via a small HTML parse. **52-week high / low** is read from each symbol’s DSE company page (`displayCompany.php`). Fetches use Next’s `revalidate` (**~60s** for the price table, **~1h** per company page). Optional env overrides: **`DSE_LSP_URL`** (full URL to the LSP page), **`DSE_COMPANY_URL_BASE`** (e.g. `https://dsebd.org/displayCompany.php` without query string).
 
+### Portfolio email reports (manual + monthly)
+
+The Portfolio page includes a **Send portfolio email** button. It sends:
+
+- Total unrealized P/L
+- Net Gain/Loss
+- Total invested
+- CSV sheet attachment of all open positions
+
+Configure these env vars:
+
+- `SMTP_HOST` (example: `smtp.gmail.com`)
+- `SMTP_PORT` (`587` for TLS or `465` for SSL)
+- `SMTP_USER`
+- `SMTP_PASS` (for Gmail, use an app password)
+- `SMTP_FROM`
+- `PORTFOLIO_REPORT_RECIPIENT` (defaults to `hasebulhassan21@gmail.com`)
+- `SUPABASE_SERVICE_ROLE_KEY` (needed for scheduled monthly report)
+- `PORTFOLIO_REPORT_CRON_SECRET` (or `CRON_SECRET`) for cron endpoint auth
+
+Monthly schedule is configured in `vercel.json` to call `/api/portfolio-report` on the 1st day of each month.
+
 ### Auth URLs (required for production)
 
 In Supabase **Authentication → URL configuration**, set:

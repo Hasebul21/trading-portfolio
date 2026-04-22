@@ -19,21 +19,25 @@ type PortfolioMarketApi = {
   lspError: string | null;
   holdings: PortfolioMarketRow[];
   totalRealizedBdt: number;
+  totalInvestedBdt: number;
 };
 
 export function PortfolioLiveShell({
   initialHoldings,
   initialMarketError,
   initialTotalRealizedBdt,
+  initialTotalInvestedBdt,
   classificationMap = {},
 }: {
   initialHoldings: PortfolioMarketRow[];
   initialMarketError: string | null;
   initialTotalRealizedBdt: number;
+  initialTotalInvestedBdt: number;
   classificationMap?: Record<string, WatchlistClassification>;
 }) {
   const [rows, setRows] = useState(initialHoldings);
   const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
+  const [totalInvestedBdt, setTotalInvestedBdt] = useState(initialTotalInvestedBdt);
   const [liveLspError, setLiveLspError] = useState<string | null>(null);
   const [hasPolled, setHasPolled] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -45,8 +49,8 @@ export function PortfolioLiveShell({
           (h) =>
             `${h.symbol}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
         )
-        .join("|")}|realized:${initialTotalRealizedBdt}`,
-    [initialHoldings, initialTotalRealizedBdt],
+        .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}`,
+    [initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt],
   );
 
   const prevInitialKey = useRef<string | null>(null);
@@ -55,7 +59,8 @@ export function PortfolioLiveShell({
     prevInitialKey.current = initialKey;
     setRows(initialHoldings);
     setTotalRealizedBdt(initialTotalRealizedBdt);
-  }, [initialKey, initialHoldings, initialTotalRealizedBdt]);
+    setTotalInvestedBdt(initialTotalInvestedBdt);
+  }, [initialKey, initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt]);
 
   const refresh = useCallback(async () => {
     try {
@@ -76,6 +81,9 @@ export function PortfolioLiveShell({
       }
       if (typeof data.totalRealizedBdt === "number" && Number.isFinite(data.totalRealizedBdt)) {
         setTotalRealizedBdt(data.totalRealizedBdt);
+      }
+      if (typeof data.totalInvestedBdt === "number" && Number.isFinite(data.totalInvestedBdt)) {
+        setTotalInvestedBdt(data.totalInvestedBdt);
       }
     } catch (e) {
       setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
@@ -121,6 +129,7 @@ export function PortfolioLiveShell({
       <PortfolioHoldingsTable
         holdings={rows}
         totalRealizedBdt={totalRealizedBdt}
+        totalInvestedBdt={totalInvestedBdt}
         classificationMap={classificationMap}
         enableBookEdit
         onAfterBookSave={refresh}

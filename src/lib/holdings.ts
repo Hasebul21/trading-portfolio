@@ -24,6 +24,7 @@ export async function fetchUserHoldings() {
       error: txRes.error.message,
       holdings: [] as ReturnType<typeof aggregateHoldings>,
       totalRealizedBdt: 0,
+      totalInvestedBdt: 0,
     };
   }
 
@@ -32,6 +33,7 @@ export async function fetchUserHoldings() {
       error: ovRes.error,
       holdings: [] as ReturnType<typeof aggregateHoldings>,
       totalRealizedBdt: 0,
+      totalInvestedBdt: 0,
     };
   }
 
@@ -39,6 +41,10 @@ export async function fetchUserHoldings() {
   const ledger = aggregateHoldings(txRows);
   const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
+  const totalInvestedBdt = ledger.reduce(
+    (sum, row) => sum + (Number.isFinite(row.totalCost) ? row.totalCost : 0),
+    0,
+  );
 
-  return { error: null as string | null, holdings, totalRealizedBdt };
+  return { error: null as string | null, holdings, totalRealizedBdt, totalInvestedBdt };
 }

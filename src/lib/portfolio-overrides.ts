@@ -24,6 +24,9 @@ export function mergeLedgerWithOverrides(
     if (!(shares > 0) || !Number.isFinite(totalCost) || !Number.isFinite(avgPrice)) continue;
 
     const base = bySym.get(sym);
+    // Overrides are meant to adjust existing open ledger positions only.
+    // If a symbol is fully sold, ignore any stale override row for it.
+    if (!base || !(base.shares > 0)) continue;
     bySym.set(sym, {
       symbol: sym,
       shares,

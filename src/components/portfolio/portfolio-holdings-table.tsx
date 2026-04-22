@@ -1,6 +1,10 @@
 "use client";
 
-import { savePortfolioPositions, type PortfolioSaveRow } from "@/app/(app)/actions";
+import {
+  savePortfolioPositions,
+  sendManualPortfolioReportEmail,
+  type PortfolioSaveRow,
+} from "@/app/(app)/actions";
 import {
   formatBdt,
   formatNumberMax2Decimals,
@@ -8,8 +12,12 @@ import {
 } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import type { WatchlistClassification } from "@/lib/watchlist-classification";
-import { Alert, Button, Card, Input, Table, Typography } from "antd";
+import {
+  WATCHLIST_CLASS_FILTER_OPTIONS,
+  type WatchlistClassFilter,
+  type WatchlistClassification,
+} from "@/lib/watchlist-classification";
+import { Alert, Button, Card, Input, Select, Space, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -46,14 +54,6 @@ function unrealizedTotals(rows: PortfolioMarketRow[]) {
     }
   }
   return { sum, withQuote, positions: rows.length };
-}
-
-function sumTotalInvested(rows: PortfolioMarketRow[]) {
-  let s = 0;
-  for (const h of rows) {
-    if (Number.isFinite(h.totalCost)) s += h.totalCost;
-  }
-  return s;
 }
 
 function fmtPivotCell(n: number | null | undefined) {
@@ -97,6 +97,12 @@ function sortNullableNumber(
   };
 }
 
+function rowMeetsClassFilter(c: WatchlistClassification, filter: WatchlistClassFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "NONE") return c === null;
+  return c === filter;
+}
+
 function ClassificationDot({ c }: { c: WatchlistClassification }) {
   if (c === "BLUE") {
     return (
@@ -120,6 +126,7 @@ function ClassificationDot({ c }: { c: WatchlistClassification }) {
 export function PortfolioHoldingsTable({
   holdings,
   totalRealizedBdt = 0,
+  totalInvestedBdt = 0,
   classificationMap = {},
   enableBookEdit = false,
   onAfterBookSave,
@@ -127,6 +134,8 @@ export function PortfolioHoldingsTable({
   holdings: PortfolioMarketRow[];
   /** Sell-only net: Σ (sell price − avg at sell) × qty − sell fees (from ledger). */
   totalRealizedBdt?: number;
+  /** Ledger-based invested amount: buys add, sells deduct cost basis. */
+  totalInvestedBdt?: number;
   classificationMap?: Record<string, WatchlistClassification>;
   enableBookEdit?: boolean;
   onAfterBookSave?: () => void | Promise<void>;
@@ -138,6 +147,10 @@ export function PortfolioHoldingsTable({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [bookEditorOpen, setBookEditorOpen] = useState(false);
+  const [classFilter, setClassFilter] = useState<WatchlistClassFilter>("ALL");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const fp = useMemo(() => bookFingerprint(holdings), [holdings]);
   const prevFp = useRef(fp);
@@ -174,14 +187,17 @@ export function PortfolioHoldingsTable({
   }, [holdings, draft, bookEditing]);
 
   const { sum: totalUnrealized, withQuote, positions } = unrealizedTotals(displayHoldings);
-  const totalInvested = sumTotalInvested(displayHoldings);
 
   const data: Row[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
     return displayHoldings
-      .filter((h) => !q || h.symbol.toUpperCase().includes(q))
+      .filter((h) => {
+        const c = classificationMap[h.symbol] ?? null;
+        if (!rowMeetsClassFilter(c, classFilter)) return false;
+        return !q || h.symbol.toUpperCase().includes(q);
+      })
       .map((h) => ({ ...h, key: h.symbol }));
-  }, [displayHoldings, symbolQuery]);
+  }, [displayHoldings, symbolQuery, classFilter, classificationMap]);
 
   const patchDraft = useCallback(
     (symbol: string, field: keyof BookDraft, value: string) => {
@@ -269,6 +285,24 @@ export function PortfolioHoldingsTable({
       setSaving(false);
     }
   };
+
+  async function handleSendEmail() {
+    setEmailStatus(null);
+    setEmailError(null);
+    setSendingEmail(true);
+    try {
+      const res = await sendManualPortfolioReportEmail();
+      if (!res.ok) {
+        setEmailError(res.error);
+        return;
+      }
+      setEmailStatus("Portfolio report email sent.");
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : "Could not send portfolio report email.");
+    } finally {
+      setSendingEmail(false);
+    }
+  }
 
   const columns: ColumnsType<Row> = useMemo(() => {
     const avgCol: ColumnsType<Row>[0] = bookEditing
@@ -541,22 +575,40 @@ export function PortfolioHoldingsTable({
             Total invested
           </div>
           <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
-            {formatBdt(totalInvested)}
+            {formatBdt(totalInvestedBdt)}
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4 dark:border-teal-900/40">
-        <Search
-          allowClear
-          placeholder="Search symbol…"
-          value={symbolQuery}
-          onChange={(e) => setSymbolQuery(e.target.value)}
-          className="w-full max-w-full sm:max-w-sm"
-          size="middle"
-        />
+        <Space wrap className="w-full min-w-0 sm:w-auto">
+          <Search
+            allowClear
+            placeholder="Search symbol…"
+            value={symbolQuery}
+            onChange={(e) => setSymbolQuery(e.target.value)}
+            className="w-full max-w-full sm:max-w-sm"
+            size="middle"
+          />
+          <Select<WatchlistClassFilter>
+            value={classFilter}
+            onChange={setClassFilter}
+            options={WATCHLIST_CLASS_FILTER_OPTIONS}
+            aria-label="Filter portfolio by chip classification"
+            className="min-w-[11rem]"
+          />
+        </Space>
         {enableBookEdit ? (
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="default"
+              size="middle"
+              loading={sendingEmail}
+              disabled={sendingEmail}
+              onClick={() => void handleSendEmail()}
+            >
+              Send portfolio email
+            </Button>
             {!bookEditorOpen ? (
               <Button type="default" size="middle" onClick={() => setBookEditorOpen(true)}>
                 Edit book
@@ -599,6 +651,17 @@ export function PortfolioHoldingsTable({
           emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
         }}
       />
+
+      {emailError ? (
+        <div className="px-3 pb-2 sm:px-4">
+          <Alert type="error" showIcon title="Could not send portfolio email" description={emailError} />
+        </div>
+      ) : null}
+      {emailStatus ? (
+        <div className="px-3 pb-2 sm:px-4">
+          <Alert type="success" showIcon title={emailStatus} />
+        </div>
+      ) : null}
 
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">

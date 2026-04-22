@@ -29,5 +29,6 @@ export async function GET() {
     lspError: lspRes.error,
     holdings,
     totalRealizedBdt: holdingsRes.totalRealizedBdt,
+    totalInvestedBdt: holdingsRes.totalInvestedBdt,
   });
 }
