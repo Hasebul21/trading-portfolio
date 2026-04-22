@@ -2,7 +2,7 @@
 
 Next.js app with **Supabase** (Postgres + email/password auth). Record buys and sells; **Portfolio** shows open positions (BDT), optional **AmarStock** live LTP for symbols in the movers feed, and unrealized P/L when LTP is available.
 
-## Prerequisites
+## Prerequisite
 
 - [Node.js](https://nodejs.org/) 20+
 - A free [Supabase](https://supabase.com/) project
