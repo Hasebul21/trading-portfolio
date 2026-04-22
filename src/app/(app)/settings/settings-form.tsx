@@ -324,6 +324,15 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                 </div>
               </Card>
 
+              <div className="rounded-lg border border-sky-200/60 bg-sky-50/90 px-4 py-3 dark:border-sky-900/40 dark:bg-sky-950/40">
+                <p className="text-[13px] font-medium text-sky-900 dark:text-sky-200">
+                  Vercel-friendly email setup
+                </p>
+                <p className="mt-1 text-[13px] font-normal text-sky-800 dark:text-sky-300">
+                  This app now uses Resend instead of SMTP. Set only <strong>RESEND_API_KEY</strong> in Vercel Project Settings to enable sending. <strong>RESEND_FROM</strong> is optional.
+                </p>
+              </div>
+
               <div className="rounded-lg border border-amber-200/60 bg-amber-50/90 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/40">
                 <p className="text-[13px] font-medium text-amber-900 dark:text-amber-200">
                   Automatic Monthly Reports

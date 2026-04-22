@@ -33,16 +33,15 @@ The Portfolio page includes a **Send portfolio email** button. It sends:
 
 Configure these env vars:
 
-- `SMTP_HOST` (example: `smtp.gmail.com`)
-- `SMTP_PORT` (`587` for TLS or `465` for SSL)
-- `SMTP_USER`
-- `SMTP_PASS` (for Gmail, use an app password)
-- `SMTP_FROM`
+- `RESEND_API_KEY`
+- `RESEND_FROM` (optional; defaults to `Portfolio <onboarding@resend.dev>`)
 - `PORTFOLIO_REPORT_RECIPIENT` (defaults to `hasebulhassan21@gmail.com`)
 - `SUPABASE_SERVICE_ROLE_KEY` (needed for scheduled monthly report)
 - `PORTFOLIO_REPORT_CRON_SECRET` (or `CRON_SECRET`) for cron endpoint auth
 
 Monthly schedule is configured in `vercel.json` to call `/api/portfolio-report` on the 1st day of each month.
+
+For quick Vercel setup, Resend is the simplest option. In testing you can usually start with the onboarding sender, then later switch `RESEND_FROM` to a verified domain sender if needed.
 
 ### Auth URLs (required for production)
 

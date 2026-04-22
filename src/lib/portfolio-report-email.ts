@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { aggregateHoldings, totalRealizedProfitLossBdt, type TransactionRow } from "@/lib/portfolio";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { holdingsToMarketRows } from "@/lib/market/portfolio-with-quotes";
@@ -72,24 +72,15 @@ function buildSummary(payload: ReportPayload) {
   };
 }
 
-function createTransport() {
-  const host = process.env.SMTP_HOST;
-  const portRaw = process.env.SMTP_PORT ?? "587";
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM ?? user;
-  const port = Number(portRaw);
-  if (!host || !user || !pass || !from || !Number.isFinite(port)) {
-    throw new Error("Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.");
+function createResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM?.trim() || "Portfolio <onboarding@resend.dev>";
+
+  if (!apiKey) {
+    throw new Error("Email is not configured. Set RESEND_API_KEY. Optionally set RESEND_FROM.");
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-  return { transporter, from };
+  return { resend: new Resend(apiKey), from };
 }
 
 export async function sendPortfolioReportEmail(
@@ -97,7 +88,7 @@ export async function sendPortfolioReportEmail(
   trigger: "manual" | "monthly",
   overrideRecipient?: string,
 ) {
-  const { transporter, from } = createTransport();
+  const { resend, from } = createResendClient();
   const recipient = overrideRecipient || reportRecipient();
   const summary = buildSummary(payload);
   const csv = buildCsv(payload);
@@ -105,9 +96,9 @@ export async function sendPortfolioReportEmail(
   const subjectPrefix = trigger === "monthly" ? "Monthly" : "Manual";
   const subject = `${subjectPrefix} portfolio report (${stamp})`;
 
-  await transporter.sendMail({
+  const result = await resend.emails.send({
     from,
-    to: recipient,
+    to: [recipient],
     subject,
     text: [
       `Portfolio report (${trigger})`,
@@ -137,11 +128,14 @@ export async function sendPortfolioReportEmail(
     attachments: [
       {
         filename: `portfolio-report-${stamp}.csv`,
-        content: csv,
-        contentType: "text/csv",
+        content: Buffer.from(csv).toString("base64"),
       },
     ],
   });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 export async function buildReportForUser(
