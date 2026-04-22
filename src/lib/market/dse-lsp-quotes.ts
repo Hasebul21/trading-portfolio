@@ -82,7 +82,7 @@ export async function fetchDseLspQuoteMap(): Promise<{
     try {
       const res = await fetch(url, {
         headers: { Accept: "text/html,*/*" },
-        next: { revalidate: 60 },
+        cache: "no-store",
       });
       if (!res.ok) {
         lastErr = `DSE LSP HTTP ${res.status}`;

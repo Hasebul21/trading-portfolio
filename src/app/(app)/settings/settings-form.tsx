@@ -292,7 +292,10 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                   <div>
                     <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Delivery</h3>
                     <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
-                      Reports are sent automatically on the <strong>1st day of every month at 3:00 PM Bangladesh time</strong> (Asia/Dhaka, UTC+6).
+                      Reports are sent automatically on the <strong>last day of every month at 9:00 PM Bangladesh time</strong> (Asia/Dhaka, UTC+6).
+                    </p>
+                    <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                      Example: April 30, May 31, June 30.
                     </p>
                   </div>
                   <div>
@@ -332,7 +335,7 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                   Automatic Monthly Reports
                 </p>
                 <p className="mt-1 text-[13px] font-normal text-amber-800 dark:text-amber-300">
-                  Cron schedule: 1st of each month at 09:00 UTC = 3:00 PM Bangladesh time.
+                  Cron runs daily at 15:00 UTC; report is sent only when it is month-end in Bangladesh (9:00 PM BD time).
                 </p>
               </div>
             </div>

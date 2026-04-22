@@ -47,7 +47,7 @@ export async function fetchDseCompanyExtras(
   try {
     const res = await fetch(url, {
       headers: { Accept: "text/html,*/*" },
-      next: { revalidate: 3600 },
+      cache: "no-store",
     });
     if (!res.ok) {
       return { week52Low: null, week52High: null };

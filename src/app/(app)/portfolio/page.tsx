@@ -7,8 +7,8 @@ import Link from "next/link";
 import { Card, Empty } from "antd";
 import { PortfolioLiveShell } from "./portfolio-live-shell";
 
-/** Refresh portfolio + DSE market fetch cache (seconds). */
-export const revalidate = 60;
+/** Always render with fresh data. */
+export const revalidate = 0;
 
 export default async function PortfolioPage() {
   const supabase = await createClient();
