@@ -591,13 +591,34 @@ export function PortfolioHoldingsTable({
             className="w-full max-w-full sm:max-w-sm"
             size="middle"
           />
-          <Select<WatchlistClassFilter>
-            value={classFilter}
-            onChange={setClassFilter}
-            options={WATCHLIST_CLASS_FILTER_OPTIONS}
-            aria-label="Filter portfolio by chip classification"
-            className="min-w-[11rem]"
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Filter:</span>
+            <Select<WatchlistClassFilter>
+              value={classFilter}
+              onChange={setClassFilter}
+              options={WATCHLIST_CLASS_FILTER_OPTIONS.map((opt) => ({
+                ...opt,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {opt.value === "BLUE" ? (
+                      <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+                    ) : opt.value === "GREEN" ? (
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                    ) : opt.value === "CLASSIFIED" ? (
+                      <span className="inline-flex items-center gap-0.5">
+                        <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+                        <span className="inline-block h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                      </span>
+                    ) : null}
+                    {opt.label}
+                  </span>
+                ),
+              }))}
+              aria-label="Filter portfolio by chip classification"
+              className="min-w-[11rem]"
+              size="middle"
+            />
+          </div>
         </Space>
         {enableBookEdit ? (
           <div className="flex flex-wrap items-center gap-2">
