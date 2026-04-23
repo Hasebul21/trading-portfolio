@@ -14,19 +14,20 @@ type NavItem =
 
 const NAV_ITEMS: NavItem[] = [
   // ── Portfolio group ────────────────────────────
-  { type: "link", href: "/portfolio",     label: "Portfolio" },
-  { type: "link", href: "/record",        label: "Transaction" },
-  { type: "link", href: "/long-term",     label: "Watchlist" },
+  { type: "link", href: "/portfolio", label: "Portfolio" },
+  { type: "link", href: "/record", label: "Transaction" },
+  { type: "link", href: "/long-term", label: "Watchlist" },
   { type: "divider" },
   // ── Trading group ─────────────────────────────
-  { type: "link", href: "/trade-plans",   label: "Quick-trade" },
-  { type: "link", href: "/mip",           label: "MIP" },
+  { type: "link", href: "/trade-plans", label: "Quick-trade" },
+  { type: "link", href: "/mip", label: "MIP" },
+  { type: "link", href: "/draft-mip", label: "Draft MIP" },
   { type: "divider" },
   // ── Records / misc ────────────────────────────
   { type: "link", href: "/trade-history", label: "History" },
-  { type: "link", href: "/invested",      label: "Capital" },
-  { type: "link", href: "/knowledge",     label: "Knowledge" },
-  { type: "link", href: "/settings",      label: "Settings" },
+  { type: "link", href: "/invested", label: "Capital" },
+  { type: "link", href: "/knowledge", label: "Knowledge" },
+  { type: "link", href: "/settings", label: "Settings" },
 ];
 
 /** Mobile: one row, horizontal scroll. md+: full-width pill spanning the header. */

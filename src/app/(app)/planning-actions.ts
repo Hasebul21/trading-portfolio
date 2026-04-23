@@ -12,6 +12,7 @@ import {
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { revalidatePath } from "next/cache";
+import { getMonthlyPlanSectionConfig, type MonthlyPlanSectionKey } from "@/lib/monthly-plan-sections";
 
 const MIP_MAX_ROWS = 12;
 const YEAR_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -24,6 +25,10 @@ function sanitizeOptionalNote(raw: FormDataEntryValue | null): string | null {
   const value = String(raw ?? "").trim();
   if (!value) return null;
   return value.slice(0, 300);
+}
+
+function getMonthlyPlanConfig(sectionKey: MonthlyPlanSectionKey) {
+  return getMonthlyPlanSectionConfig(sectionKey);
 }
 
 export async function addCapitalContribution(formData: FormData) {
@@ -306,9 +311,11 @@ function sanitizePositiveAmount(raw: string): number | null {
 }
 
 /** One-time monthly setup (date + base amount), days 5–25 Dhaka, same calendar month only. */
-export async function submitMipMonthlySetup(
+async function submitMonthlySetup(
+  sectionKey: MonthlyPlanSectionKey,
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = getMonthlyPlanConfig(sectionKey);
   const supabase = await createClient();
   const {
     data: { user },
@@ -336,7 +343,7 @@ export async function submitMipMonthlySetup(
   if (base === null) return { ok: false, error: "Enter a positive total monthly investment amount." };
 
   const { data: existing } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .select("id")
     .eq("user_id", user.id)
     .eq("year_month", ym)
@@ -350,7 +357,7 @@ export async function submitMipMonthlySetup(
   let carried = 0;
   if (prevYm) {
     const { data: prevHeader } = await supabase
-      .from("mip_monthly_headers")
+      .from(config.headerTable)
       .select("id, base_amount_bdt, carried_forward_bdt")
       .eq("user_id", user.id)
       .eq("year_month", prevYm)
@@ -358,7 +365,7 @@ export async function submitMipMonthlySetup(
 
     if (prevHeader) {
       const { data: prevRows } = await supabase
-        .from("mip_monthly_rows")
+        .from(config.rowTable)
         .select("locked, percentage")
         .eq("header_id", prevHeader.id);
 
@@ -374,7 +381,7 @@ export async function submitMipMonthlySetup(
   }
 
   const { data: inserted, error: insErr } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .insert({
       user_id: user.id,
       year_month: ym,
@@ -393,7 +400,7 @@ export async function submitMipMonthlySetup(
     return { ok: false, error: insErr?.message ?? "Could not create MIP." };
   }
 
-  const { error: rowErr } = await supabase.from("mip_monthly_rows").insert({
+  const { error: rowErr } = await supabase.from(config.rowTable).insert({
     header_id: inserted.id,
     sort_order: 0,
     symbol: null,
@@ -404,17 +411,19 @@ export async function submitMipMonthlySetup(
   });
 
   if (rowErr) {
-    await supabase.from("mip_monthly_headers").delete().eq("id", inserted.id);
+    await supabase.from(config.headerTable).delete().eq("id", inserted.id);
     return { ok: false, error: rowErr.message };
   }
 
-  revalidatePath("/mip");
+  revalidatePath(config.routePath);
   return { ok: true };
 }
 
-export async function addMipMonthlyRow(
+async function addMonthlyRow(
+  sectionKey: MonthlyPlanSectionKey,
   headerId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = getMonthlyPlanConfig(sectionKey);
   if (!UUID_RE.test(headerId)) return { ok: false, error: "Invalid header." };
 
   const supabase = await createClient();
@@ -424,7 +433,7 @@ export async function addMipMonthlyRow(
   if (!user) return { ok: false, error: "Not signed in" };
 
   const { data: header } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .select("id")
     .eq("id", headerId)
     .eq("user_id", user.id)
@@ -433,7 +442,7 @@ export async function addMipMonthlyRow(
   if (!header) return { ok: false, error: "Plan not found." };
 
   const { data: orders, error: cErr } = await supabase
-    .from("mip_monthly_rows")
+    .from(config.rowTable)
     .select("sort_order")
     .eq("header_id", headerId)
     .order("sort_order", { ascending: false })
@@ -445,7 +454,7 @@ export async function addMipMonthlyRow(
     return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
   }
 
-  const { error } = await supabase.from("mip_monthly_rows").insert({
+  const { error } = await supabase.from(config.rowTable).insert({
     header_id: headerId,
     sort_order: nextOrder,
     symbol: null,
@@ -457,13 +466,15 @@ export async function addMipMonthlyRow(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/mip");
+  revalidatePath(config.routePath);
   return { ok: true };
 }
 
-export async function lockMipMonthlyRow(
+async function lockMonthlyRow(
+  sectionKey: MonthlyPlanSectionKey,
   formData: FormData,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = getMonthlyPlanConfig(sectionKey);
   const supabase = await createClient();
   const {
     data: { user },
@@ -485,7 +496,7 @@ export async function lockMipMonthlyRow(
   }
 
   const { data: row, error: rErr } = await supabase
-    .from("mip_monthly_rows")
+    .from(config.rowTable)
     .select("id, header_id, locked, symbol, percentage")
     .eq("id", rowId)
     .maybeSingle();
@@ -494,7 +505,7 @@ export async function lockMipMonthlyRow(
   if (row.locked) return { ok: false, error: "This row is already locked." };
 
   const { data: header, error: hErr } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .select("id, user_id, base_amount_bdt, carried_forward_bdt")
     .eq("id", row.header_id)
     .eq("user_id", user.id)
@@ -503,7 +514,7 @@ export async function lockMipMonthlyRow(
   if (hErr || !header) return { ok: false, error: "Plan not found." };
 
   const { data: allRows, error: aErr } = await supabase
-    .from("mip_monthly_rows")
+    .from(config.rowTable)
     .select("id, locked, percentage, symbol")
     .eq("header_id", header.id);
 
@@ -530,7 +541,7 @@ export async function lockMipMonthlyRow(
   const calculated = calculatedAllocationBdt(pct, effective);
 
   const { error: uErr } = await supabase
-    .from("mip_monthly_rows")
+    .from(config.rowTable)
     .update({
       symbol,
       percentage: pct,
@@ -544,14 +555,16 @@ export async function lockMipMonthlyRow(
 
   if (uErr) return { ok: false, error: uErr.message };
 
-  revalidatePath("/mip");
+  revalidatePath(config.routePath);
   return { ok: true };
 }
 
-export async function resetMipMonthlySetup(
+async function resetMonthlySetup(
+  sectionKey: MonthlyPlanSectionKey,
   headerId: string,
   yearMonth: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = getMonthlyPlanConfig(sectionKey);
   if (!UUID_RE.test(headerId)) return { ok: false, error: "Invalid header." };
   if (!YEAR_MONTH_RE.test(yearMonth)) return { ok: false, error: "Invalid month." };
   if (!isTodayDhakaInSubmissionWindowForYm(yearMonth)) {
@@ -568,7 +581,7 @@ export async function resetMipMonthlySetup(
   if (!user) return { ok: false, error: "Not signed in" };
 
   const { data: header, error: hErr } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .select("id")
     .eq("id", headerId)
     .eq("user_id", user.id)
@@ -579,7 +592,7 @@ export async function resetMipMonthlySetup(
   if (!header) return { ok: false, error: "Plan not found." };
 
   const { error } = await supabase
-    .from("mip_monthly_headers")
+    .from(config.headerTable)
     .delete()
     .eq("id", headerId)
     .eq("user_id", user.id)
@@ -587,6 +600,38 @@ export async function resetMipMonthlySetup(
 
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/mip");
+  revalidatePath(config.routePath);
   return { ok: true };
+}
+
+export async function submitMipMonthlySetup(formData: FormData) {
+  return submitMonthlySetup("mip", formData);
+}
+
+export async function addMipMonthlyRow(headerId: string) {
+  return addMonthlyRow("mip", headerId);
+}
+
+export async function lockMipMonthlyRow(formData: FormData) {
+  return lockMonthlyRow("mip", formData);
+}
+
+export async function resetMipMonthlySetup(headerId: string, yearMonth: string) {
+  return resetMonthlySetup("mip", headerId, yearMonth);
+}
+
+export async function submitDraftMipMonthlySetup(formData: FormData) {
+  return submitMonthlySetup("draftMip", formData);
+}
+
+export async function addDraftMipMonthlyRow(headerId: string) {
+  return addMonthlyRow("draftMip", headerId);
+}
+
+export async function lockDraftMipMonthlyRow(formData: FormData) {
+  return lockMonthlyRow("draftMip", formData);
+}
+
+export async function resetDraftMipMonthlySetup(headerId: string, yearMonth: string) {
+  return resetMonthlySetup("draftMip", headerId, yearMonth);
 }

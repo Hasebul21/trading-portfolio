@@ -1,11 +1,5 @@
 "use client";
 
-import {
-  addMipMonthlyRow,
-  lockMipMonthlyRow,
-  resetMipMonthlySetup,
-  submitMipMonthlySetup,
-} from "@/app/(app)/planning-actions";
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import {
   calculatedAllocationBdt,
@@ -61,6 +55,8 @@ function parseYm(ym: string): { y: number; m: number } | null {
 }
 
 export function MipMonthlyModule({
+  sectionTitle,
+  routePath,
   viewYm,
   currentYmDhaka,
   header,
@@ -72,7 +68,13 @@ export function MipMonthlyModule({
   instrumentsError,
   canSubmitThisMonth,
   canResetThisMonth,
+  submitSetupAction,
+  addRowAction,
+  lockRowAction,
+  resetSetupAction,
 }: {
+  sectionTitle: string;
+  routePath: string;
   viewYm: string;
   currentYmDhaka: string;
   header: MipMonthlyHeaderDTO | null;
@@ -86,6 +88,10 @@ export function MipMonthlyModule({
   instrumentsError: string | null;
   canSubmitThisMonth: boolean;
   canResetThisMonth: boolean;
+  submitSetupAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
+  addRowAction: (headerId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  lockRowAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
+  resetSetupAction: (headerId: string, yearMonth: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 }) {
   const router = useRouter();
   const parsedYm = parseYm(viewYm);
@@ -141,8 +147,8 @@ export function MipMonthlyModule({
 
   const applySearch = useCallback(() => {
     const ym = ymFromParts(searchYear, searchMonth);
-    router.push(`/mip?ym=${ym}`);
-  }, [router, searchMonth, searchYear]);
+    router.push(`${routePath}?ym=${ym}`);
+  }, [routePath, router, searchMonth, searchYear]);
 
   const data: Row[] = useMemo(
     () => [...rows].sort((a, b) => a.sort_order - b.sort_order).map((r) => ({ ...r, key: r.id })),
@@ -155,7 +161,7 @@ export function MipMonthlyModule({
     const fd = new FormData();
     fd.set("plan_date", planDate.trim());
     fd.set("base_amount_bdt", baseAmount.trim());
-    const res = await submitMipMonthlySetup(fd);
+    const res = await submitSetupAction(fd);
     setSetupBusy(false);
     if (!res.ok) {
       setSetupError(res.error);
@@ -163,20 +169,20 @@ export function MipMonthlyModule({
     }
     setBaseAmount("");
     router.refresh();
-  }, [baseAmount, planDate, router]);
+  }, [baseAmount, planDate, router, submitSetupAction]);
 
   const handleAddRow = useCallback(async () => {
     if (!header) return;
     setAddRowError(null);
     setAddRowBusy(true);
-    const res = await addMipMonthlyRow(header.id);
+    const res = await addRowAction(header.id);
     setAddRowBusy(false);
     if (!res.ok) {
       setAddRowError(res.error);
       return;
     }
     router.refresh();
-  }, [header, router]);
+  }, [addRowAction, header, router]);
 
   const handleLockRow = useCallback(
     async (rowId: string) => {
@@ -189,7 +195,7 @@ export function MipMonthlyModule({
       fd.set("symbol", sym);
       fd.set("percentage", pct);
       fd.set("note", (draftNote[rowId] ?? "").trim());
-      const res = await lockMipMonthlyRow(fd);
+      const res = await lockRowAction(fd);
       setLockBusyId(null);
       if (!res.ok) {
         setLockErrors((e) => ({ ...e, [rowId]: res.error }));
@@ -212,26 +218,26 @@ export function MipMonthlyModule({
       });
       router.refresh();
     },
-    [draftNote, draftPct, draftSymbol, router],
+    [draftNote, draftPct, draftSymbol, lockRowAction, router],
   );
 
   const handleReset = useCallback(async () => {
     if (!header) return;
     const confirmed = window.confirm(
-      `Reset ${ymToDisplayTitle(header.year_month)} MIP? This will delete all rows and the monthly total so you can start again.`,
+      `Reset ${ymToDisplayTitle(header.year_month)} ${sectionTitle}? This will delete all rows and the monthly total so you can start again.`,
     );
     if (!confirmed) return;
 
     setResetError(null);
     setResetBusy(true);
-    const res = await resetMipMonthlySetup(header.id, header.year_month);
+    const res = await resetSetupAction(header.id, header.year_month);
     setResetBusy(false);
     if (!res.ok) {
       setResetError(res.error);
       return;
     }
     router.refresh();
-  }, [header, router]);
+  }, [header, resetSetupAction, router, sectionTitle]);
 
   const columns: ColumnsType<Row> = useMemo(
     () => [
@@ -383,7 +389,7 @@ export function MipMonthlyModule({
             {formatBdt(totalBalanceBdt)} <span className="text-lg font-normal text-zinc-400 dark:text-zinc-500">BDT</span>
           </p>
           <p className="mt-1 text-[13px] font-normal text-zinc-400 dark:text-zinc-500">
-            All investments minus all stock allocations
+            All {sectionTitle} investments minus all {sectionTitle} stock allocations
           </p>
         </div>
         {currentHeader ? (
@@ -433,7 +439,7 @@ export function MipMonthlyModule({
         </div>
         <Typography.Text type="secondary" className="text-[15px] sm:ml-auto">
           Viewing:{" "}
-          <Link href={`/mip?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
+          <Link href={`${routePath}?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
             {ymToDisplayTitle(viewYm)}
           </Link>
         </Typography.Text>
@@ -442,7 +448,7 @@ export function MipMonthlyModule({
       {!header && canSubmitThisMonth ? (
         <div className={shell}>
           <Typography.Title level={5} className="!mb-2 !mt-0 !text-[15px] !font-normal text-zinc-800 dark:text-zinc-100">
-            MIP setup (once this month)
+            {sectionTitle} setup (once this month)
           </Typography.Title>
           <p className="mb-3 text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Choose a date between the 5th and 25th (Asia/Dhaka) in {ymToDisplayTitle(viewYm)}, and your total monthly
@@ -475,7 +481,7 @@ export function MipMonthlyModule({
               />
             </label>
             <Button type="primary" loading={setupBusy} disabled={setupBusy} onClick={() => void handleSubmitSetup()}>
-              Submit MIP
+              Submit {sectionTitle}
             </Button>
           </div>
           {setupError ? <Alert type="error" showIcon className="mt-3" title={setupError} /> : null}
@@ -487,7 +493,7 @@ export function MipMonthlyModule({
           type="info"
           showIcon
           title="Submission window"
-          description="MIP setup for this month is only available from the 5th through the 25th (Asia/Dhaka). Use search to review other months."
+          description={`${sectionTitle} setup for this month is only available from the 5th through the 25th (Asia/Dhaka). Use search to review other months.`}
         />
       ) : null}
 
@@ -495,7 +501,7 @@ export function MipMonthlyModule({
         <Alert
           type="warning"
           showIcon
-          title="No MIP for this month"
+          title={`No ${sectionTitle} for this month`}
           description="There is no saved plan for the selected month. You can only create a plan for the current month during its submission window."
         />
       ) : null}
