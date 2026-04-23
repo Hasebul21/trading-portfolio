@@ -110,7 +110,7 @@ export function PortfolioLiveShell({
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <div className="flex flex-wrap items-center justify-start gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-teal-200/60 bg-white/80 px-3 py-2 text-left text-[15px] font-normal text-teal-900 shadow-sm backdrop-blur-sm sm:px-4 dark:border-teal-800/50 dark:bg-zinc-900/80 dark:text-teal-100">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />

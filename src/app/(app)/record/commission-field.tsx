@@ -6,7 +6,6 @@ import {
   marketValueBdt,
   roundBdt,
 } from "@/lib/fees/trade-commission";
-import { formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { useState } from "react";
 
 type Props = {
@@ -20,7 +19,6 @@ export function CommissionField({ quantity, pricePerShare }: Props) {
   const valid =
     Number.isFinite(qty) && Number.isFinite(price) && qty > 0 && price >= 0;
 
-  const mv = valid ? roundBdt(marketValueBdt(qty, price)) : 0;
   const rate = getTradeCommissionRate();
   const autoFees = valid ? computeTradeCommissionBdt(qty, price, rate) : 0;
   const autoStr = valid ? String(autoFees) : "";
@@ -33,24 +31,9 @@ export function CommissionField({ quantity, pricePerShare }: Props) {
 
   return (
     <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4 text-[15px] font-normal leading-snug dark:border-zinc-700 dark:bg-zinc-900/50">
-      <p className="text-zinc-800 dark:text-zinc-200">Commission</p>
-      <p className="mt-1 text-[15px] font-normal text-zinc-500 dark:text-zinc-400">
-        Default <span className="text-teal-800 dark:text-teal-200">{pctLabel}</span> of gross
-        (qty × price). You can change the amount before saving.
-      </p>
-      <dl className="mt-3 grid grid-cols-1 gap-2 text-zinc-700 dark:text-zinc-300 sm:grid-cols-2">
-        <dt className="text-zinc-500 dark:text-zinc-400">Gross (qty × price)</dt>
-        <dd className="text-right tabular-nums font-normal">
-          {valid ? formatNumberMax2Decimals(mv) : "—"}
-        </dd>
-        <dt className="text-zinc-500 dark:text-zinc-400">Auto ({pctLabel})</dt>
-        <dd className="text-right tabular-nums font-normal text-zinc-900 dark:text-zinc-50">
-          {valid ? formatNumberMax2Decimals(autoFees) : "—"}
-        </dd>
-      </dl>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
         <label className="block min-w-0 flex-1 text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-          Commission saved on this trade
+          <span className="sr-only">Fees saved on this trade</span>
           <input
             name="fees_bdt"
             type="text"

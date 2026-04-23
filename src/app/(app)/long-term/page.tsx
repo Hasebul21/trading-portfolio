@@ -151,13 +151,12 @@ export default async function LongTermPage() {
 
   return (
     <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full min-w-0 max-w-7xl text-left">
+      <WatchlistSectorChart holdings={portfolioHoldingsForChart} />
       <AddLongTermForm
         instruments={instruments}
         instrumentsError={instrumentsError}
         toolbarShell={toolbarShell}
       />
-
-      <WatchlistSectorChart holdings={portfolioHoldingsForChart} />
       <LongTermHoldingsTable rows={list} />
     </AppPageStack>
   );

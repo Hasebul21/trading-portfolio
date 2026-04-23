@@ -12,9 +12,9 @@ export function RegisterForm() {
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      <h1 className="text-[15px] font-normal tracking-normal text-zinc-900 dark:text-zinc-50">
+      <h2 className="text-[15px] font-normal tracking-normal text-zinc-900 dark:text-zinc-50">
         Create account
-      </h1>
+      </h2>
       <p className="mt-1 text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
         Your positions stay private to your login
       </p>

@@ -463,34 +463,6 @@ export function PortfolioHoldingsTable({
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s1 ?? null),
       },
       {
-        title: "Strong Buy Zone",
-        key: "s2",
-        width: 128,
-        align: "right",
-        responsive: ["xl"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.s2),
-            showSorterTooltip: { title: "Sort by strong buy zone (S2)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.s2 ?? null),
-      },
-      {
-        title: "First Sell Zone",
-        key: "r1",
-        width: 120,
-        align: "right",
-        responsive: ["lg"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.r1),
-            showSorterTooltip: { title: "Sort by first sell zone (R1)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.r1 ?? null),
-      },
-      {
         title: "Strong Sell Zone",
         key: "r2",
         width: 128,

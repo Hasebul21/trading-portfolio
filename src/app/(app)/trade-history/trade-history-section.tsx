@@ -149,7 +149,6 @@ export function TradeHistorySection({ rows, loadError }: Props) {
           className="trade-history-table"
           columns={columns}
           dataSource={data}
-          scroll={{ x: "max-content" }}
           pagination={tablePagination("rows", {
             hideOnSinglePage: false,
             pageSize: 15,
@@ -157,6 +156,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
           })}
           size="middle"
           bordered
+          tableLayout="auto"
         />
       )}
     </div>
