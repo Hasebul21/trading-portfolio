@@ -135,6 +135,7 @@ create table if not exists public.immediate_trade_plans (
   symbol text not null,
   side text not null check (side in ('buy', 'sell')),
   target_price numeric not null check (target_price >= 0),
+  planned_budget_bdt numeric check (planned_budget_bdt > 0),
   notes text
 );
 

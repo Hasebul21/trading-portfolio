@@ -14,7 +14,7 @@ export default async function TradePlansPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("immediate_trade_plans")
-    .select("id, created_at, symbol, side, target_price")
+    .select("id, created_at, symbol, side, target_price, planned_budget_bdt, notes")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -73,6 +73,23 @@ export default async function TradePlansPage() {
             aria-label="Target price"
             placeholder="Target"
             className="box-border h-9 w-full min-w-0 shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 sm:w-[5.25rem] sm:px-1.5 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+          />
+          <input
+            name="planned_budget_bdt"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="any"
+            aria-label="Planned budget"
+            placeholder="Planned budget"
+            className="box-border h-9 w-full min-w-0 shrink-0 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 sm:w-[8.5rem] sm:px-1.5 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
+          />
+          <input
+            name="notes"
+            type="text"
+            aria-label="Note"
+            placeholder="Note"
+            className="box-border h-9 w-full min-w-0 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-teal-500/40 sm:flex-1 sm:basis-[10rem] dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           />
           <Button
             type="primary"

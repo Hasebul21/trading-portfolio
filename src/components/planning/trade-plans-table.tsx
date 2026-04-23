@@ -12,6 +12,8 @@ export type TradePlanRow = {
   symbol: string;
   side: string;
   target_price: number | string;
+  planned_budget_bdt: number | string | null;
+  notes: string | null;
 };
 
 type Row = TradePlanRow & { key: string };
@@ -44,6 +46,20 @@ export function TradePlansTable({ rows }: { rows: TradePlanRow[] }) {
       render: (v: number | string) => (
         <span className="tabular-nums">{formatBdt(Number(v))}</span>
       ),
+    },
+    {
+      title: "Planned budget",
+      dataIndex: "planned_budget_bdt",
+      align: "right",
+      render: (v: number | string | null) =>
+        v == null ? <Typography.Text type="secondary">—</Typography.Text> : <span className="tabular-nums">{formatBdt(Number(v))}</span>,
+    },
+    {
+      title: "Note",
+      dataIndex: "notes",
+      align: "left",
+      width: 240,
+      render: (v: string | null) => v ? <span>{v}</span> : <Typography.Text type="secondary">—</Typography.Text>,
     },
     {
       title: "",

@@ -227,17 +227,22 @@ export async function addTradePlan(formData: FormData) {
   const side = String(formData.get("side") ?? "").toLowerCase();
   const priceRaw = String(formData.get("target_price") ?? "").trim();
   const targetPrice = Number(priceRaw);
+  const budgetRaw = String(formData.get("planned_budget_bdt") ?? "").trim();
+  const plannedBudgetBdt = budgetRaw ? sanitizePositiveAmount(budgetRaw) : null;
+  const notes = sanitizeOptionalNote(formData.get("notes"));
 
   if (!symbol) return;
   if (side !== "buy" && side !== "sell") return;
   if (!Number.isFinite(targetPrice) || targetPrice < 0) return;
+  if (budgetRaw && plannedBudgetBdt === null) return;
 
   await supabase.from("immediate_trade_plans").insert({
     user_id: user.id,
     symbol,
     side,
     target_price: targetPrice,
-    notes: null,
+    planned_budget_bdt: plannedBudgetBdt,
+    notes,
   });
 
   revalidatePath("/trade-plans");
