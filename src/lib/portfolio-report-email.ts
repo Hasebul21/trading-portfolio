@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { aggregateHoldings, totalRealizedProfitLossBdt, type TransactionRow } from "@/lib/portfolio";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
+import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 import { holdingsToMarketRows } from "@/lib/market/portfolio-with-quotes";
 import { mergeLedgerWithOverrides, type PositionOverrideRow } from "@/lib/portfolio-overrides";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -267,7 +268,9 @@ export async function buildReportForUser(
   const ledger = aggregateHoldings(txRows);
   const overrides = (ovRes.data ?? []) as PositionOverrideRow[];
   const merged = mergeLedgerWithOverrides(ledger, overrides);
-  const rows = holdingsToMarketRows(merged, lspRes.bySymbol);
+
+  const companyExtrasRes = await fetchDseCompanyExtrasMap(merged.map((h) => h.symbol));
+  const rows = holdingsToMarketRows(merged, lspRes.bySymbol, companyExtrasRes);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
   return { rows, totalRealizedBdt };
 }

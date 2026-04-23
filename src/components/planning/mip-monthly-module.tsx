@@ -379,70 +379,34 @@ export function MipMonthlyModule({
   return (
     <div className="flex min-w-0 flex-col gap-5 text-left">
 
-      {/* ── Total Balance card ── */}
-      <div className={`${shell} flex flex-col items-center gap-1 py-4 text-center sm:flex-row sm:items-center sm:justify-between sm:py-3 sm:text-left`}>
-        <div>
-          <p className="text-[13px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-            Total Balance
-          </p>
-          <p className={`mt-0.5 text-3xl font-semibold tabular-nums leading-none ${totalBalanceBdt < 0 ? "text-red-600 dark:text-red-400" : "text-teal-700 dark:text-teal-300"}`}>
-            {formatBdt(totalBalanceBdt)} <span className="text-lg font-normal text-zinc-400 dark:text-zinc-500">BDT</span>
-          </p>
-          <p className="mt-1 text-[13px] font-normal text-zinc-400 dark:text-zinc-500">
-            All {sectionTitle} investments minus all {sectionTitle} stock allocations
-          </p>
-        </div>
+      {/* ── Month selector & Total Amount ── */}
+      <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
+        <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+          <span className="mb-1 block">Select Month</span>
+          <Select
+            size="middle"
+            className="min-w-[9rem]"
+            value={searchMonth}
+            onChange={(v) => {
+              const ym = ymFromParts(searchYear, Number(v));
+              router.push(`${routePath}?ym=${ym}`);
+            }}
+            options={Array.from({ length: 12 }, (_, i) => ({
+              value: i + 1,
+              label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
+            }))}
+          />
+        </label>
         {currentHeader ? (
-          <div className="mt-2 rounded-md border border-teal-200/70 bg-teal-50/60 px-4 py-2 text-center dark:border-teal-800/50 dark:bg-teal-950/40 sm:mt-0 sm:text-right">
+          <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
             <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
-              {ymToDisplayTitle(currentYmDhaka)} remaining
+              Total Amount
             </p>
             <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
               {formatBdt(currentRemainingBdt)} BDT
             </p>
-            <p className="text-[12px] tabular-nums text-teal-600 dark:text-teal-400">
-              {currentRemainingPct.toLocaleString(undefined, { maximumFractionDigits: 2 })}% unallocated
-            </p>
           </div>
         ) : null}
-      </div>
-
-      {/* ── Month search bar ── */}
-      <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-            <span className="mb-1 block">Month</span>
-            <Select
-              size="middle"
-              className="min-w-[7.5rem]"
-              value={searchMonth}
-              onChange={(v) => setSearchMonth(Number(v))}
-              options={Array.from({ length: 12 }, (_, i) => ({
-                value: i + 1,
-                label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
-              }))}
-            />
-          </label>
-          <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-            <span className="mb-1 block">Year</span>
-            <Select
-              size="middle"
-              className="min-w-[5.5rem]"
-              value={searchYear}
-              onChange={(v) => setSearchYear(Number(v))}
-              options={yearOptions.map((y) => ({ value: y, label: String(y) }))}
-            />
-          </label>
-          <Button type="default" size="middle" className="mt-5 sm:mt-0" onClick={applySearch}>
-            View
-          </Button>
-        </div>
-        <Typography.Text type="secondary" className="text-[15px] sm:ml-auto">
-          Viewing:{" "}
-          <Link href={`${routePath}?ym=${encodeURIComponent(viewYm)}`} className="text-teal-800 underline dark:text-teal-300">
-            {ymToDisplayTitle(viewYm)}
-          </Link>
-        </Typography.Text>
       </div>
 
       {!header && canSubmitThisMonth ? (
