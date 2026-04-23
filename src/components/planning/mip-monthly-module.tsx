@@ -120,6 +120,8 @@ export function MipMonthlyModule({
   const [lockBusyId, setLockBusyId] = useState<string | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [saveBusyId, setSaveBusyId] = useState<string | null>(null);
 
   const headerNum = header
     ? {
@@ -225,6 +227,44 @@ export function MipMonthlyModule({
     [draftNote, draftPct, draftSymbol, lockRowAction, router],
   );
 
+  const handleSaveDraftRow = useCallback(
+    async (rowId: string) => {
+      const sym = (draftSymbol[rowId] ?? "").trim().toUpperCase();
+      const pct = (draftPct[rowId] ?? "").trim();
+      setLockErrors((e) => ({ ...e, [rowId]: null }));
+      setSaveBusyId(rowId);
+      const fd = new FormData();
+      fd.set("row_id", rowId);
+      fd.set("symbol", sym);
+      fd.set("percentage", pct);
+      fd.set("note", (draftNote[rowId] ?? "").trim());
+      const res = await lockRowAction(fd);
+      setSaveBusyId(null);
+      if (!res.ok) {
+        setLockErrors((e) => ({ ...e, [rowId]: res.error }));
+        return;
+      }
+      setDraftSymbol((d) => {
+        const n = { ...d };
+        delete n[rowId];
+        return n;
+      });
+      setDraftPct((d) => {
+        const n = { ...d };
+        delete n[rowId];
+        return n;
+      });
+      setDraftNote((d) => {
+        const n = { ...d };
+        delete n[rowId];
+        return n;
+      });
+      setEditingRowId(null);
+      router.refresh();
+    },
+    [draftNote, draftPct, draftSymbol, lockRowAction, router],
+  );
+
   const handleReset = useCallback(async () => {
     if (!header) return;
     const confirmed = window.confirm(
@@ -268,15 +308,12 @@ export function MipMonthlyModule({
         title: "Investment %",
         key: "pct",
         align: "right",
-        width: disableLockFeature ? 140 : 120,
+        width: 120,
         render: (_: unknown, record) => {
-          // When lock feature is disabled (Draft MIP), always show input with remaining %
+          // When lock feature is disabled (Draft MIP), show editable input only when editing
           if (disableLockFeature) {
-            const allPcts = rows.map((r) => Number(draftPct[r.id] ?? r.percentage ?? 0));
-            const totalPct = allPcts.reduce((sum, p) => sum + p, 0);
-            const remainingPct = Math.max(0, 100 - totalPct);
-            return (
-              <div className="flex flex-col gap-1">
+            if (editingRowId === record.id) {
+              return (
                 <input
                   type="number"
                   inputMode="decimal"
@@ -289,10 +326,13 @@ export function MipMonthlyModule({
                   onChange={(e) => setDraftPct((d) => ({ ...d, [record.id]: e.target.value }))}
                   className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
                 />
-                <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
-                  Remaining: {remainingPct.toFixed(2)}%
-                </span>
-              </div>
+              );
+            }
+            // Show value when not editing
+            return (
+              <span className="tabular-nums">
+                {Number(record.percentage ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%
+              </span>
             );
           }
           // Normal mode: show locked or editable
@@ -341,8 +381,31 @@ export function MipMonthlyModule({
         title: "Note",
         dataIndex: "note",
         width: 240,
-        render: (_: unknown, record) =>
-          record.locked ? (
+        render: (_: unknown, record) => {
+          // For Draft MIP, show editable input only when editing
+          if (disableLockFeature) {
+            if (editingRowId === record.id) {
+              return (
+                <input
+                  type="text"
+                  aria-label="Note"
+                  maxLength={300}
+                  placeholder="Optional note"
+                  value={draftNote[record.id] ?? record.note ?? ""}
+                  onChange={(e) => setDraftNote((d) => ({ ...d, [record.id]: e.target.value }))}
+                  className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+                />
+              );
+            }
+            // Show value when not editing
+            return record.note ? (
+              <span>{record.note}</span>
+            ) : (
+              <Typography.Text type="secondary">—</Typography.Text>
+            );
+          }
+          // Normal mode
+          return record.locked ? (
             record.note ? (
               <span>{record.note}</span>
             ) : (
@@ -358,10 +421,49 @@ export function MipMonthlyModule({
               onChange={(e) => setDraftNote((d) => ({ ...d, [record.id]: e.target.value }))}
               className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          ),
+          );
+        },
       },
       ...(disableLockFeature
-        ? []
+        ? [
+            {
+              title: "Action",
+              key: "action",
+              width: 100,
+              render: (_: unknown, record: Row) => {
+                if (editingRowId === record.id) {
+                  return (
+                    <div className="flex flex-col items-end gap-1">
+                      <Button
+                        type="primary"
+                        size="small"
+                        loading={saveBusyId === record.id}
+                        disabled={saveBusyId !== null && saveBusyId !== record.id}
+                        onClick={() => void handleSaveDraftRow(record.id)}
+                      >
+                        Save
+                      </Button>
+                      {lockErrors[record.id] ? (
+                        <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
+                          {lockErrors[record.id]}
+                        </Typography.Text>
+                      ) : null}
+                    </div>
+                  );
+                }
+                return (
+                  <Button
+                    type="default"
+                    size="small"
+                    disabled={editingRowId !== null}
+                    onClick={() => setEditingRowId(record.id)}
+                  >
+                    Edit
+                  </Button>
+                );
+              },
+            },
+          ]
         : [
           {
             title: "Status",
@@ -399,10 +501,14 @@ export function MipMonthlyModule({
       draftSymbol,
       effective,
       handleLockRow,
+      handleSaveDraftRow,
       instruments,
       instrumentsError,
       lockBusyId,
       lockErrors,
+      saveBusyId,
+      editingRowId,
+      disableLockFeature,
     ],
   );
 
@@ -445,6 +551,39 @@ export function MipMonthlyModule({
           ) : null}
         </div>
       )}
+
+      {/* ── Draft MIP Summary ── */}
+      {disableLockFeature && currentHeader ? (
+        <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
+          {(() => {
+            const allPcts = rows.map((r) => Number(draftPct[r.id] ?? r.percentage ?? 0));
+            const totalPct = allPcts.reduce((sum, p) => sum + p, 0);
+            const totalAmount = currentHeader && currentEffective > 0
+              ? Math.round((totalPct / 100) * currentEffective * 100) / 100
+              : 0;
+            return (
+              <>
+                <div className="rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 dark:border-blue-800/50 dark:bg-blue-950/40">
+                  <p className="text-[12px] font-normal uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                    Total Allocated %
+                  </p>
+                  <p className="tabular-nums text-[18px] font-semibold text-blue-800 dark:text-blue-200">
+                    {totalPct.toFixed(2)}%
+                  </p>
+                </div>
+                <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
+                  <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
+                    Total Allocated BDT
+                  </p>
+                  <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
+                    {formatBdt(totalAmount)}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      ) : null}
 
       {!header && canSubmitThisMonth ? (
         <div className={shell}>
