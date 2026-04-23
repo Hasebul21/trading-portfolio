@@ -582,10 +582,11 @@ export function MipMonthlyModule({
               className="w-full min-w-0"
               columns={columns}
               dataSource={data}
-              scroll={{ x: "max-content" }}
+              scroll={deleteRowAction ? undefined : { x: "max-content" }}
               pagination={false}
               size="middle"
               bordered
+              tableLayout={deleteRowAction ? "auto" : undefined}
             />
           </div>
         </>

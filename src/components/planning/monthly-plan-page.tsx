@@ -157,7 +157,10 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
         !!header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
 
     return (
-        <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-4xl text-left">
+        <AppPageStack
+            gapClass="gap-4 sm:gap-5"
+            className={`mx-auto min-w-0 text-left ${sectionKey === "draftMip" ? "max-w-6xl" : "max-w-4xl"}`}
+        >
             <AppPageHeader title={config.title} />
             <MipMonthlyModule
                 key={`${config.routePath}:${viewYm}`}

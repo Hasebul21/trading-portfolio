@@ -386,24 +386,6 @@ export function PortfolioHoldingsTable({
           </span>
         ),
       },
-      {
-        title: "Sector",
-        dataIndex: "sector",
-        width: 144,
-        align: "left",
-        ...(!bookEditing
-          ? {
-            sorter: (a: Row, b: Row) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
-            showSorterTooltip: { title: "Sort by sector" },
-          }
-          : {}),
-        render: (v: string | null) =>
-          v ? (
-            <span className="text-[15px] font-normal text-zinc-700 dark:text-zinc-300">{v}</span>
-          ) : (
-            <Typography.Text type="secondary">Unknown</Typography.Text>
-          ),
-      },
       avgCol,
       sharesCol,
       totalCol,
