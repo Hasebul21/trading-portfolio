@@ -38,8 +38,11 @@ Configure these env vars:
 - `PORTFOLIO_REPORT_RECIPIENT` (defaults to `hasebulhassan21@gmail.com`)
 - `SUPABASE_SERVICE_ROLE_KEY` (needed for scheduled monthly report)
 - `PORTFOLIO_REPORT_CRON_SECRET` (or `CRON_SECRET`) for cron endpoint auth
+- `DRAFT_MIP_CLEANUP_CRON_SECRET` (or `CRON_SECRET`) for Draft MIP cleanup cron auth
 
 Monthly schedule is configured in `vercel.json` to call `/api/portfolio-report` on the 1st day of each month.
+
+Draft MIP cleanup is configured in `vercel.json` to call `/api/draft-mip-cleanup` daily; the route deletes all Draft MIP headers (and cascading rows) only when it is the last calendar day in Asia/Dhaka.
 
 For quick Vercel setup, Resend is the simplest option. In testing you can usually start with the onboarding sender, then later switch `RESEND_FROM` to a verified domain sender if needed.
 
