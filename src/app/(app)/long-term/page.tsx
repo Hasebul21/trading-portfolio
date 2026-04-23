@@ -4,8 +4,10 @@ import {
   LongTermHoldingsTable,
   type LongTermHoldingRow,
 } from "@/components/planning/long-term-holdings-table";
+import { WatchlistSectorChart } from "@/components/planning/watchlist-sector-chart";
 import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
 import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
+import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { fetchUserHoldings } from "@/lib/holdings";
 import { normalizeWatchlistClassification } from "@/lib/watchlist-classification";
@@ -103,15 +105,22 @@ export default async function LongTermPage() {
     holdingsRes.holdings.map((h) => [h.symbol.toUpperCase(), h]),
   );
 
+  const companyExtrasMapBySymbol = await fetchDseCompanyExtrasMap(
+    (rows ?? []).map((r) => String(r.symbol).trim()),
+  );
+
   const list: LongTermHoldingRow[] = (rows ?? []).map((row) => {
     const sym = String(row.symbol).trim().toUpperCase();
     const h = bySymbol.get(sym);
     const quote = lspRes.bySymbol.get(sym);
     const liveZones = quote ? zoneLevelsFromLspQuote(quote) : null;
+    const extras = companyExtrasMapBySymbol.get(sym);
+    const sector = extras?.sector ?? h?.category ?? null;
     return {
       id: row.id,
       created_at: row.created_at,
       symbol: row.symbol,
+      sector,
       buy_point_bdt: row.buy_point_bdt,
       sell_point_bdt: row.sell_point_bdt,
       manual_avg_cost_bdt: row.manual_avg_cost_bdt,
@@ -131,6 +140,7 @@ export default async function LongTermPage() {
         toolbarShell={toolbarShell}
       />
 
+      <WatchlistSectorChart rows={list} />
       <LongTermHoldingsTable rows={list} />
     </AppPageStack>
   );

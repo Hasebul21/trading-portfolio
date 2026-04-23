@@ -23,8 +23,7 @@ import { useCallback, useMemo, useState } from "react";
 export type LongTermHoldingRow = {
   id: string;
   created_at: string;
-  symbol: string;
-  /** Stored as BLUE | GREEN | null (unclassified). */
+  symbol: string; sector: string | null;  /** Stored as BLUE | GREEN | null (unclassified). */
   classification: WatchlistClassification;
   buy_point_bdt?: number | string | null;
   sell_point_bdt?: number | string | null;
@@ -331,6 +330,14 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       render: (v: string) => (
         <span className="font-mono text-[15px] font-normal text-zinc-900 dark:text-zinc-50">{v}</span>
       ),
+    },
+    {
+      title: "Sector",
+      dataIndex: "sector",
+      width: 144,
+      align: "left",
+      sorter: (a, b) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
+      render: (v: string | null) => v ? <span>{v}</span> : <Typography.Text type="secondary">Unknown</Typography.Text>,
     },
     {
       title: "Classification",
