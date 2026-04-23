@@ -13,8 +13,17 @@ import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { revalidatePath } from "next/cache";
 
+const MIP_MAX_ROWS = 12;
+const YEAR_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 function normalizeSymbol(raw: string): string {
   return raw.trim().toUpperCase();
+}
+
+function sanitizeOptionalNote(raw: FormDataEntryValue | null): string | null {
+  const value = String(raw ?? "").trim();
+  if (!value) return null;
+  return value.slice(0, 300);
 }
 
 export async function addCapitalContribution(formData: FormData) {
@@ -389,6 +398,7 @@ export async function submitMipMonthlySetup(
     sort_order: 0,
     symbol: null,
     percentage: null,
+    note: null,
     calculated_amount_bdt: null,
     locked: false,
   });
@@ -431,13 +441,16 @@ export async function addMipMonthlyRow(
 
   if (cErr) return { ok: false, error: cErr.message };
   const nextOrder = ((orders?.[0]?.sort_order as number | undefined) ?? -1) + 1;
-  if (nextOrder >= 6) return { ok: false, error: "Maximum 6 rows allowed." };
+  if (nextOrder >= MIP_MAX_ROWS) {
+    return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
+  }
 
   const { error } = await supabase.from("mip_monthly_rows").insert({
     header_id: headerId,
     sort_order: nextOrder,
     symbol: null,
     percentage: null,
+    note: null,
     calculated_amount_bdt: null,
     locked: false,
   });
@@ -462,6 +475,8 @@ export async function lockMipMonthlyRow(
 
   const symbol = normalizeSymbol(String(formData.get("symbol") ?? ""));
   if (!symbol) return { ok: false, error: "Select or enter a DSE stock name." };
+
+  const note = sanitizeOptionalNote(formData.get("note"));
 
   const pctRaw = String(formData.get("percentage") ?? "").trim().replace(/,/g, "");
   const pct = Number(pctRaw);
@@ -519,6 +534,7 @@ export async function lockMipMonthlyRow(
     .update({
       symbol,
       percentage: pct,
+      note,
       calculated_amount_bdt: calculated,
       locked: true,
     })
@@ -527,6 +543,49 @@ export async function lockMipMonthlyRow(
     .eq("locked", false);
 
   if (uErr) return { ok: false, error: uErr.message };
+
+  revalidatePath("/mip");
+  return { ok: true };
+}
+
+export async function resetMipMonthlySetup(
+  headerId: string,
+  yearMonth: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!UUID_RE.test(headerId)) return { ok: false, error: "Invalid header." };
+  if (!YEAR_MONTH_RE.test(yearMonth)) return { ok: false, error: "Invalid month." };
+  if (!isTodayDhakaInSubmissionWindowForYm(yearMonth)) {
+    return {
+      ok: false,
+      error: "You can reset only the current month's MIP between the 5th and 25th (Asia/Dhaka).",
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: header, error: hErr } = await supabase
+    .from("mip_monthly_headers")
+    .select("id")
+    .eq("id", headerId)
+    .eq("user_id", user.id)
+    .eq("year_month", yearMonth)
+    .maybeSingle();
+
+  if (hErr) return { ok: false, error: hErr.message };
+  if (!header) return { ok: false, error: "Plan not found." };
+
+  const { error } = await supabase
+    .from("mip_monthly_headers")
+    .delete()
+    .eq("id", headerId)
+    .eq("user_id", user.id)
+    .eq("year_month", yearMonth);
+
+  if (error) return { ok: false, error: error.message };
 
   revalidatePath("/mip");
   return { ok: true };

@@ -254,9 +254,10 @@ create policy "mip_monthly_headers_delete_own"
 create table if not exists public.mip_monthly_rows (
   id uuid primary key default gen_random_uuid(),
   header_id uuid not null references public.mip_monthly_headers (id) on delete cascade,
-  sort_order int not null check (sort_order >= 0 and sort_order < 6),
+  sort_order int not null check (sort_order >= 0 and sort_order < 12),
   symbol text,
   percentage numeric,
+  note text,
   calculated_amount_bdt numeric,
   locked boolean not null default false,
   created_at timestamptz not null default now(),

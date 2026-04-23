@@ -30,34 +30,34 @@ export default async function MipPage({ searchParams }: PageProps) {
   const [headerRes, currentHeaderRes, allHeadersRes, allLockedRowsRes] = await Promise.all([
     user
       ? supabase
-          .from("mip_monthly_headers")
-          .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
-          .eq("user_id", user.id)
-          .eq("year_month", viewYm)
-          .maybeSingle()
+        .from("mip_monthly_headers")
+        .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
+        .eq("user_id", user.id)
+        .eq("year_month", viewYm)
+        .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     needCurrentSeparately
       ? supabase
-          .from("mip_monthly_headers")
-          .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
-          .eq("user_id", user!.id)
-          .eq("year_month", currentYmDhaka)
-          .maybeSingle()
+        .from("mip_monthly_headers")
+        .select("id, year_month, plan_date, base_amount_bdt, carried_forward_bdt, locked_at")
+        .eq("user_id", user!.id)
+        .eq("year_month", currentYmDhaka)
+        .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     // All-time total invested (sum of base_amount_bdt)
     user
       ? supabase
-          .from("mip_monthly_headers")
-          .select("base_amount_bdt")
-          .eq("user_id", user.id)
+        .from("mip_monthly_headers")
+        .select("base_amount_bdt")
+        .eq("user_id", user.id)
       : Promise.resolve({ data: null, error: null }),
     // All-time total allocated (sum of locked calculated_amount_bdt via RLS)
     user
       ? supabase
-          .from("mip_monthly_rows")
-          .select("calculated_amount_bdt, mip_monthly_headers!inner(user_id)")
-          .eq("locked", true)
-          .eq("mip_monthly_headers.user_id", user.id)
+        .from("mip_monthly_rows")
+        .select("calculated_amount_bdt, mip_monthly_headers!inner(user_id)")
+        .eq("locked", true)
+        .eq("mip_monthly_headers.user_id", user.id)
       : Promise.resolve({ data: null, error: null }),
   ]);
 
@@ -97,7 +97,7 @@ export default async function MipPage({ searchParams }: PageProps) {
   if (header) {
     const { data: rowData, error: rowErr } = await supabase
       .from("mip_monthly_rows")
-      .select("id, header_id, sort_order, symbol, percentage, calculated_amount_bdt, locked")
+      .select("id, header_id, sort_order, symbol, percentage, note, calculated_amount_bdt, locked")
       .eq("header_id", header.id)
       .order("sort_order", { ascending: true });
 
@@ -110,7 +110,7 @@ export default async function MipPage({ searchParams }: PageProps) {
   if (needCurrentSeparately && currentHeader) {
     const { data: rowData } = await supabase
       .from("mip_monthly_rows")
-      .select("id, header_id, sort_order, symbol, percentage, calculated_amount_bdt, locked")
+      .select("id, header_id, sort_order, symbol, percentage, note, calculated_amount_bdt, locked")
       .eq("header_id", currentHeader.id)
       .order("sort_order", { ascending: true });
     if (rowData) currentRows = rowData as MipMonthlyRowDTO[];
@@ -131,6 +131,8 @@ export default async function MipPage({ searchParams }: PageProps) {
 
   const canSubmitThisMonth =
     !header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
+  const canResetThisMonth =
+    !!header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
 
   return (
     <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-4xl text-left">
@@ -147,6 +149,7 @@ export default async function MipPage({ searchParams }: PageProps) {
         instruments={instruments}
         instrumentsError={instrumentsError}
         canSubmitThisMonth={canSubmitThisMonth}
+        canResetThisMonth={canResetThisMonth}
       />
     </AppPageStack>
   );

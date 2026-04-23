@@ -3,6 +3,7 @@
 import {
   addMipMonthlyRow,
   lockMipMonthlyRow,
+  resetMipMonthlySetup,
   submitMipMonthlySetup,
 } from "@/app/(app)/planning-actions";
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
@@ -34,11 +35,13 @@ export type MipMonthlyRowDTO = {
   sort_order: number;
   symbol: string | null;
   percentage: number | string | null;
+  note: string | null;
   calculated_amount_bdt: number | string | null;
   locked: boolean;
 };
 
 type Row = MipMonthlyRowDTO & { key: string };
+const MIP_MAX_ROWS = 12;
 
 const shell =
   "rounded-md border border-teal-200/60 bg-white/92 px-3 py-2 shadow-sm ring-1 ring-teal-500/5 dark:border-teal-900/45 dark:bg-zinc-900/85 dark:ring-teal-900/20";
@@ -68,6 +71,7 @@ export function MipMonthlyModule({
   instruments,
   instrumentsError,
   canSubmitThisMonth,
+  canResetThisMonth,
 }: {
   viewYm: string;
   currentYmDhaka: string;
@@ -81,6 +85,7 @@ export function MipMonthlyModule({
   instruments: SymbolFieldInstrument[];
   instrumentsError: string | null;
   canSubmitThisMonth: boolean;
+  canResetThisMonth: boolean;
 }) {
   const router = useRouter();
   const parsedYm = parseYm(viewYm);
@@ -101,19 +106,22 @@ export function MipMonthlyModule({
 
   const [draftSymbol, setDraftSymbol] = useState<Record<string, string>>({});
   const [draftPct, setDraftPct] = useState<Record<string, string>>({});
+  const [draftNote, setDraftNote] = useState<Record<string, string>>({});
   const [lockBusyId, setLockBusyId] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const headerNum = header
     ? {
-        base: Number(header.base_amount_bdt),
-        carried: Number(header.carried_forward_bdt),
-      }
+      base: Number(header.base_amount_bdt),
+      carried: Number(header.carried_forward_bdt),
+    }
     : null;
   const effective = headerNum
     ? effectiveMonthlyTotalBdt({
-        base_amount_bdt: headerNum.base,
-        carried_forward_bdt: headerNum.carried,
-      })
+      base_amount_bdt: headerNum.base,
+      carried_forward_bdt: headerNum.carried,
+    })
     : 0;
 
   // Balance for the current Dhaka month — shown in the header bar regardless of which month is viewed.
@@ -180,6 +188,7 @@ export function MipMonthlyModule({
       fd.set("row_id", rowId);
       fd.set("symbol", sym);
       fd.set("percentage", pct);
+      fd.set("note", (draftNote[rowId] ?? "").trim());
       const res = await lockMipMonthlyRow(fd);
       setLockBusyId(null);
       if (!res.ok) {
@@ -196,10 +205,33 @@ export function MipMonthlyModule({
         delete n[rowId];
         return n;
       });
+      setDraftNote((d) => {
+        const n = { ...d };
+        delete n[rowId];
+        return n;
+      });
       router.refresh();
     },
-    [draftPct, draftSymbol, router],
+    [draftNote, draftPct, draftSymbol, router],
   );
+
+  const handleReset = useCallback(async () => {
+    if (!header) return;
+    const confirmed = window.confirm(
+      `Reset ${ymToDisplayTitle(header.year_month)} MIP? This will delete all rows and the monthly total so you can start again.`,
+    );
+    if (!confirmed) return;
+
+    setResetError(null);
+    setResetBusy(true);
+    const res = await resetMipMonthlySetup(header.id, header.year_month);
+    setResetBusy(false);
+    if (!res.ok) {
+      setResetError(res.error);
+      return;
+    }
+    router.refresh();
+  }, [header, router]);
 
   const columns: ColumnsType<Row> = useMemo(
     () => [
@@ -269,6 +301,29 @@ export function MipMonthlyModule({
         },
       },
       {
+        title: "Note",
+        dataIndex: "note",
+        width: 240,
+        render: (_: unknown, record) =>
+          record.locked ? (
+            record.note ? (
+              <span>{record.note}</span>
+            ) : (
+              <Typography.Text type="secondary">—</Typography.Text>
+            )
+          ) : (
+            <input
+              type="text"
+              aria-label="Note"
+              maxLength={300}
+              placeholder="Optional note"
+              value={draftNote[record.id] ?? record.note ?? ""}
+              onChange={(e) => setDraftNote((d) => ({ ...d, [record.id]: e.target.value }))}
+              className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+            />
+          ),
+      },
+      {
         title: "Status",
         key: "status",
         width: 160,
@@ -298,6 +353,7 @@ export function MipMonthlyModule({
       },
     ],
     [
+      draftNote,
       draftPct,
       draftSymbol,
       effective,
@@ -454,16 +510,31 @@ export function MipMonthlyModule({
               {ymToDisplayTitle(header.year_month)}
             </Typography.Title>
             <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+              {canResetThisMonth ? (
+                <Button
+                  danger
+                  type="default"
+                  size="middle"
+                  loading={resetBusy}
+                  disabled={resetBusy || addRowBusy}
+                  onClick={() => void handleReset()}
+                >
+                  Reset month
+                </Button>
+              ) : null}
               <Button
                 type="default"
                 size="middle"
-                disabled={rows.length >= 6 || addRowBusy}
+                disabled={rows.length >= MIP_MAX_ROWS || addRowBusy || resetBusy}
                 loading={addRowBusy}
                 onClick={() => void handleAddRow()}
               >
-                Add row ({rows.length}/6)
+                Add row ({rows.length}/{MIP_MAX_ROWS})
               </Button>
             </div>
+            {resetError ? (
+              <Alert type="error" showIcon className="mb-2" title={resetError} />
+            ) : null}
             {addRowError ? (
               <Alert type="error" showIcon className="mb-2" title={addRowError} />
             ) : null}
