@@ -4,9 +4,9 @@ import { formatBdt } from "@/lib/format-bdt";
 import { useMemo } from "react";
 
 export type PortfolioHoldingForChart = {
-  symbol: string;
-  sector: string | null;
-  totalCost: number;
+    symbol: string;
+    sector: string | null;
+    totalCost: number;
 };
 
 const COLORS = [
@@ -21,52 +21,52 @@ const COLORS = [
 ];
 
 function buildSectorSlices(
-  holdings: PortfolioHoldingForChart[],
+    holdings: PortfolioHoldingForChart[],
 ): Array<{
-  sector: string;
-  count: number;
-  totalInvested: number;
+    sector: string;
+    count: number;
+    totalInvested: number;
 }> {
-  const sectorMap: Record<string, { count: number; totalInvested: number }> = {};
+    const sectorMap: Record<string, { count: number; totalInvested: number }> = {};
 
-  for (const holding of holdings) {
-    const sector = holding.sector ?? "Unknown";
-    if (!sectorMap[sector]) {
-      sectorMap[sector] = { count: 0, totalInvested: 0 };
+    for (const holding of holdings) {
+        const sector = holding.sector ?? "Unknown";
+        if (!sectorMap[sector]) {
+            sectorMap[sector] = { count: 0, totalInvested: 0 };
+        }
+        sectorMap[sector].count += 1;
+        sectorMap[sector].totalInvested += holding.totalCost;
     }
-    sectorMap[sector].count += 1;
-    sectorMap[sector].totalInvested += holding.totalCost;
-  }
 
-  return Object.entries(sectorMap)
-    .map(([sector, { count, totalInvested }]) => ({
-      sector,
-      count,
-      totalInvested: Math.round(totalInvested * 100) / 100,
-    }))
-    .sort((a, b) => b.totalInvested - a.totalInvested);
+    return Object.entries(sectorMap)
+        .map(([sector, { count, totalInvested }]) => ({
+            sector,
+            count,
+            totalInvested: Math.round(totalInvested * 100) / 100,
+        }))
+        .sort((a, b) => b.totalInvested - a.totalInvested);
 }
 
 function chartBackground(
-  slices: Array<{ sector: string; count: number; totalInvested: number }>,
+    slices: Array<{ sector: string; count: number; totalInvested: number }>,
 ): string {
-  if (slices.length === 0) return "transparent";
+    if (slices.length === 0) return "transparent";
 
-  const total = slices.reduce((sum, s) => sum + s.totalInvested, 0);
-  if (total === 0) return "transparent";
+    const total = slices.reduce((sum, s) => sum + s.totalInvested, 0);
+    if (total === 0) return "transparent";
 
-  const stops: string[] = [];
-  let cumulativePercent = 0;
+    const stops: string[] = [];
+    let cumulativePercent = 0;
 
-  for (const slice of slices) {
-    const percent = (slice.totalInvested / total) * 100;
-    const color = COLORS[(stops.length / 2) % COLORS.length];
-    stops.push(`${color} ${cumulativePercent}%`);
-    cumulativePercent += percent;
-    stops.push(`${color} ${cumulativePercent}%`);
-  }
+    for (const slice of slices) {
+        const percent = (slice.totalInvested / total) * 100;
+        const color = COLORS[(stops.length / 2) % COLORS.length];
+        stops.push(`${color} ${cumulativePercent}%`);
+        cumulativePercent += percent;
+        stops.push(`${color} ${cumulativePercent}%`);
+    }
 
-  return `conic-gradient(${stops.join(", ")})`;
+    return `conic-gradient(${stops.join(", ")})`;
 }
 
 export function WatchlistSectorChart({ holdings }: { holdings: PortfolioHoldingForChart[] }) {
