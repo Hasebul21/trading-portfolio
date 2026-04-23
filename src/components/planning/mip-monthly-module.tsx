@@ -72,6 +72,8 @@ export function MipMonthlyModule({
   addRowAction,
   lockRowAction,
   resetSetupAction,
+  hideMonthSelector = false,
+  disableLockFeature = false,
 }: {
   sectionTitle: string;
   routePath: string;
@@ -92,6 +94,8 @@ export function MipMonthlyModule({
   addRowAction: (headerId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   lockRowAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
   resetSetupAction: (headerId: string, yearMonth: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  hideMonthSelector?: boolean;
+  disableLockFeature?: boolean;
 }) {
   const router = useRouter();
   const parsedYm = parseYm(viewYm);
@@ -264,9 +268,35 @@ export function MipMonthlyModule({
         title: "Investment %",
         key: "pct",
         align: "right",
-        width: 120,
-        render: (_: unknown, record) =>
-          record.locked ? (
+        width: disableLockFeature ? 140 : 120,
+        render: (_: unknown, record) => {
+          // When lock feature is disabled (Draft MIP), always show input with remaining %
+          if (disableLockFeature) {
+            const allPcts = rows.map((r) => Number(draftPct[r.id] ?? r.percentage ?? 0));
+            const totalPct = allPcts.reduce((sum, p) => sum + p, 0);
+            const remainingPct = Math.max(0, 100 - totalPct);
+            return (
+              <div className="flex flex-col gap-1">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  aria-label="Percentage"
+                  placeholder="%"
+                  value={draftPct[record.id] ?? (record.percentage != null ? String(record.percentage) : "")}
+                  onChange={(e) => setDraftPct((d) => ({ ...d, [record.id]: e.target.value }))}
+                  className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
+                />
+                <span className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                  Remaining: {remainingPct.toFixed(2)}%
+                </span>
+              </div>
+            );
+          }
+          // Normal mode: show locked or editable
+          return record.locked ? (
             <span className="tabular-nums">
               {Number(record.percentage).toLocaleString(undefined, { maximumFractionDigits: 2 })}%
             </span>
@@ -283,7 +313,8 @@ export function MipMonthlyModule({
               onChange={(e) => setDraftPct((d) => ({ ...d, [record.id]: e.target.value }))}
               className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          ),
+          );
+        },
       },
       {
         title: "Calculated amount (BDT)",
@@ -329,34 +360,38 @@ export function MipMonthlyModule({
             />
           ),
       },
-      {
-        title: "Status",
-        key: "status",
-        width: 160,
-        render: (_: unknown, record) =>
-          record.locked ? (
-            <Tag color="blue" className="m-0 border-0 font-normal">
-              Locked
-            </Tag>
-          ) : (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                type="primary"
-                size="small"
-                loading={lockBusyId === record.id}
-                disabled={lockBusyId !== null && lockBusyId !== record.id}
-                onClick={() => void handleLockRow(record.id)}
-              >
-                Lock row
-              </Button>
-              {lockErrors[record.id] ? (
-                <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
-                  {lockErrors[record.id]}
-                </Typography.Text>
-              ) : null}
-            </div>
-          ),
-      },
+      ...(disableLockFeature
+        ? []
+        : [
+          {
+            title: "Status",
+            key: "status",
+            width: 160,
+            render: (_: unknown, record: Row) =>
+              record.locked ? (
+                <Tag color="blue" className="m-0 border-0 font-normal">
+                  Locked
+                </Tag>
+              ) : (
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={lockBusyId === record.id}
+                    disabled={lockBusyId !== null && lockBusyId !== record.id}
+                    onClick={() => void handleLockRow(record.id)}
+                  >
+                    Lock row
+                  </Button>
+                  {lockErrors[record.id] ? (
+                    <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
+                      {lockErrors[record.id]}
+                    </Typography.Text>
+                  ) : null}
+                </div>
+              ),
+          },
+        ]),
     ],
     [
       draftNote,
@@ -380,34 +415,36 @@ export function MipMonthlyModule({
     <div className="flex min-w-0 flex-col gap-5 text-left">
 
       {/* ── Month selector & Total Amount ── */}
-      <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-        <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-          <span className="mb-1 block">Select Month</span>
-          <Select
-            size="middle"
-            className="min-w-[9rem]"
-            value={searchMonth}
-            onChange={(v) => {
-              const ym = ymFromParts(searchYear, Number(v));
-              router.push(`${routePath}?ym=${ym}`);
-            }}
-            options={Array.from({ length: 12 }, (_, i) => ({
-              value: i + 1,
-              label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
-            }))}
-          />
-        </label>
-        {currentHeader ? (
-          <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
-            <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
-              Total Amount
-            </p>
-            <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
-              {formatBdt(currentRemainingBdt)} BDT
-            </p>
-          </div>
-        ) : null}
-      </div>
+      {!hideMonthSelector && (
+        <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
+          <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+            <span className="mb-1 block">Select Month</span>
+            <Select
+              size="middle"
+              className="min-w-[9rem]"
+              value={searchMonth}
+              onChange={(v) => {
+                const ym = ymFromParts(searchYear, Number(v));
+                router.push(`${routePath}?ym=${ym}`);
+              }}
+              options={Array.from({ length: 12 }, (_, i) => ({
+                value: i + 1,
+                label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
+              }))}
+            />
+          </label>
+          {currentHeader ? (
+            <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
+              <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
+                Total Amount
+              </p>
+              <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
+                {formatBdt(currentRemainingBdt)} BDT
+              </p>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {!header && canSubmitThisMonth ? (
         <div className={shell}>

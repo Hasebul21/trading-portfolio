@@ -175,6 +175,8 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
                 addRowAction={actions.addRowAction}
                 lockRowAction={actions.lockRowAction}
                 resetSetupAction={actions.resetSetupAction}
+                hideMonthSelector={sectionKey === "draftMip"}
+                disableLockFeature={sectionKey === "draftMip"}
             />
         </AppPageStack>
     );
