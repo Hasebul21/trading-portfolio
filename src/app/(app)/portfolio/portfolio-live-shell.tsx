@@ -1,7 +1,6 @@
 "use client";
 
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
-import { PortfolioSectorChart } from "@/components/portfolio/portfolio-sector-chart";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import type { WatchlistClassification } from "@/lib/watchlist-classification";
 import { Alert } from "antd";
@@ -126,8 +125,6 @@ export function PortfolioLiveShell({
             : "Connecting to live prices…"}
         </span>
       </div>
-
-      <PortfolioSectorChart rows={rows} />
 
       <PortfolioHoldingsTable
         holdings={rows}
