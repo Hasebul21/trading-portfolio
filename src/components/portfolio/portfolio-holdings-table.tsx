@@ -304,6 +304,7 @@ export function PortfolioHoldingsTable({
         key: "avgPrice",
         width: 128,
         align: "right",
+        responsive: ["sm"],
         sorter: (a, b) => a.avgPrice - b.avgPrice,
         showSorterTooltip: { title: "Sort by average cost" },
         render: (_: unknown, row) => (
@@ -331,6 +332,7 @@ export function PortfolioHoldingsTable({
         dataIndex: "shares",
         width: 80,
         align: "right",
+        responsive: ["sm"],
         sorter: (a, b) => a.shares - b.shares,
         showSorterTooltip: { title: "Sort by shares" },
         render: (v: number) => (
@@ -358,6 +360,7 @@ export function PortfolioHoldingsTable({
         dataIndex: "totalCost",
         width: 112,
         align: "right",
+        responsive: ["md"],
         sorter: (a, b) => a.totalCost - b.totalCost,
         showSorterTooltip: { title: "Sort by total invested" },
         render: (_: unknown, row) => (
@@ -417,6 +420,7 @@ export function PortfolioHoldingsTable({
         dataIndex: "marketLtp",
         width: 118,
         align: "right",
+        responsive: ["md"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.marketLtp),
@@ -435,6 +439,7 @@ export function PortfolioHoldingsTable({
         key: "pivot",
         width: 132,
         align: "right",
+        responsive: ["lg"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.pivot?.pivot),
@@ -448,6 +453,7 @@ export function PortfolioHoldingsTable({
         key: "s1",
         width: 120,
         align: "right",
+        responsive: ["lg"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.pivot?.s1),
@@ -461,6 +467,7 @@ export function PortfolioHoldingsTable({
         key: "s2",
         width: 128,
         align: "right",
+        responsive: ["xl"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.pivot?.s2),
@@ -474,6 +481,7 @@ export function PortfolioHoldingsTable({
         key: "r1",
         width: 120,
         align: "right",
+        responsive: ["lg"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.pivot?.r1),
@@ -487,6 +495,7 @@ export function PortfolioHoldingsTable({
         key: "r2",
         width: 128,
         align: "right",
+        responsive: ["xl"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.pivot?.r2),
@@ -560,7 +569,7 @@ export function PortfolioHoldingsTable({
       </div>
 
       <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4 dark:border-teal-900/40">
-        <Space wrap className="w-full min-w-0 sm:w-auto">
+        <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
           <Search
             allowClear
             placeholder="Search symbol…"
@@ -569,7 +578,7 @@ export function PortfolioHoldingsTable({
             className="w-full max-w-full sm:max-w-sm"
             size="middle"
           />
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
             <span className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Filter:</span>
             <Select<WatchlistClassFilter>
               value={classFilter}
@@ -593,21 +602,22 @@ export function PortfolioHoldingsTable({
                 ),
               }))}
               aria-label="Filter portfolio by chip classification"
-              className="min-w-[11rem]"
+              className="w-full min-w-0 sm:min-w-[11rem]"
               size="middle"
             />
           </div>
         </Space>
         {enableBookEdit ? (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             {!bookEditorOpen ? (
-              <Button type="default" size="middle" onClick={() => setBookEditorOpen(true)}>
+              <Button type="default" size="middle" className="w-full sm:w-auto" onClick={() => setBookEditorOpen(true)}>
                 Edit book
               </Button>
             ) : (
               <Button
                 type="default"
                 size="middle"
+                className="w-full sm:w-auto"
                 disabled={saving}
                 onClick={() => {
                   setBookEditorOpen(false);
@@ -658,7 +668,7 @@ export function PortfolioHoldingsTable({
             <Alert type="success" showIcon title="Portfolio book values saved." className="text-left" />
           ) : null}
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="primary" size="large" loading={saving} disabled={!dirty || saving} onClick={() => void handleSaveBook()}>
+            <Button type="primary" size="large" className="w-full sm:w-auto" loading={saving} disabled={!dirty || saving} onClick={() => void handleSaveBook()}>
               Save portfolio book values
             </Button>
           </div>

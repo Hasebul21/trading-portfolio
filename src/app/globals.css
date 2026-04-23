@@ -45,6 +45,12 @@ body {
   font-weight: 400;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 /* Uniform typography: no bold weights site-wide (incl. Ant Design defaults). */
 strong,
 b {
@@ -59,7 +65,7 @@ b {
   font-weight: 400 !important;
 }
 
-.ant-table-thead > tr > th {
+.ant-table-thead>tr>th {
   font-weight: 400 !important;
 }
 
@@ -78,60 +84,89 @@ b {
   background: transparent;
 }
 
-.portfolio-holdings-table .ant-table-thead > tr > th,
-.long-term-holdings-table .ant-table-thead > tr > th {
+.portfolio-holdings-table .ant-table-thead>tr>th,
+.long-term-holdings-table .ant-table-thead>tr>th {
   font-size: 15px;
   font-weight: 400;
   letter-spacing: -0.01em;
   text-transform: none;
   color: #0f766e;
-  background: linear-gradient(
-    to bottom,
-    rgba(240, 253, 250, 0.98),
-    rgba(236, 253, 245, 0.88)
-  ) !important;
+  background: linear-gradient(to bottom,
+      rgba(240, 253, 250, 0.98),
+      rgba(236, 253, 245, 0.88)) !important;
   border-bottom: 1px solid rgba(13, 148, 136, 0.15) !important;
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr > td,
-.long-term-holdings-table .ant-table-tbody > tr > td {
+.portfolio-holdings-table .ant-table-tbody>tr>td,
+.long-term-holdings-table .ant-table-tbody>tr>td {
   border-color: rgba(15, 118, 110, 0.06) !important;
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td,
-.long-term-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+.portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
+.long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
   background: rgba(240, 253, 250, 0.35);
 }
 
-.portfolio-holdings-table .ant-table-tbody > tr:hover > td,
-.long-term-holdings-table .ant-table-tbody > tr:hover > td {
+.portfolio-holdings-table .ant-table-tbody>tr:hover>td,
+.long-term-holdings-table .ant-table-tbody>tr:hover>td {
   background: rgba(113, 113, 122, 0.09) !important;
 }
 
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .ant-table-wrapper {
+    min-width: 0;
+  }
+
+  .ant-table-wrapper .ant-table {
+    font-size: 13px;
+  }
+
+  .ant-table-wrapper .ant-table-thead>tr>th,
+  .ant-table-wrapper .ant-table-tbody>tr>td {
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+    vertical-align: top;
+  }
+
+  .ant-pagination {
+    justify-content: center;
+    row-gap: 8px;
+  }
+
+  .ant-card,
+  .ant-alert {
+    max-width: 100%;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
-  .portfolio-holdings-table .ant-table-thead > tr > th,
-  .long-term-holdings-table .ant-table-thead > tr > th {
+
+  .portfolio-holdings-table .ant-table-thead>tr>th,
+  .long-term-holdings-table .ant-table-thead>tr>th {
     color: #5eead4;
-    background: linear-gradient(
-      to bottom,
-      rgba(6, 78, 59, 0.55),
-      rgba(4, 47, 46, 0.72)
-    ) !important;
+    background: linear-gradient(to bottom,
+        rgba(6, 78, 59, 0.55),
+        rgba(4, 47, 46, 0.72)) !important;
     border-bottom-color: rgba(45, 212, 191, 0.2) !important;
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr > td,
-  .long-term-holdings-table .ant-table-tbody > tr > td {
+  .portfolio-holdings-table .ant-table-tbody>tr>td,
+  .long-term-holdings-table .ant-table-tbody>tr>td {
     border-color: rgba(45, 212, 191, 0.08) !important;
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr:nth-child(even) > td,
-  .long-term-holdings-table .ant-table-tbody > tr:nth-child(even) > td {
+  .portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
+  .long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
     background: rgba(6, 78, 59, 0.22);
   }
 
-  .portfolio-holdings-table .ant-table-tbody > tr:hover > td,
-  .long-term-holdings-table .ant-table-tbody > tr:hover > td {
+  .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
+  .long-term-holdings-table .ant-table-tbody>tr:hover>td {
     background: rgba(161, 161, 170, 0.13) !important;
   }
 }

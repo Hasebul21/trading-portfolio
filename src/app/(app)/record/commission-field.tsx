@@ -38,7 +38,7 @@ export function CommissionField({ quantity, pricePerShare }: Props) {
         Default <span className="text-teal-800 dark:text-teal-200">{pctLabel}</span> of gross
         (qty × price). You can change the amount before saving.
       </p>
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-zinc-700 dark:text-zinc-300">
+      <dl className="mt-3 grid grid-cols-1 gap-2 text-zinc-700 dark:text-zinc-300 sm:grid-cols-2">
         <dt className="text-zinc-500 dark:text-zinc-400">Gross (qty × price)</dt>
         <dd className="text-right tabular-nums font-normal">
           {valid ? formatNumberMax2Decimals(mv) : "—"}

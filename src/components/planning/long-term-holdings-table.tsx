@@ -336,6 +336,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       dataIndex: "sector",
       width: 144,
       align: "left",
+      responsive: ["sm"],
       sorter: (a, b) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
       render: (v: string | null) => v ? <span>{v}</span> : <Typography.Text type="secondary">Unknown</Typography.Text>,
     },
@@ -344,6 +345,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       key: "classification",
       width: 200,
       align: "left",
+      responsive: ["sm"],
       render: (_: unknown, r) => (
         <Space direction="vertical" size={6} className="w-full py-0.5">
           {r.classification === "BLUE" ? (
@@ -376,6 +378,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       dataIndex: "created_at",
       width: 100,
       align: "left",
+      responsive: ["md"],
       render: (v: string) => (
         <span className="text-zinc-600 dark:text-zinc-400">{new Date(v).toLocaleDateString()}</span>
       ),
@@ -421,34 +424,34 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-auto">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <Space wrap className="w-full min-w-0 sm:w-auto">
+        <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
           <Input
             allowClear
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder="Search by symbol"
             aria-label="Filter watchlist by symbol"
-            className="max-w-[16rem]"
+            className="w-full max-w-full sm:max-w-[16rem]"
           />
           <Select<WatchlistClassFilter>
             value={classFilter}
             onChange={setClassFilter}
             options={WATCHLIST_CLASS_FILTER_OPTIONS}
             aria-label="Filter by chip classification"
-            className="min-w-[11rem]"
+            className="w-full min-w-0 sm:min-w-[11rem]"
           />
         </Space>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
           {!editing ? (
-            <Button type="default" size="middle" onClick={beginEdit}>
+            <Button type="default" size="middle" className="w-full sm:w-auto" onClick={beginEdit}>
               Edit table
             </Button>
           ) : (
             <>
-              <Button type="primary" size="middle" loading={saving} disabled={saving} onClick={() => void handleSave()}>
+              <Button type="primary" size="middle" className="w-full sm:w-auto" loading={saving} disabled={saving} onClick={() => void handleSave()}>
                 Save changes
               </Button>
-              <Button type="default" size="middle" disabled={saving} onClick={cancelEdit}>
+              <Button type="default" size="middle" className="w-full sm:w-auto" disabled={saving} onClick={cancelEdit}>
                 Cancel
               </Button>
             </>

@@ -38,91 +38,93 @@ export function TradeHistorySection({ rows, loadError }: Props) {
 
   const columns: ColumnsType<Row> = useMemo(
     () => [
-    {
-      title: "When",
-      dataIndex: "created_at",
-      align: "left",
-      render: (v: string) => (
-        <span className="text-zinc-600 dark:text-zinc-400">
-          {new Date(v).toLocaleString("en-GB", {
-            timeZone: "Asia/Dhaka",
-            dateStyle: "short",
-            timeStyle: "short",
-          })}
-        </span>
-      ),
-    },
-    {
-      title: "Symbol",
-      dataIndex: "symbol",
-      align: "left",
-      render: (v: string) => (
-        <Typography.Text strong className="font-mono">
-          {String(v).toUpperCase()}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: "Side",
-      dataIndex: "side",
-      align: "center",
-      width: 72,
-      render: (v: string) => <span className="capitalize">{v}</span>,
-    },
-    {
-      title: "Qty",
-      dataIndex: "quantity",
-      align: "right",
-      render: (v: string | number) => (
-        <span className="tabular-nums">
-          {formatNumberMax2Decimals(Number(v))}
-        </span>
-      ),
-    },
-    {
-      title: "Price",
-      dataIndex: "price_per_share",
-      align: "right",
-      render: (v: string | number) => (
-        <span className="tabular-nums">{formatBdt(Number(v))}</span>
-      ),
-    },
-    {
-      title: "Fees",
-      dataIndex: "fees_bdt",
-      align: "right",
-      render: (v: string | number | null | undefined) => (
-        <span className="tabular-nums">{formatBdt(Number(v ?? 0))}</span>
-      ),
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 96,
-      align: "center",
-      render: (_: unknown, record) => (
-        <Popconfirm
-          title="Remove this row?"
-          description="Deletes this row. Holdings and Net Gain/Loss will recalc."
-          okText="Remove"
-          okButtonProps={{ danger: true }}
-          cancelText="Cancel"
-          onConfirm={() => void onRemove(record.id)}
-        >
-          <Button
-            type="link"
-            danger
-            size="small"
-            loading={removingId === record.id}
-            disabled={removingId !== null && removingId !== record.id}
-            className="p-0"
+      {
+        title: "When",
+        dataIndex: "created_at",
+        align: "left",
+        responsive: ["sm"],
+        render: (v: string) => (
+          <span className="text-zinc-600 dark:text-zinc-400">
+            {new Date(v).toLocaleString("en-GB", {
+              timeZone: "Asia/Dhaka",
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
+      {
+        title: "Symbol",
+        dataIndex: "symbol",
+        align: "left",
+        render: (v: string) => (
+          <Typography.Text strong className="font-mono">
+            {String(v).toUpperCase()}
+          </Typography.Text>
+        ),
+      },
+      {
+        title: "Side",
+        dataIndex: "side",
+        align: "center",
+        width: 72,
+        render: (v: string) => <span className="capitalize">{v}</span>,
+      },
+      {
+        title: "Qty",
+        dataIndex: "quantity",
+        align: "right",
+        render: (v: string | number) => (
+          <span className="tabular-nums">
+            {formatNumberMax2Decimals(Number(v))}
+          </span>
+        ),
+      },
+      {
+        title: "Price",
+        dataIndex: "price_per_share",
+        align: "right",
+        render: (v: string | number) => (
+          <span className="tabular-nums">{formatBdt(Number(v))}</span>
+        ),
+      },
+      {
+        title: "Fees",
+        dataIndex: "fees_bdt",
+        align: "right",
+        responsive: ["md"],
+        render: (v: string | number | null | undefined) => (
+          <span className="tabular-nums">{formatBdt(Number(v ?? 0))}</span>
+        ),
+      },
+      {
+        title: "",
+        key: "actions",
+        width: 96,
+        align: "center",
+        render: (_: unknown, record) => (
+          <Popconfirm
+            title="Remove this row?"
+            description="Deletes this row. Holdings and Net Gain/Loss will recalc."
+            okText="Remove"
+            okButtonProps={{ danger: true }}
+            cancelText="Cancel"
+            onConfirm={() => void onRemove(record.id)}
           >
-            Remove
-          </Button>
-        </Popconfirm>
-      ),
-    },
-  ],
+            <Button
+              type="link"
+              danger
+              size="small"
+              loading={removingId === record.id}
+              disabled={removingId !== null && removingId !== record.id}
+              className="p-0"
+            >
+              Remove
+            </Button>
+          </Popconfirm>
+        ),
+      },
+    ],
     [onRemove, removingId],
   );
 
@@ -144,6 +146,7 @@ export function TradeHistorySection({ rows, loadError }: Props) {
         <Typography.Paragraph type="secondary">No trades in this range.</Typography.Paragraph>
       ) : (
         <Table<Row>
+          className="trade-history-table"
           columns={columns}
           dataSource={data}
           scroll={{ x: "max-content" }}

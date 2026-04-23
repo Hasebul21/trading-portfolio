@@ -441,11 +441,11 @@ export function MipMonthlyModule({
 
       {/* ── Month selector & Total Amount ── */}
       <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-        <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+        <label className="w-full text-[15px] font-normal text-zinc-600 sm:w-auto dark:text-zinc-400">
           <span className="mb-1 block">Select Month</span>
           <Select
             size="middle"
-            className="min-w-[9rem]"
+            className="w-full sm:min-w-[9rem]"
             value={searchMonth}
             onChange={(v) => {
               const ym = ymFromParts(searchYear, Number(v));
@@ -458,7 +458,7 @@ export function MipMonthlyModule({
           />
         </label>
         {currentHeader ? (
-          <div className="rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 dark:border-blue-800/50 dark:bg-blue-950/40">
+          <div className="w-full rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 sm:w-auto dark:border-blue-800/50 dark:bg-blue-950/40">
             <p className="text-[12px] font-normal uppercase tracking-wide text-blue-600 dark:text-blue-400">
               Total %
             </p>
@@ -468,7 +468,7 @@ export function MipMonthlyModule({
           </div>
         ) : null}
         {currentHeader ? (
-          <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
+          <div className="w-full rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 sm:w-auto dark:border-teal-800/50 dark:bg-teal-950/40">
             <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
               Total Balance
             </p>
@@ -549,12 +549,13 @@ export function MipMonthlyModule({
             >
               {ymToDisplayTitle(header.year_month)}
             </Typography.Title>
-            <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
               {canResetThisMonth ? (
                 <Button
                   danger
                   type="default"
                   size="middle"
+                  className="w-full sm:w-auto"
                   loading={resetBusy}
                   disabled={resetBusy || addRowBusy}
                   onClick={() => void handleReset()}
@@ -565,6 +566,7 @@ export function MipMonthlyModule({
               <Button
                 type="default"
                 size="middle"
+                className="w-full sm:w-auto"
                 disabled={rows.length >= MIP_MAX_ROWS || addRowBusy || resetBusy}
                 loading={addRowBusy}
                 onClick={() => void handleAddRow()}
