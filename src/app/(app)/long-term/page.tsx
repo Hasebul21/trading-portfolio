@@ -4,7 +4,7 @@ import {
   LongTermHoldingsTable,
   type LongTermHoldingRow,
 } from "@/components/planning/long-term-holdings-table";
-import { WatchlistSectorChart } from "@/components/planning/watchlist-sector-chart";
+import { WatchlistSectorChart, type PortfolioHoldingForChart } from "@/components/planning/watchlist-sector-chart";
 import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
 import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
@@ -109,6 +109,11 @@ export default async function LongTermPage() {
     (rows ?? []).map((r) => String(r.symbol).trim()),
   );
 
+  // Also fetch company extras for all portfolio holdings
+  const allPortfolioCompanyExtras = await fetchDseCompanyExtrasMap(
+    holdingsRes.holdings.map((h) => h.symbol),
+  );
+
   const list: LongTermHoldingRow[] = (rows ?? []).map((row) => {
     const sym = String(row.symbol).trim().toUpperCase();
     const h = bySymbol.get(sym);
@@ -132,6 +137,18 @@ export default async function LongTermPage() {
     };
   });
 
+  // Build sector chart data from all portfolio holdings
+  const portfolioHoldingsForChart: PortfolioHoldingForChart[] = holdingsRes.holdings.map((h) => {
+    const sym = h.symbol.toUpperCase();
+    const extras = allPortfolioCompanyExtras.get(sym);
+    const sector = extras?.sector ?? h.category ?? null;
+    return {
+      symbol: h.symbol,
+      sector,
+      totalCost: h.totalCost,
+    };
+  });
+
   return (
     <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full min-w-0 max-w-7xl text-left">
       <AddLongTermForm
@@ -140,7 +157,7 @@ export default async function LongTermPage() {
         toolbarShell={toolbarShell}
       />
 
-      <WatchlistSectorChart rows={list} />
+      <WatchlistSectorChart holdings={portfolioHoldingsForChart} />
       <LongTermHoldingsTable rows={list} />
     </AppPageStack>
   );

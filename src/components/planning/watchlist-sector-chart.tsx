@@ -2,7 +2,12 @@
 
 import { formatBdt } from "@/lib/format-bdt";
 import { useMemo } from "react";
-import type { LongTermHoldingRow } from "./long-term-holdings-table";
+
+export type PortfolioHoldingForChart = {
+  symbol: string;
+  sector: string | null;
+  totalCost: number;
+};
 
 const COLORS = [
     "#14b8a6", // teal
@@ -15,54 +20,58 @@ const COLORS = [
     "#8b5cf6", // violet
 ];
 
-function buildSectorSlices(rows: LongTermHoldingRow[]): Array<{
-    sector: string;
-    count: number;
-    totalRealInvested: number;
+function buildSectorSlices(
+  holdings: PortfolioHoldingForChart[],
+): Array<{
+  sector: string;
+  count: number;
+  totalInvested: number;
 }> {
-    const sectorMap: Record<string, { count: number; totalRealInvested: number }> = {};
+  const sectorMap: Record<string, { count: number; totalInvested: number }> = {};
 
-    for (const row of rows) {
-        const sector = row.sector ?? "Unknown";
-        if (!sectorMap[sector]) {
-            sectorMap[sector] = { count: 0, totalRealInvested: 0 };
-        }
-        sectorMap[sector].count += 1;
-
-        const invested = row.portfolio_total_invested_bdt ?? 0;
-        sectorMap[sector].totalRealInvested += Number(invested);
+  for (const holding of holdings) {
+    const sector = holding.sector ?? "Unknown";
+    if (!sectorMap[sector]) {
+      sectorMap[sector] = { count: 0, totalInvested: 0 };
     }
+    sectorMap[sector].count += 1;
+    sectorMap[sector].totalInvested += holding.totalCost;
+  }
 
-    return Object.entries(sectorMap).map(([sector, { count, totalRealInvested }]) => ({
-        sector,
-        count,
-        totalRealInvested: Math.round(totalRealInvested * 100) / 100,
-    }));
+  return Object.entries(sectorMap)
+    .map(([sector, { count, totalInvested }]) => ({
+      sector,
+      count,
+      totalInvested: Math.round(totalInvested * 100) / 100,
+    }))
+    .sort((a, b) => b.totalInvested - a.totalInvested);
 }
 
-function chartBackground(slices: Array<{ sector: string; count: number; totalRealInvested: number }>): string {
-    if (slices.length === 0) return "transparent";
+function chartBackground(
+  slices: Array<{ sector: string; count: number; totalInvested: number }>,
+): string {
+  if (slices.length === 0) return "transparent";
 
-    const total = slices.reduce((sum, s) => sum + s.totalRealInvested, 0);
-    if (total === 0) return "transparent";
+  const total = slices.reduce((sum, s) => sum + s.totalInvested, 0);
+  if (total === 0) return "transparent";
 
-    const stops: string[] = [];
-    let cumulativePercent = 0;
+  const stops: string[] = [];
+  let cumulativePercent = 0;
 
-    for (const slice of slices) {
-        const percent = (slice.totalRealInvested / total) * 100;
-        const color = COLORS[(stops.length / 2) % COLORS.length];
-        stops.push(`${color} ${cumulativePercent}%`);
-        cumulativePercent += percent;
-        stops.push(`${color} ${cumulativePercent}%`);
-    }
+  for (const slice of slices) {
+    const percent = (slice.totalInvested / total) * 100;
+    const color = COLORS[(stops.length / 2) % COLORS.length];
+    stops.push(`${color} ${cumulativePercent}%`);
+    cumulativePercent += percent;
+    stops.push(`${color} ${cumulativePercent}%`);
+  }
 
-    return `conic-gradient(${stops.join(", ")})`;
+  return `conic-gradient(${stops.join(", ")})`;
 }
 
-export function WatchlistSectorChart({ rows }: { rows: LongTermHoldingRow[] }) {
-    const slices = useMemo(() => buildSectorSlices(rows), [rows]);
-    const total = useMemo(() => slices.reduce((sum, s) => sum + s.totalRealInvested, 0), [slices]);
+export function WatchlistSectorChart({ holdings }: { holdings: PortfolioHoldingForChart[] }) {
+    const slices = useMemo(() => buildSectorSlices(holdings), [holdings]);
+    const total = useMemo(() => slices.reduce((sum, s) => sum + s.totalInvested, 0), [slices]);
     const bg = useMemo(() => chartBackground(slices), [slices]);
 
     if (slices.length === 0 || total === 0) {
@@ -97,7 +106,7 @@ export function WatchlistSectorChart({ rows }: { rows: LongTermHoldingRow[] }) {
                 <div className="flex flex-1 flex-col gap-1">
                     {slices.map((slice, i) => {
                         const color = COLORS[i % COLORS.length];
-                        const percent = ((slice.totalRealInvested / total) * 100).toFixed(1);
+                        const percent = ((slice.totalInvested / total) * 100).toFixed(1);
                         return (
                             <div key={slice.sector} className="flex items-center gap-2">
                                 <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
@@ -113,7 +122,7 @@ export function WatchlistSectorChart({ rows }: { rows: LongTermHoldingRow[] }) {
                     })}
                     <div className="mt-1.5 border-t border-teal-200/40 pt-1.5 dark:border-teal-900/40">
                         <div className="flex items-center justify-between text-[12px] font-semibold">
-                            <span className="text-zinc-700 dark:text-zinc-300">Total</span>
+                            <span className="text-zinc-700 dark:text-zinc-300">Total tracked</span>
                             <span className="font-mono text-teal-700 dark:text-teal-300">{formatBdt(total)}</span>
                         </div>
                     </div>
