@@ -10,7 +10,6 @@ import {
 import { formatBdt } from "@/lib/format-bdt";
 import { Alert, Button, Select, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
@@ -70,10 +69,9 @@ export function MipMonthlyModule({
   canResetThisMonth,
   submitSetupAction,
   addRowAction,
+  deleteRowAction,
   lockRowAction,
   resetSetupAction,
-  hideMonthSelector = false,
-  disableLockFeature = false,
 }: {
   sectionTitle: string;
   routePath: string;
@@ -92,10 +90,9 @@ export function MipMonthlyModule({
   canResetThisMonth: boolean;
   submitSetupAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
   addRowAction: (headerId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  deleteRowAction?: (rowId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   lockRowAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
   resetSetupAction: (headerId: string, yearMonth: string) => Promise<{ ok: true } | { ok: false; error: string }>;
-  hideMonthSelector?: boolean;
-  disableLockFeature?: boolean;
 }) {
   const router = useRouter();
   const parsedYm = parseYm(viewYm);
@@ -113,15 +110,15 @@ export function MipMonthlyModule({
   const [addRowBusy, setAddRowBusy] = useState(false);
   const [addRowError, setAddRowError] = useState<string | null>(null);
   const [lockErrors, setLockErrors] = useState<Record<string, string | null>>({});
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string | null>>({});
 
   const [draftSymbol, setDraftSymbol] = useState<Record<string, string>>({});
   const [draftPct, setDraftPct] = useState<Record<string, string>>({});
   const [draftNote, setDraftNote] = useState<Record<string, string>>({});
   const [lockBusyId, setLockBusyId] = useState<string | null>(null);
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
-  const [editingRowId, setEditingRowId] = useState<string | null>(null);
-  const [saveBusyId, setSaveBusyId] = useState<string | null>(null);
 
   const headerNum = header
     ? {
@@ -144,11 +141,25 @@ export function MipMonthlyModule({
       carried_forward_bdt: Number(currentHeader.carried_forward_bdt),
     });
   }, [currentHeader]);
-  const currentLockedSumPct = useMemo(() => sumLockedPercentages(currentRows), [currentRows]);
-  const currentRemainingPct = Math.max(0, Math.round((100 - currentLockedSumPct) * 10000) / 10000);
+  const summaryEffective = useMemo(() => {
+    if (!header) return currentEffective;
+    return effectiveMonthlyTotalBdt({
+      base_amount_bdt: Number(header.base_amount_bdt),
+      carried_forward_bdt: Number(header.carried_forward_bdt),
+    });
+  }, [currentEffective, header]);
+  const liveAllocatedPct = useMemo(() => {
+    return rows.reduce((sum, row) => {
+      if (row.locked) return sum + Number(row.percentage ?? 0);
+      const raw = draftPct[row.id];
+      const parsed = raw == null || raw.trim() === "" ? 0 : Number(raw);
+      return sum + (Number.isFinite(parsed) && parsed > 0 ? parsed : 0);
+    }, 0);
+  }, [draftPct, rows]);
+  const currentRemainingPct = Math.max(0, Math.round((100 - liveAllocatedPct) * 10000) / 10000);
   const currentRemainingBdt =
-    currentHeader && currentEffective > 0
-      ? Math.round((currentRemainingPct / 100) * currentEffective * 100) / 100
+    summaryEffective > 0
+      ? Math.round((currentRemainingPct / 100) * summaryEffective * 100) / 100
       : 0;
 
   const applySearch = useCallback(() => {
@@ -160,12 +171,6 @@ export function MipMonthlyModule({
     () => [...rows].sort((a, b) => a.sort_order - b.sort_order).map((r) => ({ ...r, key: r.id })),
     [rows],
   );
-  const rowById = useMemo(() => {
-    return rows.reduce<Record<string, Row>>((acc, row) => {
-      acc[row.id] = { ...row, key: row.id };
-      return acc;
-    }, {});
-  }, [rows]);
 
   const handleSubmitSetup = useCallback(async () => {
     setSetupError(null);
@@ -233,43 +238,23 @@ export function MipMonthlyModule({
     [draftNote, draftPct, draftSymbol, lockRowAction, router],
   );
 
-  const handleSaveDraftRow = useCallback(
+  const handleDeleteRow = useCallback(
     async (rowId: string) => {
-      const existingSymbol = String(rowById[rowId]?.symbol ?? "").trim().toUpperCase();
-      const sym = (draftSymbol[rowId] ?? existingSymbol).trim().toUpperCase();
-      const pct = (draftPct[rowId] ?? "").trim();
-      setLockErrors((e) => ({ ...e, [rowId]: null }));
-      setSaveBusyId(rowId);
-      const fd = new FormData();
-      fd.set("row_id", rowId);
-      fd.set("symbol", sym);
-      fd.set("percentage", pct);
-      fd.set("note", (draftNote[rowId] ?? "").trim());
-      const res = await lockRowAction(fd);
-      setSaveBusyId(null);
+      if (!deleteRowAction) return;
+      const confirmed = window.confirm("Delete this row from Draft MIP?");
+      if (!confirmed) return;
+
+      setDeleteErrors((e) => ({ ...e, [rowId]: null }));
+      setDeleteBusyId(rowId);
+      const res = await deleteRowAction(rowId);
+      setDeleteBusyId(null);
       if (!res.ok) {
-        setLockErrors((e) => ({ ...e, [rowId]: res.error }));
+        setDeleteErrors((e) => ({ ...e, [rowId]: res.error }));
         return;
       }
-      setDraftSymbol((d) => {
-        const n = { ...d };
-        delete n[rowId];
-        return n;
-      });
-      setDraftPct((d) => {
-        const n = { ...d };
-        delete n[rowId];
-        return n;
-      });
-      setDraftNote((d) => {
-        const n = { ...d };
-        delete n[rowId];
-        return n;
-      });
-      setEditingRowId(null);
       router.refresh();
     },
-    [draftNote, draftPct, draftSymbol, lockRowAction, rowById, router],
+    [deleteRowAction, router],
   );
 
   const handleReset = useCallback(async () => {
@@ -295,15 +280,8 @@ export function MipMonthlyModule({
       {
         title: "DSE stock name",
         dataIndex: "symbol",
-        render: (_: unknown, record) => {
-          if (disableLockFeature) {
-            return (
-              <Typography.Text className="font-mono">
-                {String(record.symbol ?? "").toUpperCase() || "-"}
-              </Typography.Text>
-            );
-          }
-          return record.locked ? (
+        render: (_: unknown, record) =>
+          record.locked ? (
             <Typography.Text className="font-mono">{String(record.symbol).toUpperCase()}</Typography.Text>
           ) : (
             <SymbolField
@@ -316,42 +294,15 @@ export function MipMonthlyModule({
               onValueChange={(v) => setDraftSymbol((d) => ({ ...d, [record.id]: v }))}
               className="box-border h-9 w-full min-w-[6rem] max-w-[11rem] rounded border border-zinc-300/90 bg-white px-2 font-mono text-[15px] font-normal text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          );
-        },
+          ),
       },
       {
         title: "Investment %",
         key: "pct",
         align: "right",
         width: 120,
-        render: (_: unknown, record) => {
-          // When lock feature is disabled (Draft MIP), show editable input only when editing
-          if (disableLockFeature) {
-            if (editingRowId === record.id) {
-              return (
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  aria-label="Percentage"
-                  placeholder="%"
-                  value={draftPct[record.id] ?? (record.percentage != null ? String(record.percentage) : "")}
-                  onChange={(e) => setDraftPct((d) => ({ ...d, [record.id]: e.target.value }))}
-                  className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
-                />
-              );
-            }
-            // Show value when not editing
-            return (
-              <span className="tabular-nums">
-                {Number(record.percentage ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}%
-              </span>
-            );
-          }
-          // Normal mode: show locked or editable
-          return record.locked ? (
+        render: (_: unknown, record) =>
+          record.locked ? (
             <span className="tabular-nums">
               {Number(record.percentage).toLocaleString(undefined, { maximumFractionDigits: 2 })}%
             </span>
@@ -368,8 +319,7 @@ export function MipMonthlyModule({
               onChange={(e) => setDraftPct((d) => ({ ...d, [record.id]: e.target.value }))}
               className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          );
-        },
+          ),
       },
       {
         title: "Calculated amount (BDT)",
@@ -396,31 +346,8 @@ export function MipMonthlyModule({
         title: "Note",
         dataIndex: "note",
         width: 240,
-        render: (_: unknown, record) => {
-          // For Draft MIP, show editable input only when editing
-          if (disableLockFeature) {
-            if (editingRowId === record.id) {
-              return (
-                <input
-                  type="text"
-                  aria-label="Note"
-                  maxLength={300}
-                  placeholder="Optional note"
-                  value={draftNote[record.id] ?? record.note ?? ""}
-                  onChange={(e) => setDraftNote((d) => ({ ...d, [record.id]: e.target.value }))}
-                  className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
-                />
-              );
-            }
-            // Show value when not editing
-            return record.note ? (
-              <span>{record.note}</span>
-            ) : (
-              <Typography.Text type="secondary">—</Typography.Text>
-            );
-          }
-          // Normal mode
-          return record.locked ? (
+        render: (_: unknown, record) =>
+          record.locked ? (
             record.note ? (
               <span>{record.note}</span>
             ) : (
@@ -436,94 +363,71 @@ export function MipMonthlyModule({
               onChange={(e) => setDraftNote((d) => ({ ...d, [record.id]: e.target.value }))}
               className="box-border h-9 w-full rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 outline-none dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          );
-        },
+          ),
       },
-      ...(disableLockFeature
-        ? [
-          {
-            title: "Action",
-            key: "action",
-            width: 100,
-            render: (_: unknown, record: Row) => {
-              if (editingRowId === record.id) {
-                return (
-                  <div className="flex flex-col items-end gap-1">
-                    <Button
-                      type="primary"
-                      size="small"
-                      loading={saveBusyId === record.id}
-                      disabled={saveBusyId !== null && saveBusyId !== record.id}
-                      onClick={() => void handleSaveDraftRow(record.id)}
-                    >
-                      Save
-                    </Button>
-                    {lockErrors[record.id] ? (
-                      <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
-                        {lockErrors[record.id]}
-                      </Typography.Text>
-                    ) : null}
-                  </div>
-                );
-              }
-              return (
-                <Button
-                  type="default"
-                  size="small"
-                  disabled={editingRowId !== null}
-                  onClick={() => setEditingRowId(record.id)}
-                >
-                  Edit
-                </Button>
-              );
-            },
-          },
-        ]
-        : [
-          {
-            title: "Status",
-            key: "status",
-            width: 160,
-            render: (_: unknown, record: Row) =>
-              record.locked ? (
-                <Tag color="blue" className="m-0 border-0 font-normal">
-                  Locked
-                </Tag>
-              ) : (
-                <div className="flex flex-col items-end gap-1">
-                  <Button
-                    type="primary"
-                    size="small"
-                    loading={lockBusyId === record.id}
-                    disabled={lockBusyId !== null && lockBusyId !== record.id}
-                    onClick={() => void handleLockRow(record.id)}
-                  >
-                    Lock row
-                  </Button>
-                  {lockErrors[record.id] ? (
-                    <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
-                      {lockErrors[record.id]}
-                    </Typography.Text>
-                  ) : null}
-                </div>
-              ),
-          },
-        ]),
+      {
+        title: deleteRowAction ? "Actions" : "Status",
+        key: "status",
+        width: deleteRowAction ? 176 : 160,
+        render: (_: unknown, record: Row) => (
+          <div className="flex flex-col items-end gap-1">
+            {record.locked ? (
+              <Tag color="blue" className="m-0 border-0 font-normal">
+                Locked
+              </Tag>
+            ) : (
+              <Button
+                type="primary"
+                size="small"
+                loading={lockBusyId === record.id}
+                disabled={
+                  lockBusyId !== null || deleteBusyId !== null || (deleteRowAction ? deleteBusyId === record.id : false)
+                }
+                onClick={() => void handleLockRow(record.id)}
+              >
+                Lock row
+              </Button>
+            )}
+            {deleteRowAction ? (
+              <Button
+                danger
+                type="default"
+                size="small"
+                loading={deleteBusyId === record.id}
+                disabled={lockBusyId !== null || deleteBusyId !== null}
+                onClick={() => void handleDeleteRow(record.id)}
+              >
+                Delete
+              </Button>
+            ) : null}
+            {lockErrors[record.id] ? (
+              <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
+                {lockErrors[record.id]}
+              </Typography.Text>
+            ) : null}
+            {deleteErrors[record.id] ? (
+              <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
+                {deleteErrors[record.id]}
+              </Typography.Text>
+            ) : null}
+          </div>
+        ),
+      },
     ],
     [
       draftNote,
       draftPct,
       draftSymbol,
-      effective,
+      deleteBusyId,
+      deleteErrors,
+      deleteRowAction,
       handleLockRow,
-      handleSaveDraftRow,
+      handleDeleteRow,
       instruments,
       instrumentsError,
       lockBusyId,
       lockErrors,
-      saveBusyId,
-      editingRowId,
-      disableLockFeature,
+      effective,
     ],
   );
 
@@ -536,88 +440,44 @@ export function MipMonthlyModule({
     <div className="flex min-w-0 flex-col gap-5 text-left">
 
       {/* ── Month selector & Total Amount ── */}
-      {!hideMonthSelector && (
-        <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-          <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-            <span className="mb-1 block">Select Month</span>
-            <Select
-              size="middle"
-              className="min-w-[9rem]"
-              value={searchMonth}
-              onChange={(v) => {
-                const ym = ymFromParts(searchYear, Number(v));
-                router.push(`${routePath}?ym=${ym}`);
-              }}
-              options={Array.from({ length: 12 }, (_, i) => ({
-                value: i + 1,
-                label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
-              }))}
-            />
-          </label>
-          {currentHeader ? (
-            <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
-              <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                Total Amount
-              </p>
-              <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
-                {formatBdt(currentRemainingBdt)} BDT
-              </p>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {/* ── Draft MIP Summary ── */}
-      {disableLockFeature && currentHeader ? (
-        <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-          {(() => {
-            const basePcts = rows.map((r) => Number(r.percentage ?? 0));
-            const allPcts = rows.map((r) => Number(draftPct[r.id] ?? r.percentage ?? 0));
-            const baseTotalPct = basePcts.reduce((sum, p) => sum + p, 0);
-            const totalPct = allPcts.reduce((sum, p) => sum + p, 0);
-            const pctDelta = totalPct - baseTotalPct;
-            const baseAmount = currentHeader && currentEffective > 0
-              ? Math.round((baseTotalPct / 100) * currentEffective * 100) / 100
-              : 0;
-            const totalAmount = currentHeader && currentEffective > 0
-              ? Math.round((totalPct / 100) * currentEffective * 100) / 100
-              : 0;
-            const amountDelta = totalAmount - baseAmount;
-
-            const formatDelta = (n: number, suffix = "") => {
-              const sign = n > 0 ? "+" : n < 0 ? "-" : "";
-              const abs = Math.abs(n);
-              return `${sign}${abs.toFixed(2)}${suffix}`;
-            };
-            return (
-              <>
-                <div className="rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 dark:border-blue-800/50 dark:bg-blue-950/40">
-                  <p className="text-[12px] font-normal uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                    Total Allocated %
-                  </p>
-                  <p className="tabular-nums text-[18px] font-semibold text-blue-800 dark:text-blue-200">
-                    {totalPct.toFixed(2)}%
-                  </p>
-                  <p className="tabular-nums text-[12px] font-normal text-blue-700 dark:text-blue-300">
-                    {formatDelta(pctDelta, "%")}
-                  </p>
-                </div>
-                <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
-                  <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
-                    Total Allocated BDT
-                  </p>
-                  <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
-                    {formatBdt(totalAmount)}
-                  </p>
-                  <p className="tabular-nums text-[12px] font-normal text-teal-700 dark:text-teal-300">
-                    {amountDelta > 0 ? "+" : amountDelta < 0 ? "-" : ""}{formatBdt(Math.abs(amountDelta))}
-                  </p>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-      ) : null}
+      <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
+        <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+          <span className="mb-1 block">Select Month</span>
+          <Select
+            size="middle"
+            className="min-w-[9rem]"
+            value={searchMonth}
+            onChange={(v) => {
+              const ym = ymFromParts(searchYear, Number(v));
+              router.push(`${routePath}?ym=${ym}`);
+            }}
+            options={Array.from({ length: 12 }, (_, i) => ({
+              value: i + 1,
+              label: new Date(2000, i, 1).toLocaleString("en-GB", { month: "long" }),
+            }))}
+          />
+        </label>
+        {currentHeader ? (
+          <div className="rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 dark:border-blue-800/50 dark:bg-blue-950/40">
+            <p className="text-[12px] font-normal uppercase tracking-wide text-blue-600 dark:text-blue-400">
+              Total %
+            </p>
+            <p className="tabular-nums text-[18px] font-semibold text-blue-800 dark:text-blue-200">
+              {currentRemainingPct.toFixed(2)}%
+            </p>
+          </div>
+        ) : null}
+        {currentHeader ? (
+          <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
+            <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
+              Total Balance
+            </p>
+            <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
+              {formatBdt(currentRemainingBdt)} BDT
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       {!header && canSubmitThisMonth ? (
         <div className={shell}>

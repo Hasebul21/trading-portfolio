@@ -475,6 +475,50 @@ async function addMonthlyRow(
   return { ok: true };
 }
 
+async function deleteMonthlyRow(
+  sectionKey: MonthlyPlanSectionKey,
+  rowId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const config = getMonthlyPlanConfig(sectionKey);
+  if (!UUID_RE.test(rowId)) return { ok: false, error: "Invalid row." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: row, error: rowErr } = await supabase
+    .from(config.rowTable)
+    .select("id, header_id")
+    .eq("id", rowId)
+    .maybeSingle();
+
+  if (rowErr) return { ok: false, error: rowErr.message };
+  if (!row) return { ok: false, error: "Row not found." };
+
+  const { data: header, error: headerErr } = await supabase
+    .from(config.headerTable)
+    .select("id")
+    .eq("id", row.header_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (headerErr) return { ok: false, error: headerErr.message };
+  if (!header) return { ok: false, error: "Plan not found." };
+
+  const { error } = await supabase
+    .from(config.rowTable)
+    .delete()
+    .eq("id", rowId)
+    .eq("header_id", row.header_id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(config.routePath);
+  return { ok: true };
+}
+
 async function lockMonthlyRow(
   sectionKey: MonthlyPlanSectionKey,
   formData: FormData,
@@ -631,6 +675,10 @@ export async function submitDraftMipMonthlySetup(formData: FormData) {
 
 export async function addDraftMipMonthlyRow(headerId: string) {
   return addMonthlyRow("draftMip", headerId);
+}
+
+export async function deleteDraftMipMonthlyRow(rowId: string) {
+  return deleteMonthlyRow("draftMip", rowId);
 }
 
 export async function lockDraftMipMonthlyRow(formData: FormData) {

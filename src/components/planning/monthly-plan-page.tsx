@@ -8,6 +8,7 @@ import {
 import {
     addDraftMipMonthlyRow,
     addMipMonthlyRow,
+    deleteDraftMipMonthlyRow,
     lockDraftMipMonthlyRow,
     lockMipMonthlyRow,
     resetDraftMipMonthlySetup,
@@ -29,12 +30,14 @@ const ACTIONS = {
     mip: {
         submitSetupAction: submitMipMonthlySetup,
         addRowAction: addMipMonthlyRow,
+        deleteRowAction: undefined,
         lockRowAction: lockMipMonthlyRow,
         resetSetupAction: resetMipMonthlySetup,
     },
     draftMip: {
         submitSetupAction: submitDraftMipMonthlySetup,
         addRowAction: addDraftMipMonthlyRow,
+        deleteRowAction: deleteDraftMipMonthlyRow,
         lockRowAction: lockDraftMipMonthlyRow,
         resetSetupAction: resetDraftMipMonthlySetup,
     },
@@ -173,10 +176,9 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
                 canResetThisMonth={canResetThisMonth}
                 submitSetupAction={actions.submitSetupAction}
                 addRowAction={actions.addRowAction}
+                deleteRowAction={actions.deleteRowAction}
                 lockRowAction={actions.lockRowAction}
                 resetSetupAction={actions.resetSetupAction}
-                hideMonthSelector={sectionKey === "draftMip"}
-                disableLockFeature={sectionKey === "draftMip"}
             />
         </AppPageStack>
     );
