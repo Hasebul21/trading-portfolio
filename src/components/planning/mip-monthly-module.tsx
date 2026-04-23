@@ -160,6 +160,12 @@ export function MipMonthlyModule({
     () => [...rows].sort((a, b) => a.sort_order - b.sort_order).map((r) => ({ ...r, key: r.id })),
     [rows],
   );
+  const rowById = useMemo(() => {
+    return rows.reduce<Record<string, Row>>((acc, row) => {
+      acc[row.id] = { ...row, key: row.id };
+      return acc;
+    }, {});
+  }, [rows]);
 
   const handleSubmitSetup = useCallback(async () => {
     setSetupError(null);
@@ -229,7 +235,8 @@ export function MipMonthlyModule({
 
   const handleSaveDraftRow = useCallback(
     async (rowId: string) => {
-      const sym = (draftSymbol[rowId] ?? "").trim().toUpperCase();
+      const existingSymbol = String(rowById[rowId]?.symbol ?? "").trim().toUpperCase();
+      const sym = (draftSymbol[rowId] ?? existingSymbol).trim().toUpperCase();
       const pct = (draftPct[rowId] ?? "").trim();
       setLockErrors((e) => ({ ...e, [rowId]: null }));
       setSaveBusyId(rowId);
@@ -262,7 +269,7 @@ export function MipMonthlyModule({
       setEditingRowId(null);
       router.refresh();
     },
-    [draftNote, draftPct, draftSymbol, lockRowAction, router],
+    [draftNote, draftPct, draftSymbol, lockRowAction, rowById, router],
   );
 
   const handleReset = useCallback(async () => {
@@ -288,8 +295,15 @@ export function MipMonthlyModule({
       {
         title: "DSE stock name",
         dataIndex: "symbol",
-        render: (_: unknown, record) =>
-          record.locked ? (
+        render: (_: unknown, record) => {
+          if (disableLockFeature) {
+            return (
+              <Typography.Text className="font-mono">
+                {String(record.symbol ?? "").toUpperCase() || "-"}
+              </Typography.Text>
+            );
+          }
+          return record.locked ? (
             <Typography.Text className="font-mono">{String(record.symbol).toUpperCase()}</Typography.Text>
           ) : (
             <SymbolField
@@ -302,7 +316,8 @@ export function MipMonthlyModule({
               onValueChange={(v) => setDraftSymbol((d) => ({ ...d, [record.id]: v }))}
               className="box-border h-9 w-full min-w-[6rem] max-w-[11rem] rounded border border-zinc-300/90 bg-white px-2 font-mono text-[15px] font-normal text-zinc-900 outline-none ring-teal-500/30 focus:ring-1 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
             />
-          ),
+          );
+        },
       },
       {
         title: "Investment %",
@@ -426,44 +441,44 @@ export function MipMonthlyModule({
       },
       ...(disableLockFeature
         ? [
-            {
-              title: "Action",
-              key: "action",
-              width: 100,
-              render: (_: unknown, record: Row) => {
-                if (editingRowId === record.id) {
-                  return (
-                    <div className="flex flex-col items-end gap-1">
-                      <Button
-                        type="primary"
-                        size="small"
-                        loading={saveBusyId === record.id}
-                        disabled={saveBusyId !== null && saveBusyId !== record.id}
-                        onClick={() => void handleSaveDraftRow(record.id)}
-                      >
-                        Save
-                      </Button>
-                      {lockErrors[record.id] ? (
-                        <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
-                          {lockErrors[record.id]}
-                        </Typography.Text>
-                      ) : null}
-                    </div>
-                  );
-                }
+          {
+            title: "Action",
+            key: "action",
+            width: 100,
+            render: (_: unknown, record: Row) => {
+              if (editingRowId === record.id) {
                 return (
-                  <Button
-                    type="default"
-                    size="small"
-                    disabled={editingRowId !== null}
-                    onClick={() => setEditingRowId(record.id)}
-                  >
-                    Edit
-                  </Button>
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      type="primary"
+                      size="small"
+                      loading={saveBusyId === record.id}
+                      disabled={saveBusyId !== null && saveBusyId !== record.id}
+                      onClick={() => void handleSaveDraftRow(record.id)}
+                    >
+                      Save
+                    </Button>
+                    {lockErrors[record.id] ? (
+                      <Typography.Text type="danger" className="max-w-[14rem] text-right text-[13px]">
+                        {lockErrors[record.id]}
+                      </Typography.Text>
+                    ) : null}
+                  </div>
                 );
-              },
+              }
+              return (
+                <Button
+                  type="default"
+                  size="small"
+                  disabled={editingRowId !== null}
+                  onClick={() => setEditingRowId(record.id)}
+                >
+                  Edit
+                </Button>
+              );
             },
-          ]
+          },
+        ]
         : [
           {
             title: "Status",
@@ -556,11 +571,24 @@ export function MipMonthlyModule({
       {disableLockFeature && currentHeader ? (
         <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
           {(() => {
+            const basePcts = rows.map((r) => Number(r.percentage ?? 0));
             const allPcts = rows.map((r) => Number(draftPct[r.id] ?? r.percentage ?? 0));
+            const baseTotalPct = basePcts.reduce((sum, p) => sum + p, 0);
             const totalPct = allPcts.reduce((sum, p) => sum + p, 0);
+            const pctDelta = totalPct - baseTotalPct;
+            const baseAmount = currentHeader && currentEffective > 0
+              ? Math.round((baseTotalPct / 100) * currentEffective * 100) / 100
+              : 0;
             const totalAmount = currentHeader && currentEffective > 0
               ? Math.round((totalPct / 100) * currentEffective * 100) / 100
               : 0;
+            const amountDelta = totalAmount - baseAmount;
+
+            const formatDelta = (n: number, suffix = "") => {
+              const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+              const abs = Math.abs(n);
+              return `${sign}${abs.toFixed(2)}${suffix}`;
+            };
             return (
               <>
                 <div className="rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 dark:border-blue-800/50 dark:bg-blue-950/40">
@@ -570,6 +598,9 @@ export function MipMonthlyModule({
                   <p className="tabular-nums text-[18px] font-semibold text-blue-800 dark:text-blue-200">
                     {totalPct.toFixed(2)}%
                   </p>
+                  <p className="tabular-nums text-[12px] font-normal text-blue-700 dark:text-blue-300">
+                    {formatDelta(pctDelta, "%")}
+                  </p>
                 </div>
                 <div className="rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 dark:border-teal-800/50 dark:bg-teal-950/40">
                   <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
@@ -577,6 +608,9 @@ export function MipMonthlyModule({
                   </p>
                   <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
                     {formatBdt(totalAmount)}
+                  </p>
+                  <p className="tabular-nums text-[12px] font-normal text-teal-700 dark:text-teal-300">
+                    {amountDelta > 0 ? "+" : amountDelta < 0 ? "-" : ""}{formatBdt(Math.abs(amountDelta))}
                   </p>
                 </div>
               </>
