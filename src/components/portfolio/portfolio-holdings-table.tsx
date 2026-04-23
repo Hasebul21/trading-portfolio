@@ -286,84 +286,84 @@ export function PortfolioHoldingsTable({
   const columns: ColumnsType<Row> = useMemo(() => {
     const avgCol: ColumnsType<Row>[0] = bookEditing
       ? {
-          title: "Average cost / share",
-          key: "avgPrice",
-          width: 132,
-          align: "right",
-          render: (_: unknown, row) => (
-            <input
-              aria-label={`${row.symbol} average cost per share`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
-              onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
-            />
-          ),
-        }
+        title: "Average cost / share",
+        key: "avgPrice",
+        width: 132,
+        align: "right",
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} average cost per share`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
+            onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
+          />
+        ),
+      }
       : {
-          title: "Average cost / share",
-          key: "avgPrice",
-          width: 128,
-          align: "right",
-          sorter: (a, b) => a.avgPrice - b.avgPrice,
-          showSorterTooltip: { title: "Sort by average cost" },
-          render: (_: unknown, row) => (
-            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
-          ),
-        };
+        title: "Average cost / share",
+        key: "avgPrice",
+        width: 128,
+        align: "right",
+        sorter: (a, b) => a.avgPrice - b.avgPrice,
+        showSorterTooltip: { title: "Sort by average cost" },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
+        ),
+      };
 
     const sharesCol: ColumnsType<Row>[0] = bookEditing
       ? {
-          title: "Shares",
-          dataIndex: "shares",
-          width: 96,
-          align: "right",
-          render: (_: unknown, row) => (
-            <input
-              aria-label={`${row.symbol} shares`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
-              onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
-            />
-          ),
-        }
+        title: "Shares",
+        dataIndex: "shares",
+        width: 96,
+        align: "right",
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} shares`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
+            onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
+          />
+        ),
+      }
       : {
-          title: "Shares",
-          dataIndex: "shares",
-          width: 80,
-          align: "right",
-          sorter: (a, b) => a.shares - b.shares,
-          showSorterTooltip: { title: "Sort by shares" },
-          render: (v: number) => (
-            <span className="tabular-nums text-[15px] font-normal">{formatNumberMax2Decimals(v)}</span>
-          ),
-        };
+        title: "Shares",
+        dataIndex: "shares",
+        width: 80,
+        align: "right",
+        sorter: (a, b) => a.shares - b.shares,
+        showSorterTooltip: { title: "Sort by shares" },
+        render: (v: number) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatNumberMax2Decimals(v)}</span>
+        ),
+      };
 
     const totalCol: ColumnsType<Row>[0] = bookEditing
       ? {
-          title: "Total invested",
-          dataIndex: "totalCost",
-          width: 120,
-          align: "right",
-          render: (_: unknown, row) => (
-            <input
-              aria-label={`${row.symbol} total invested`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
-              onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
-            />
-          ),
-        }
+        title: "Total invested",
+        dataIndex: "totalCost",
+        width: 120,
+        align: "right",
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} total invested`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
+            onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
+          />
+        ),
+      }
       : {
-          title: "Total invested",
-          dataIndex: "totalCost",
-          width: 112,
-          align: "right",
-          sorter: (a, b) => a.totalCost - b.totalCost,
-          showSorterTooltip: { title: "Sort by total invested" },
-          render: (_: unknown, row) => (
-            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
-          ),
-        };
+        title: "Total invested",
+        dataIndex: "totalCost",
+        width: 112,
+        align: "right",
+        sorter: (a, b) => a.totalCost - b.totalCost,
+        showSorterTooltip: { title: "Sort by total invested" },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
+        ),
+      };
 
     return [
       {
@@ -373,9 +373,9 @@ export function PortfolioHoldingsTable({
         align: "left",
         ...(!bookEditing
           ? {
-              sorter: (a: Row, b: Row) => a.symbol.localeCompare(b.symbol),
-              showSorterTooltip: { title: "Sort by symbol" },
-            }
+            sorter: (a: Row, b: Row) => a.symbol.localeCompare(b.symbol),
+            showSorterTooltip: { title: "Sort by symbol" },
+          }
           : {}),
         render: (v: string) => (
           <span className="flex items-center gap-1.5">
@@ -385,6 +385,24 @@ export function PortfolioHoldingsTable({
             </span>
           </span>
         ),
+      },
+      {
+        title: "Sector",
+        dataIndex: "sector",
+        width: 144,
+        align: "left",
+        ...(!bookEditing
+          ? {
+            sorter: (a: Row, b: Row) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
+            showSorterTooltip: { title: "Sort by sector" },
+          }
+          : {}),
+        render: (v: string | null) =>
+          v ? (
+            <span className="text-[15px] font-normal text-zinc-700 dark:text-zinc-300">{v}</span>
+          ) : (
+            <Typography.Text type="secondary">Unknown</Typography.Text>
+          ),
       },
       avgCol,
       sharesCol,
@@ -396,9 +414,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.unrealizedPl),
-              showSorterTooltip: { title: "Sort by unrealized P/L" },
-            }
+            sorter: sortNullableNumber((r) => r.unrealizedPl),
+            showSorterTooltip: { title: "Sort by unrealized P/L" },
+          }
           : {}),
         render: (v: number | null) =>
           v === null ? (
@@ -419,9 +437,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.marketLtp),
-              showSorterTooltip: { title: "Sort by last price" },
-            }
+            sorter: sortNullableNumber((r) => r.marketLtp),
+            showSorterTooltip: { title: "Sort by last price" },
+          }
           : {}),
         render: (v: number | null) =>
           v === null ? (
@@ -437,9 +455,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.pivot?.pivot),
-              showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
-            }
+            sorter: sortNullableNumber((r) => r.pivot?.pivot),
+            showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
+          }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
       },
@@ -450,9 +468,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.pivot?.s1),
-              showSorterTooltip: { title: "Sort by first buy zone (S1)" },
-            }
+            sorter: sortNullableNumber((r) => r.pivot?.s1),
+            showSorterTooltip: { title: "Sort by first buy zone (S1)" },
+          }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s1 ?? null),
       },
@@ -463,9 +481,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.pivot?.s2),
-              showSorterTooltip: { title: "Sort by strong buy zone (S2)" },
-            }
+            sorter: sortNullableNumber((r) => r.pivot?.s2),
+            showSorterTooltip: { title: "Sort by strong buy zone (S2)" },
+          }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.s2 ?? null),
       },
@@ -476,9 +494,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.pivot?.r1),
-              showSorterTooltip: { title: "Sort by first sell zone (R1)" },
-            }
+            sorter: sortNullableNumber((r) => r.pivot?.r1),
+            showSorterTooltip: { title: "Sort by first sell zone (R1)" },
+          }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r1 ?? null),
       },
@@ -489,9 +507,9 @@ export function PortfolioHoldingsTable({
         align: "right",
         ...(!bookEditing
           ? {
-              sorter: sortNullableNumber((r) => r.pivot?.r2),
-              showSorterTooltip: { title: "Sort by strong sell zone (R2)" },
-            }
+            sorter: sortNullableNumber((r) => r.pivot?.r2),
+            showSorterTooltip: { title: "Sort by strong sell zone (R2)" },
+          }
           : {}),
         render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
       },

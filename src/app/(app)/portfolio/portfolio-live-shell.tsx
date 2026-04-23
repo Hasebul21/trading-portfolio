@@ -1,10 +1,11 @@
 "use client";
 
+import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
+import { PortfolioSectorChart } from "@/components/portfolio/portfolio-sector-chart";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import type { WatchlistClassification } from "@/lib/watchlist-classification";
 import { Alert } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
 
 function pollIntervalMs(): number {
   const raw = process.env.NEXT_PUBLIC_PORTFOLIO_POLL_MS;
@@ -47,7 +48,7 @@ export function PortfolioLiveShell({
       `${initialHoldings
         .map(
           (h) =>
-            `${h.symbol}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
+            `${h.symbol}:${h.sector ?? ""}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
         )
         .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}`,
     [initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt],
@@ -118,13 +119,15 @@ export function PortfolioLiveShell({
           </span>
           {updatedAt
             ? `Live prices · ${updatedAt.toLocaleTimeString(undefined, {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })}`
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}`
             : "Connecting to live prices…"}
         </span>
       </div>
+
+      <PortfolioSectorChart rows={rows} />
 
       <PortfolioHoldingsTable
         holdings={rows}
