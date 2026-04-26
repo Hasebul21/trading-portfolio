@@ -42,6 +42,17 @@ function fmtSignedBdt(n: number) {
   return s;
 }
 
+/** P/L indicator with colored dot and white text */
+function PlIndicator({ value }: { value: number }) {
+  const dotColor = value >= 0 ? "bg-emerald-400" : "bg-red-400";
+  return (
+    <span className="inline-flex items-center gap-1.5 tabular-nums text-[15px] font-normal text-zinc-50">
+      <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
+      {fmtSignedBdt(value)}
+    </span>
+  );
+}
+
 function unrealizedTotals(rows: PortfolioMarketRow[]) {
   let sum = 0;
   let withQuote = 0;
@@ -423,12 +434,7 @@ export function PortfolioHoldingsTable({
           v === null ? (
             <Typography.Text type="secondary">—</Typography.Text>
           ) : (
-            <Typography.Text
-              type={v >= 0 ? "success" : "danger"}
-              className="tabular-nums text-[15px] font-normal"
-            >
-              {fmtSignedBdt(v)}
-            </Typography.Text>
+            <PlIndicator value={v} />
           ),
       },
       {
@@ -512,12 +518,7 @@ export function PortfolioHoldingsTable({
                 —
               </Typography.Text>
             ) : (
-              <Typography.Text
-                type={totalUnrealized >= 0 ? "success" : "danger"}
-                className="text-[15px] font-normal tabular-nums"
-              >
-                {fmtSignedBdt(totalUnrealized)}
-              </Typography.Text>
+              <PlIndicator value={totalUnrealized} />
             )}
           </div>
           {withQuote > 0 && withQuote < positions ? (
@@ -537,12 +538,7 @@ export function PortfolioHoldingsTable({
             Net Gain/Loss
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
-            <Typography.Text
-              type={totalRealizedBdt >= 0 ? "success" : "danger"}
-              className="text-[15px] font-normal tabular-nums"
-            >
-              {fmtSignedBdt(totalRealizedBdt)}
-            </Typography.Text>
+            <PlIndicator value={totalRealizedBdt} />
           </div>
         </div>
 
