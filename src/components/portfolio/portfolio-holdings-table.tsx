@@ -300,15 +300,15 @@ export function PortfolioHoldingsTable({
         ),
       }
       : {
-        title: "Average cost / share",
-        key: "avgPrice",
-        width: 128,
+        title: "Break-even Price (incl. fees)",
+        key: "breakEvenPrice",
+        width: 148,
         align: "right",
         responsive: ["sm"],
-        sorter: (a, b) => a.avgPrice - b.avgPrice,
-        showSorterTooltip: { title: "Sort by average cost" },
+        sorter: (a, b) => a.breakEvenPrice - b.breakEvenPrice,
+        showSorterTooltip: { title: "Sort by break-even price" },
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.breakEvenPrice)}</span>
         ),
       };
 

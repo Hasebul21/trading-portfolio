@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HoldingRow } from "@/lib/portfolio";
-import { sortHoldingsByTotalInvestedDesc } from "@/lib/portfolio";
+import { calculateBreakEvenPrice, sortHoldingsByTotalInvestedDesc } from "@/lib/portfolio";
 
 export type PositionOverrideRow = {
   symbol: string;
@@ -32,6 +32,7 @@ export function mergeLedgerWithOverrides(
       shares,
       totalCost,
       avgPrice,
+      breakEvenPrice: calculateBreakEvenPrice(avgPrice),
       category: base?.category ?? null,
       feesInPositionBdt: 0,
     });

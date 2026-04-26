@@ -86,7 +86,7 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
   const columns = [
     { title: "Symbol", w: 0.22 },
     { title: "Shares", w: 0.18 },
-    { title: "Avg (BDT)", w: 0.20 },
+    { title: "BE (BDT)", w: 0.20 },
     { title: "Invested (BDT)", w: 0.20 },
     { title: "Unrealized P/L", w: 0.20 },
   ];
@@ -125,7 +125,7 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
     const values = [
       row.symbol,
       fmt2(row.shares),
-      fmt2(row.avgPrice),
+      fmt2(row.breakEvenPrice),
       fmt2(row.totalCost),
       row.unrealizedPl === null ? "N/A" : fmt2(row.unrealizedPl),
     ];

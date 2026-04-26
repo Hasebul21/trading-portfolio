@@ -1,3 +1,28 @@
+/**
+ * DSE brokerage commission rate (0.40%).
+ * Applied on both buy and sell transactions.
+ */
+export const BROKERAGE_COMMISSION_RATE = 0.004;
+
+/**
+ * Calculate break-even sell price that covers buy-side and sell-side brokerage commissions.
+ * Formula: breakEvenPrice = avgBuyPrice * (1 + rate) / (1 - rate)
+ *
+ * @param avgBuyPrice - Average cost per share including buy fees
+ * @param commissionRate - Commission rate (defaults to BROKERAGE_COMMISSION_RATE)
+ * @returns Minimum sell price to break even after all fees
+ */
+export function calculateBreakEvenPrice(
+  avgBuyPrice: number,
+  commissionRate: number = BROKERAGE_COMMISSION_RATE,
+): number {
+  if (!Number.isFinite(avgBuyPrice) || avgBuyPrice <= 0) return 0;
+  if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate >= 1) {
+    return avgBuyPrice;
+  }
+  return (avgBuyPrice * (1 + commissionRate)) / (1 - commissionRate);
+}
+
 export type TransactionRow = {
   id: string;
   created_at: string;
@@ -17,6 +42,11 @@ export type HoldingRow = {
   totalCost: number;
   /** True average cost per share: (buys incl. fees − cost removed on sells) ÷ shares. */
   avgPrice: number;
+  /**
+   * Minimum sell price per share to break even after both buy and sell brokerage fees.
+   * Computed as: avgPrice * (1 + commissionRate) / (1 - commissionRate)
+   */
+  breakEvenPrice: number;
   /**
    * Commission/fees (BDT) attributed to the remaining position after proportional
    * reduction on sells. `avgPrice` already includes this spread across shares.
@@ -180,6 +210,7 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
       category: s.category,
       totalCost: s.totalCost,
       avgPrice: s.avg,
+      breakEvenPrice: calculateBreakEvenPrice(s.avg),
       feesInPositionBdt:
         Math.round(Math.max(0, s.feesInPosition) * 100) / 100,
     }));
