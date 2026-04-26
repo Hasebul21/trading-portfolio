@@ -26,10 +26,10 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
           borderRadius: 10,
           borderRadiusLG: 14,
           colorPrimary: "#0d9488",
-          colorSuccess: "#059669",
-          colorWarning: "#d97706",
-          colorError: "#dc2626",
-          colorInfo: "#6366f1",
+          colorSuccess: "#34d399",
+          colorWarning: "#fbbf24",
+          colorError: "#f87171",
+          colorInfo: "#818cf8",
         },
         components: {
           Card: {
