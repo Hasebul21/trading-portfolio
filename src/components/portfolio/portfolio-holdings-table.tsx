@@ -394,7 +394,7 @@ export function PortfolioHoldingsTable({
         render: (v: string) => (
           <span className="flex items-center gap-1.5">
             <ClassificationDot c={classificationMap[v] ?? null} />
-            <span className="bg-gradient-to-r from-teal-700 via-emerald-700 to-teal-800 bg-clip-text font-mono text-[15px] font-normal text-transparent dark:from-teal-300 dark:via-emerald-300 dark:to-teal-200">
+            <span className="font-mono text-[15px] font-normal text-zinc-50">
               {v}
             </span>
           </span>
@@ -415,7 +415,6 @@ export function PortfolioHoldingsTable({
           <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
         ),
       },
-      avgCol,
       sharesCol,
       totalCol,
       {
