@@ -1,16 +1,31 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateBreakEvenPrice,
+  roundToNearestTen,
   BROKERAGE_COMMISSION_RATE,
   aggregateHoldings,
   type TransactionRow,
 } from "./portfolio";
 
+describe("roundToNearestTen", () => {
+  it("rounds 270.77 to 270.8", () => {
+    expect(roundToNearestTen(270.77)).toBe(270.8);
+  });
+
+  it("rounds 100.84 to 100.8", () => {
+    expect(roundToNearestTen(100.84)).toBe(100.8);
+  });
+
+  it("rounds 100.85 to 100.9", () => {
+    expect(roundToNearestTen(100.85)).toBe(100.9);
+  });
+});
+
 describe("calculateBreakEvenPrice", () => {
-  it("returns correct break-even price with default rate (100 → ~100.80)", () => {
+  it("returns correct break-even price with default rate (100 → 100.8)", () => {
     const result = calculateBreakEvenPrice(100);
-    // Formula: 100 * (1 + 0.004) / (1 - 0.004) = 100.4 / 0.996 ≈ 100.8032
-    expect(result).toBeCloseTo(100.8032, 2);
+    // Formula: 100 * (1 + 0.004) / (1 - 0.004) = 100.4 / 0.996 ≈ 100.8032 → rounded to 100.8
+    expect(result).toBe(100.8);
   });
 
   it("returns 0 for zero or negative avgBuyPrice", () => {
@@ -26,20 +41,20 @@ describe("calculateBreakEvenPrice", () => {
 
   it("handles small prices correctly", () => {
     const result = calculateBreakEvenPrice(1.5);
-    // 1.5 * 1.004 / 0.996 ≈ 1.512
-    expect(result).toBeCloseTo(1.512, 3);
+    // 1.5 * 1.004 / 0.996 ≈ 1.512 → rounded to 1.5
+    expect(result).toBe(1.5);
   });
 
   it("handles high commission rate", () => {
     const result = calculateBreakEvenPrice(100, 0.05);
-    // 100 * 1.05 / 0.95 ≈ 110.526
-    expect(result).toBeCloseTo(110.526, 2);
+    // 100 * 1.05 / 0.95 ≈ 110.526 → rounded to 110.5
+    expect(result).toBe(110.5);
   });
 
-  it("returns avgBuyPrice unchanged when commission rate is invalid", () => {
-    expect(calculateBreakEvenPrice(100, -0.01)).toBe(100);
+  it("returns avgBuyPrice rounded when commission rate is invalid", () => {
+    expect(calculateBreakEvenPrice(100.77, -0.01)).toBe(100.8);
     expect(calculateBreakEvenPrice(100, 1)).toBe(100);
-    expect(calculateBreakEvenPrice(100, NaN)).toBe(100);
+    expect(calculateBreakEvenPrice(100.77, NaN)).toBe(100.8);
   });
 
   it("uses BROKERAGE_COMMISSION_RATE constant (0.004)", () => {
@@ -65,8 +80,8 @@ describe("aggregateHoldings", () => {
     expect(holdings).toHaveLength(1);
     expect(holdings[0]!.symbol).toBe("TEST");
     expect(holdings[0]!.avgPrice).toBe(50);
-    // breakEvenPrice = 50 * 1.004 / 0.996 ≈ 50.4016
-    expect(holdings[0]!.breakEvenPrice).toBeCloseTo(50.4016, 2);
+    // breakEvenPrice = 50 * 1.004 / 0.996 ≈ 50.4016 → rounded to 50.4
+    expect(holdings[0]!.breakEvenPrice).toBe(50.4);
   });
 
   it("computes weighted average then breakEvenPrice for multiple buys", () => {
@@ -95,8 +110,8 @@ describe("aggregateHoldings", () => {
     expect(holdings).toHaveLength(1);
     // Weighted avg = (100*40 + 100*60) / 200 = 50
     expect(holdings[0]!.avgPrice).toBe(50);
-    // breakEvenPrice ≈ 50.4016
-    expect(holdings[0]!.breakEvenPrice).toBeCloseTo(50.4016, 2);
+    // breakEvenPrice ≈ 50.4016 → rounded to 50.4
+    expect(holdings[0]!.breakEvenPrice).toBe(50.4);
   });
 
   it("returns empty array for fully sold position", () => {

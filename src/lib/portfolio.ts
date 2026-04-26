@@ -5,12 +5,20 @@
 export const BROKERAGE_COMMISSION_RATE = 0.004;
 
 /**
+ * Round a number to the nearest 0.10 (e.g., 270.77 → 270.80).
+ */
+export function roundToNearestTen(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/**
  * Calculate break-even sell price that covers buy-side and sell-side brokerage commissions.
  * Formula: breakEvenPrice = avgBuyPrice * (1 + rate) / (1 - rate)
+ * Result is rounded to nearest 0.10.
  *
  * @param avgBuyPrice - Average cost per share including buy fees
  * @param commissionRate - Commission rate (defaults to BROKERAGE_COMMISSION_RATE)
- * @returns Minimum sell price to break even after all fees
+ * @returns Minimum sell price to break even after all fees, rounded to nearest 0.10
  */
 export function calculateBreakEvenPrice(
   avgBuyPrice: number,
@@ -18,9 +26,10 @@ export function calculateBreakEvenPrice(
 ): number {
   if (!Number.isFinite(avgBuyPrice) || avgBuyPrice <= 0) return 0;
   if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate >= 1) {
-    return avgBuyPrice;
+    return roundToNearestTen(avgBuyPrice);
   }
-  return (avgBuyPrice * (1 + commissionRate)) / (1 - commissionRate);
+  const raw = (avgBuyPrice * (1 + commissionRate)) / (1 - commissionRate);
+  return roundToNearestTen(raw);
 }
 
 export type TransactionRow = {
