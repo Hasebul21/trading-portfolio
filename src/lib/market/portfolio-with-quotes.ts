@@ -9,7 +9,7 @@ export type PortfolioMarketRow = HoldingRow & {
   sector: string | null;
   marketLtp: number | null;
   pivot: FloorPivot | null;
-  /** (LTP − avg) × shares when LTP known */
+  /** (LTP − breakEvenPrice) × shares when LTP known; accounts for sell-side fees */
   unrealizedPl: number | null;
 };
 
@@ -24,7 +24,7 @@ export function holdingsToMarketRows(
     const marketLtp = q?.ltp ?? null;
     const unrealizedPl =
       marketLtp !== null && Number.isFinite(marketLtp)
-        ? (marketLtp - h.avgPrice) * h.shares
+        ? (marketLtp - h.breakEvenPrice) * h.shares
         : null;
     const pivot = q ? computeFloorPivot(q.dayHigh, q.dayLow, q.closep) : null;
     const sector = companyExtrasBySymbol.get(h.symbol)?.sector ?? h.category ?? null;

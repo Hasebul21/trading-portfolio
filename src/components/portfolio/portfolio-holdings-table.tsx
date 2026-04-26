@@ -9,6 +9,7 @@ import {
   formatNumberMax2Decimals,
   formatPlainNumberMax2Decimals,
 } from "@/lib/format-bdt";
+import { calculateBreakEvenPrice } from "@/lib/portfolio";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import {
@@ -166,11 +167,12 @@ export function PortfolioHoldingsTable({
       const tot = parseBookNumber(d.total);
       if (sh === null || av === null || tot === null) return h;
       if (!(sh > 0) || av < 0 || tot < 0) return h;
+      const be = calculateBreakEvenPrice(av);
       const unrealizedPl =
         h.marketLtp !== null && Number.isFinite(h.marketLtp)
-          ? (h.marketLtp - av) * sh
+          ? (h.marketLtp - be) * sh
           : null;
-      return { ...h, shares: sh, avgPrice: av, totalCost: tot, unrealizedPl };
+      return { ...h, shares: sh, avgPrice: av, breakEvenPrice: be, totalCost: tot, unrealizedPl };
     });
   }, [holdings, draft, bookEditing]);
 
