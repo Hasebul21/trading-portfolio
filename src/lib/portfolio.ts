@@ -1,35 +1,24 @@
 /**
- * DSE brokerage commission rate (0.40%).
- * Applied on both buy and sell transactions.
+ * DSE brokerage commission rate (0.40%) applied on both buy and sell.
+ * Used for break-even price calculation.
  */
 export const BROKERAGE_COMMISSION_RATE = 0.004;
 
 /**
- * Round a number to the nearest 0.10 (e.g., 270.77 → 270.80).
+ * Rounds a price to the nearest DSE tick size (BDT 0.10).
  */
-export function roundToNearestTen(n: number): number {
-  return Math.round(n * 10) / 10;
+export function roundToTickSize(price: number): number {
+  return Math.round(price * 10) / 10;
 }
 
 /**
- * Calculate break-even sell price that covers buy-side and sell-side brokerage commissions.
- * Formula: breakEvenPrice = avgBuyPrice * (1 + rate) / (1 - rate)
- * Result is rounded to nearest 0.10.
- *
- * @param avgBuyPrice - Average cost per share including buy fees
- * @param commissionRate - Commission rate (defaults to BROKERAGE_COMMISSION_RATE)
- * @returns Minimum sell price to break even after all fees, rounded to nearest 0.10
+ * Calculates the break-even price including both buy and sell brokerage fees.
+ * Formula: breakEvenPrice = avgPrice × (1 + rate) / (1 − rate)
+ * where rate is BROKERAGE_COMMISSION_RATE (0.40%).
  */
-export function calculateBreakEvenPrice(
-  avgBuyPrice: number,
-  commissionRate: number = BROKERAGE_COMMISSION_RATE,
-): number {
-  if (!Number.isFinite(avgBuyPrice) || avgBuyPrice <= 0) return 0;
-  if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate >= 1) {
-    return roundToNearestTen(avgBuyPrice);
-  }
-  const raw = (avgBuyPrice * (1 + commissionRate)) / (1 - commissionRate);
-  return roundToNearestTen(raw);
+export function calculateBreakEvenPrice(avgPrice: number): number {
+  const rate = BROKERAGE_COMMISSION_RATE;
+  return roundToTickSize((avgPrice * (1 + rate)) / (1 - rate));
 }
 
 export type TransactionRow = {
@@ -52,8 +41,8 @@ export type HoldingRow = {
   /** True average cost per share: (buys incl. fees − cost removed on sells) ÷ shares. */
   avgPrice: number;
   /**
-   * Minimum sell price per share to break even after both buy and sell brokerage fees.
-   * Computed as: avgPrice * (1 + commissionRate) / (1 - commissionRate)
+   * Break-even price including both buy and sell brokerage commissions.
+   * Rounded to nearest DSE tick size (BDT 0.10).
    */
   breakEvenPrice: number;
   /**

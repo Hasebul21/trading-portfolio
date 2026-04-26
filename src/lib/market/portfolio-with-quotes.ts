@@ -9,7 +9,7 @@ export type PortfolioMarketRow = HoldingRow & {
   sector: string | null;
   marketLtp: number | null;
   pivot: FloorPivot | null;
-  /** (LTP − breakEvenPrice) × shares when LTP known; accounts for sell-side fees */
+  /** (LTP − avg) × shares when LTP known */
   unrealizedPl: number | null;
 };
 
@@ -22,6 +22,7 @@ export function holdingsToMarketRows(
   return holdings.map((h) => {
     const q = bySymbol.get(h.symbol);
     const marketLtp = q?.ltp ?? null;
+    // Use breakEvenPrice to calculate unrealized P/L (includes buy+sell fees)
     const unrealizedPl =
       marketLtp !== null && Number.isFinite(marketLtp)
         ? (marketLtp - h.breakEvenPrice) * h.shares

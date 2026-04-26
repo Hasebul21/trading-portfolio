@@ -9,7 +9,6 @@ import {
   formatNumberMax2Decimals,
   formatPlainNumberMax2Decimals,
 } from "@/lib/format-bdt";
-import { calculateBreakEvenPrice } from "@/lib/portfolio";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import {
@@ -26,6 +25,15 @@ type Row = PortfolioMarketRow & { key: string };
 type BookDraft = { shares: string; avg: string; total: string };
 
 const { Search } = Input;
+
+const biasLineColumnTitle = (
+  <span className="block whitespace-normal text-right text-[15px] font-normal leading-snug">
+    Bias Line
+    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
+      (Buy Above / Sell Below)
+    </span>
+  </span>
+);
 
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
@@ -167,12 +175,11 @@ export function PortfolioHoldingsTable({
       const tot = parseBookNumber(d.total);
       if (sh === null || av === null || tot === null) return h;
       if (!(sh > 0) || av < 0 || tot < 0) return h;
-      const be = calculateBreakEvenPrice(av);
       const unrealizedPl =
         h.marketLtp !== null && Number.isFinite(h.marketLtp)
-          ? (h.marketLtp - be) * sh
+          ? (h.marketLtp - av) * sh
           : null;
-      return { ...h, shares: sh, avgPrice: av, breakEvenPrice: be, totalCost: tot, unrealizedPl };
+      return { ...h, shares: sh, avgPrice: av, totalCost: tot, unrealizedPl };
     });
   }, [holdings, draft, bookEditing]);
 
@@ -293,15 +300,15 @@ export function PortfolioHoldingsTable({
         ),
       }
       : {
-        title: "Break-even Price (incl. fees)",
-        key: "breakEvenPrice",
-        width: 148,
+        title: "Average cost / share",
+        key: "avgPrice",
+        width: 128,
         align: "right",
         responsive: ["sm"],
-        sorter: (a, b) => a.breakEvenPrice - b.breakEvenPrice,
-        showSorterTooltip: { title: "Sort by break-even price" },
+        sorter: (a, b) => a.avgPrice - b.avgPrice,
+        showSorterTooltip: { title: "Sort by average cost" },
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.breakEvenPrice)}</span>
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
         ),
       };
 
@@ -382,6 +389,21 @@ export function PortfolioHoldingsTable({
           </span>
         ),
       },
+      {
+        title: "Break-even",
+        dataIndex: "breakEvenPrice",
+        width: 100,
+        align: "right",
+        ...(!bookEditing
+          ? {
+            sorter: (a: Row, b: Row) => a.breakEvenPrice - b.breakEvenPrice,
+            showSorterTooltip: { title: "Sort by break-even price" },
+          }
+          : {}),
+        render: (v: number) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
+        ),
+      },
       avgCol,
       sharesCol,
       totalCol,
@@ -390,6 +412,7 @@ export function PortfolioHoldingsTable({
         dataIndex: "unrealizedPl",
         width: 118,
         align: "right",
+        responsive: ["sm"],
         ...(!bookEditing
           ? {
             sorter: sortNullableNumber((r) => r.unrealizedPl),
@@ -426,6 +449,20 @@ export function PortfolioHoldingsTable({
           ) : (
             <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
           ),
+      },
+      {
+        title: biasLineColumnTitle,
+        key: "pivot",
+        width: 132,
+        align: "right",
+        responsive: ["lg"],
+        ...(!bookEditing
+          ? {
+            sorter: sortNullableNumber((r) => r.pivot?.pivot),
+            showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
+          }
+          : {}),
+        render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
       },
       {
         title: "First Buy Zone",
