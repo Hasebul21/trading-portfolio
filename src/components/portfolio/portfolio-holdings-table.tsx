@@ -26,15 +26,6 @@ type BookDraft = { shares: string; avg: string; total: string };
 
 const { Search } = Input;
 
-const biasLineColumnTitle = (
-  <span className="block whitespace-normal text-right text-[15px] font-normal leading-snug">
-    Bias Line
-    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
-      (Buy Above / Sell Below)
-    </span>
-  </span>
-);
-
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
   if (n > 0) return `+${s}`;
@@ -433,20 +424,6 @@ export function PortfolioHoldingsTable({
           ) : (
             <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
           ),
-      },
-      {
-        title: biasLineColumnTitle,
-        key: "pivot",
-        width: 132,
-        align: "right",
-        responsive: ["lg"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.pivot),
-            showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
       },
       {
         title: "First Buy Zone",
