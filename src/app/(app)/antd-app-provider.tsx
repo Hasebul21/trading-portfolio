@@ -6,7 +6,7 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: theme.darkAlgorithm,
         token: {
           fontFamily:
             "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
