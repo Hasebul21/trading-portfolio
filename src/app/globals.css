@@ -2,7 +2,7 @@
 
 :root {
   --background: #030712;
-  --foreground: #f1f5f9;
+  --foreground: #ffffff;
   --accent: #0d9488;
   --accent-muted: rgba(45, 212, 191, 0.08);
   --glow-violet: rgba(129, 140, 248, 0.06);
@@ -81,21 +81,41 @@ b {
   font-weight: 400;
   letter-spacing: -0.01em;
   text-transform: none;
-  color: #0f766e;
+  color: #ffffff;
   background: linear-gradient(to bottom,
-      rgba(240, 253, 250, 0.98),
-      rgba(236, 253, 245, 0.88)) !important;
-  border-bottom: 1px solid rgba(13, 148, 136, 0.15) !important;
+      rgba(6, 78, 59, 0.55),
+      rgba(4, 47, 46, 0.72)) !important;
+  border-bottom: 1px solid rgba(45, 212, 191, 0.2) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr>td,
 .long-term-holdings-table .ant-table-tbody>tr>td {
-  border-color: rgba(15, 118, 110, 0.06) !important;
+  border-color: rgba(45, 212, 191, 0.08) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
 .long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
-  background: rgba(240, 253, 250, 0.35);
+  background: rgba(6, 78, 59, 0.22);
+}
+
+.portfolio-holdings-table .ant-table-tbody>tr:hover>td,
+.long-term-holdings-table .ant-table-tbody>tr:hover>td {
+  background: rgba(161, 161, 170, 0.13) !important;
+}
+
+/* Force white text globally */
+.ant-typography,
+.ant-table-cell,
+.ant-card,
+.ant-alert,
+.ant-input,
+.ant-select,
+.ant-tabs {
+  color: #ffffff !important;
+}
+
+.ant-table-thead>tr>th {
+  color: #ffffff !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
@@ -132,32 +152,5 @@ b {
   .ant-card,
   .ant-alert {
     max-width: 100%;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-
-  .portfolio-holdings-table .ant-table-thead>tr>th,
-  .long-term-holdings-table .ant-table-thead>tr>th {
-    color: #5eead4;
-    background: linear-gradient(to bottom,
-        rgba(6, 78, 59, 0.55),
-        rgba(4, 47, 46, 0.72)) !important;
-    border-bottom-color: rgba(45, 212, 191, 0.2) !important;
-  }
-
-  .portfolio-holdings-table .ant-table-tbody>tr>td,
-  .long-term-holdings-table .ant-table-tbody>tr>td {
-    border-color: rgba(45, 212, 191, 0.08) !important;
-  }
-
-  .portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
-  .long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
-    background: rgba(6, 78, 59, 0.22);
-  }
-
-  .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
-  .long-term-holdings-table .ant-table-tbody>tr:hover>td {
-    background: rgba(161, 161, 170, 0.13) !important;
   }
 }

@@ -30,6 +30,10 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
           colorWarning: "#fbbf24",
           colorError: "#f87171",
           colorInfo: "#818cf8",
+          colorText: "#ffffff",
+          colorTextSecondary: "#e4e4e7",
+          colorTextTertiary: "#a1a1aa",
+          colorTextHeading: "#ffffff",
         },
         components: {
           Card: {
@@ -45,7 +49,8 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
             cellFontSize: 15,
             cellFontSizeMD: 15,
             cellFontSizeSM: 15,
-            headerColor: "rgba(15, 118, 110, 0.92)",
+            headerColor: "#ffffff",
+            colorText: "#ffffff",
           },
           Typography: {
             fontWeightStrong: 400,
