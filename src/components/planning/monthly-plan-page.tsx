@@ -153,8 +153,12 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
 
     const canSubmitThisMonth =
         !header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
+    // MIP is immutable once created for a month; only Draft MIP allows reset
     const canResetThisMonth =
-        !!header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
+        sectionKey === "draftMip" &&
+        !!header &&
+        viewYm === currentYmDhaka &&
+        isTodayDhakaInSubmissionWindowForYm(viewYm);
 
     return (
         <AppPageStack
