@@ -564,17 +564,15 @@ async function lockMonthlyRow(
 
   const { data: allRows, error: aErr } = await supabase
     .from(config.rowTable)
-    .select("id, locked, percentage, symbol")
+    .select("id, locked, percentage, symbol, calculated_amount_bdt")
     .eq("header_id", header.id);
 
   if (aErr) return { ok: false, error: aErr.message };
 
-  const others = (allRows ?? []).filter((r) => r.id !== rowId);
-  for (const o of others) {
-    if (o.symbol && String(o.symbol).trim().toUpperCase() === symbol) {
-      return { ok: false, error: `${symbol} is already used in this table.` };
-    }
-  }
+  // Check if this symbol already exists in a locked row — if so, merge
+  const existingLockedRow = (allRows ?? []).find(
+    (r) => r.id !== rowId && r.locked && r.symbol && String(r.symbol).trim().toUpperCase() === symbol
+  );
 
   const lockedRows = (allRows ?? []).filter((r) => r.id !== rowId && r.locked);
   const currentSum = sumLockedPercentages(lockedRows);
@@ -587,6 +585,35 @@ async function lockMonthlyRow(
     base_amount_bdt: Number(header.base_amount_bdt),
     carried_forward_bdt: Number(header.carried_forward_bdt),
   });
+
+  if (existingLockedRow) {
+    // Merge: add percentage to existing row, delete current row
+    const existingPct = Number(existingLockedRow.percentage ?? 0);
+    const mergedPct = Math.round((existingPct + pct) * 10000) / 10000;
+    const mergedCalculated = calculatedAllocationBdt(mergedPct, effective);
+
+    const { error: mergeErr } = await supabase
+      .from(config.rowTable)
+      .update({
+        percentage: mergedPct,
+        calculated_amount_bdt: mergedCalculated,
+      })
+      .eq("id", existingLockedRow.id);
+
+    if (mergeErr) return { ok: false, error: mergeErr.message };
+
+    // Delete the duplicate row
+    const { error: delErr } = await supabase
+      .from(config.rowTable)
+      .delete()
+      .eq("id", rowId);
+
+    if (delErr) return { ok: false, error: delErr.message };
+
+    revalidatePath(config.routePath);
+    return { ok: true };
+  }
+
   const calculated = calculatedAllocationBdt(pct, effective);
 
   const { error: uErr } = await supabase
