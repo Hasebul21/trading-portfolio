@@ -446,27 +446,30 @@ async function addMonthlyRow(
 
   if (!header) return { ok: false, error: "Plan not found." };
 
-  // Count actual rows for limit check (not max sort_order, which may have gaps after deletions)
-  const { count: rowCount, error: countErr } = await supabase
+  // Get all existing sort_order values to find an available slot
+  const { data: existingRows, error: rowsErr } = await supabase
     .from(config.rowTable)
-    .select("id", { count: "exact", head: true })
+    .select("sort_order")
     .eq("header_id", headerId);
 
-  if (countErr) return { ok: false, error: countErr.message };
-  if ((rowCount ?? 0) >= MIP_MAX_ROWS) {
+  if (rowsErr) return { ok: false, error: rowsErr.message };
+
+  const usedOrders = new Set((existingRows ?? []).map((r) => r.sort_order as number));
+
+  // Check row count limit
+  if (usedOrders.size >= MIP_MAX_ROWS) {
     return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
   }
 
-  // Get max sort_order for the new row's position
-  const { data: orders, error: cErr } = await supabase
-    .from(config.rowTable)
-    .select("sort_order")
-    .eq("header_id", headerId)
-    .order("sort_order", { ascending: false })
-    .limit(1);
+  // Find first available sort_order (0 to MIP_MAX_ROWS-1)
+  let nextOrder = 0;
+  while (usedOrders.has(nextOrder) && nextOrder < MIP_MAX_ROWS) {
+    nextOrder++;
+  }
 
-  if (cErr) return { ok: false, error: cErr.message };
-  const nextOrder = ((orders?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+  if (nextOrder >= MIP_MAX_ROWS) {
+    return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
+  }
 
   const { error } = await supabase.from(config.rowTable).insert({
     header_id: headerId,

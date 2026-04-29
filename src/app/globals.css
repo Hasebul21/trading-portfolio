@@ -103,15 +103,124 @@ b {
   background: rgba(161, 161, 170, 0.13) !important;
 }
 
-/* Force white text globally */
+/* Force white text globally for Ant Design dark mode */
 .ant-typography,
 .ant-table-cell,
 .ant-card,
+.ant-card-head-title,
+.ant-card-meta-title,
+.ant-card-meta-description,
 .ant-alert,
+.ant-alert-message,
+.ant-alert-description,
 .ant-input,
+.ant-input-number,
+.ant-input-number-input,
 .ant-select,
-.ant-tabs {
+.ant-select-selection-item,
+.ant-select-selection-placeholder,
+.ant-tabs,
+.ant-tabs-tab,
+.ant-tag,
+.ant-statistic-title,
+.ant-statistic-content,
+.ant-statistic-content-value,
+.ant-descriptions-item-label,
+.ant-descriptions-item-content,
+.ant-form-item-label>label,
+.ant-checkbox-wrapper,
+.ant-radio-wrapper,
+.ant-tooltip-inner,
+.ant-popover-inner,
+.ant-popover-title,
+.ant-popover-inner-content,
+.ant-popconfirm-message,
+.ant-popconfirm-title,
+.ant-popconfirm-description,
+.ant-dropdown-menu-item,
+.ant-dropdown-menu-item-group-title,
+.ant-modal-title,
+.ant-modal-body,
+.ant-modal-confirm-title,
+.ant-modal-confirm-content,
+.ant-message-notice-content,
+.ant-notification-notice-message,
+.ant-notification-notice-description,
+.ant-drawer-title,
+.ant-drawer-body,
+.ant-collapse-header,
+.ant-collapse-content,
+.ant-list-item,
+.ant-list-item-meta-title,
+.ant-list-item-meta-description,
+.ant-empty-description,
+.ant-result-title,
+.ant-result-subtitle,
+.ant-steps-item-title,
+.ant-steps-item-description,
+.ant-timeline-item-content,
+.ant-picker,
+.ant-picker-input>input,
+.ant-picker-dropdown,
+.ant-picker-cell,
+.ant-picker-header,
+.ant-picker-content th,
+.ant-picker-content td,
+.ant-breadcrumb,
+.ant-breadcrumb-link,
+.ant-breadcrumb-separator,
+.ant-menu-item,
+.ant-menu-submenu-title,
+.ant-pagination-item a,
+.ant-pagination-item-link,
+.ant-pagination-options {
   color: #ffffff !important;
+}
+
+/* Dropdown and popover backgrounds for dark mode */
+.ant-dropdown-menu,
+.ant-popover-inner,
+.ant-popconfirm-inner-content,
+.ant-tooltip-inner,
+.ant-select-dropdown,
+.ant-picker-panel-container,
+.ant-modal-content {
+  background-color: #18181b !important;
+  border-color: rgba(63, 63, 70, 0.8) !important;
+}
+
+.ant-dropdown-menu-item:hover,
+.ant-select-item-option-active,
+.ant-select-item-option-selected {
+  background-color: rgba(45, 212, 191, 0.12) !important;
+}
+
+.ant-select-item,
+.ant-select-item-option-content {
+  color: #ffffff !important;
+}
+
+/* Input and select backgrounds */
+.ant-input,
+.ant-input-number,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-picker {
+  background-color: rgba(24, 24, 27, 0.9) !important;
+  border-color: rgba(63, 63, 70, 0.8) !important;
+}
+
+/* Input placeholder text */
+.ant-input::placeholder,
+.ant-input-number-input::placeholder,
+.ant-picker-input>input::placeholder {
+  color: rgba(161, 161, 170, 0.7) !important;
+}
+
+/* Card backgrounds */
+.ant-card {
+  background-color: rgba(24, 24, 27, 0.6) !important;
+  border-color: rgba(63, 63, 70, 0.5) !important;
 }
 
 .ant-table-thead>tr>th {
