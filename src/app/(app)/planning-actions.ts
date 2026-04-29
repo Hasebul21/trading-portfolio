@@ -446,6 +446,18 @@ async function addMonthlyRow(
 
   if (!header) return { ok: false, error: "Plan not found." };
 
+  // Count actual rows for limit check (not max sort_order, which may have gaps after deletions)
+  const { count: rowCount, error: countErr } = await supabase
+    .from(config.rowTable)
+    .select("id", { count: "exact", head: true })
+    .eq("header_id", headerId);
+
+  if (countErr) return { ok: false, error: countErr.message };
+  if ((rowCount ?? 0) >= MIP_MAX_ROWS) {
+    return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
+  }
+
+  // Get max sort_order for the new row's position
   const { data: orders, error: cErr } = await supabase
     .from(config.rowTable)
     .select("sort_order")
@@ -455,9 +467,6 @@ async function addMonthlyRow(
 
   if (cErr) return { ok: false, error: cErr.message };
   const nextOrder = ((orders?.[0]?.sort_order as number | undefined) ?? -1) + 1;
-  if (nextOrder >= MIP_MAX_ROWS) {
-    return { ok: false, error: `Maximum ${MIP_MAX_ROWS} rows allowed.` };
-  }
 
   const { error } = await supabase.from(config.rowTable).insert({
     header_id: headerId,
