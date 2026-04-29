@@ -315,7 +315,7 @@ function sanitizePositiveAmount(raw: string): number | null {
   return Math.round(n * 100) / 100;
 }
 
-/** One-time monthly setup (date + base amount), days 5–25 Dhaka, same calendar month only. */
+/** One-time monthly setup (date + base amount). Current month: days 5–25 only. Next month: any day. */
 async function submitMonthlySetup(
   sectionKey: MonthlyPlanSectionKey,
   formData: FormData,
@@ -340,7 +340,7 @@ async function submitMonthlySetup(
     return {
       ok: false,
       error:
-        "You can submit only once per month, between the 5th and 25th (Asia/Dhaka), for the current month.",
+        "You can submit MIP for the current month (days 5-25) or the next month only.",
     };
   }
 

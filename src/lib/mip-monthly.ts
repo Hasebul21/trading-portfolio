@@ -25,11 +25,38 @@ export function isPlanDateInAllowedDayRange(planDate: Date): boolean {
   return day >= 5 && day <= 25;
 }
 
-/** Submission allowed only on days 5–25 of `ym` (Dhaka), and only for the current Dhaka month matching `ym`. */
+export function nextYearMonth(ym: string): string | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(ym.trim());
+  if (!m) return null;
+  let y = Number(m[1]);
+  let mo = Number(m[2]);
+  if (mo >= 12) {
+    y += 1;
+    mo = 1;
+  } else {
+    mo += 1;
+  }
+  return `${y}-${String(mo).padStart(2, "0")}`;
+}
+
+/**
+ * Submission allowed for current month (days 5–25) or next month (any day).
+ * This allows planning ahead for the upcoming month at any time.
+ */
 export function isTodayDhakaInSubmissionWindowForYm(ym: string, now: Date = new Date()): boolean {
-  if (yearMonthDhaka(now) !== ym) return false;
-  const day = calendarDayDhaka(now);
-  return day >= 5 && day <= 25;
+  const currentYm = yearMonthDhaka(now);
+
+  // Allow submission for the next month at any time
+  const upcomingYm = nextYearMonth(currentYm);
+  if (upcomingYm === ym) return true;
+
+  // For current month, allow only on days 5–25
+  if (currentYm === ym) {
+    const day = calendarDayDhaka(now);
+    return day >= 5 && day <= 25;
+  }
+
+  return false;
 }
 
 export function prevYearMonth(ym: string): string | null {
