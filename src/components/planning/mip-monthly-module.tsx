@@ -65,7 +65,6 @@ export function MipMonthlyModule({
   totalBalanceBdt,
   instruments,
   instrumentsError,
-  canSubmitThisMonth,
   canResetThisMonth,
   submitSetupAction,
   addRowAction,
@@ -86,7 +85,6 @@ export function MipMonthlyModule({
   totalBalanceBdt: number;
   instruments: SymbolFieldInstrument[];
   instrumentsError: string | null;
-  canSubmitThisMonth: boolean;
   canResetThisMonth: boolean;
   submitSetupAction: (formData: FormData) => Promise<{ ok: true } | { ok: false; error: string }>;
   addRowAction: (headerId: string) => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -479,22 +477,22 @@ export function MipMonthlyModule({
         ) : null}
       </div>
 
-      {!header && canSubmitThisMonth ? (
+      {!header ? (
         <div className={shell}>
           <Typography.Title level={5} className="!mb-2 !mt-0 !text-[15px] !font-normal text-zinc-800 dark:text-zinc-100">
             {sectionTitle} setup (once this month)
           </Typography.Title>
           <p className="mb-3 text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
-            Choose a date between the 5th and 25th (Asia/Dhaka) in {ymToDisplayTitle(viewYm)}, and your total monthly
-            investment. After submit, fields lock and you fill the allocation table below.
+            Choose a date in {ymToDisplayTitle(viewYm)}, and your total monthly investment. After submit, fields lock
+            and you fill the allocation table below.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
               <span className="mb-1 block">Date</span>
               <input
                 type="date"
-                min={`${viewYm}-05`}
-                max={`${viewYm}-25`}
+                min={`${viewYm}-01`}
+                max={`${viewYm}-31`}
                 value={planDate}
                 onChange={(e) => setPlanDate(e.target.value)}
                 className="box-border h-9 rounded border border-zinc-300/90 bg-white px-2 text-[15px] font-normal text-zinc-900 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50"
@@ -520,15 +518,6 @@ export function MipMonthlyModule({
           </div>
           {setupError ? <Alert type="error" showIcon className="mt-3" title={setupError} /> : null}
         </div>
-      ) : null}
-
-      {!header && viewYm !== currentYmDhaka ? (
-        <Alert
-          type="warning"
-          showIcon
-          title={`No ${sectionTitle} for this month`}
-          description="There is no saved plan for the selected month. You can only create a plan for the current month during its submission window."
-        />
       ) : null}
 
       {header ? (

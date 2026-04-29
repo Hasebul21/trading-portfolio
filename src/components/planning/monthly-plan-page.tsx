@@ -18,7 +18,7 @@ import {
 } from "@/app/(app)/planning-actions";
 import { getMonthlyPlanSectionConfig, type MonthlyPlanSectionKey } from "@/lib/monthly-plan-sections";
 import { getCachedDseInstruments } from "@/lib/market/dse-instruments";
-import { isTodayDhakaInSubmissionWindowForYm, yearMonthDhaka } from "@/lib/mip-monthly";
+import { yearMonthDhaka } from "@/lib/mip-monthly";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = {
@@ -151,14 +151,8 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
     );
     const totalBalanceBdt = Math.round((totalInvestedBdt - totalAllocatedBdt) * 100) / 100;
 
-    const canSubmitThisMonth =
-        !header && viewYm === currentYmDhaka && isTodayDhakaInSubmissionWindowForYm(viewYm);
     // MIP is immutable once created for a month; only Draft MIP allows reset
-    const canResetThisMonth =
-        sectionKey === "draftMip" &&
-        !!header &&
-        viewYm === currentYmDhaka &&
-        isTodayDhakaInSubmissionWindowForYm(viewYm);
+    const canResetThisMonth = sectionKey === "draftMip" && !!header;
 
     return (
         <AppPageStack
@@ -179,7 +173,6 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
                 totalBalanceBdt={totalBalanceBdt}
                 instruments={instruments}
                 instrumentsError={instrumentsError}
-                canSubmitThisMonth={canSubmitThisMonth}
                 canResetThisMonth={canResetThisMonth}
                 submitSetupAction={actions.submitSetupAction}
                 addRowAction={actions.addRowAction}

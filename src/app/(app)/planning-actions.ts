@@ -5,7 +5,6 @@ import {
   calculatedAllocationBdt,
   carryForwardBdtFromPrevious,
   effectiveMonthlyTotalBdt,
-  isTodayDhakaInSubmissionWindowForYm,
   prevYearMonth,
   sumLockedPercentages,
 } from "@/lib/mip-monthly";
@@ -331,18 +330,7 @@ async function submitMonthlySetup(
   const parsed = parseYmdDhakaCalendar(dateStr);
   if (!parsed) return { ok: false, error: "Use a valid plan date (YYYY-MM-DD)." };
 
-  const { ym, day } = parsed;
-  if (day < 5 || day > 25) {
-    return { ok: false, error: "Plan date must fall between the 5th and 25th of the month." };
-  }
-
-  if (!isTodayDhakaInSubmissionWindowForYm(ym)) {
-    return {
-      ok: false,
-      error:
-        "You can submit MIP for the current month (days 5-25) or the next month only.",
-    };
-  }
+  const { ym } = parsed;
 
   const base = sanitizePositiveAmount(String(formData.get("base_amount_bdt") ?? ""));
   if (base === null) return { ok: false, error: "Enter a positive total monthly investment amount." };
@@ -628,12 +616,6 @@ async function resetMonthlySetup(
   const config = getMonthlyPlanConfig(sectionKey);
   if (!UUID_RE.test(headerId)) return { ok: false, error: "Invalid header." };
   if (!YEAR_MONTH_RE.test(yearMonth)) return { ok: false, error: "Invalid month." };
-  if (!isTodayDhakaInSubmissionWindowForYm(yearMonth)) {
-    return {
-      ok: false,
-      error: "You can reset only the current month's MIP between the 5th and 25th (Asia/Dhaka).",
-    };
-  }
 
   const supabase = await createClient();
   const {
