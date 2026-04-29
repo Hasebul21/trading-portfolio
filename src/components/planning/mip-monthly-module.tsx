@@ -522,15 +522,6 @@ export function MipMonthlyModule({
         </div>
       ) : null}
 
-      {!header && !canSubmitThisMonth && viewYm === currentYmDhaka ? (
-        <Alert
-          type="info"
-          showIcon
-          title="Submission window"
-          description={`${sectionTitle} setup for this month is only available from the 5th through the 25th (Asia/Dhaka). Use search to review other months.`}
-        />
-      ) : null}
-
       {!header && viewYm !== currentYmDhaka ? (
         <Alert
           type="warning"
