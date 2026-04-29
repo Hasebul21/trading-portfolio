@@ -455,20 +455,20 @@ export function MipMonthlyModule({
             }))}
           />
         </label>
-        {currentHeader ? (
+        {header ? (
           <div className="w-full rounded-md border border-blue-200/70 bg-blue-50/60 px-3 py-1.5 sm:w-auto dark:border-blue-800/50 dark:bg-blue-950/40">
             <p className="text-[12px] font-normal uppercase tracking-wide text-blue-600 dark:text-blue-400">
-              Total %
+              Remaining %
             </p>
             <p className="tabular-nums text-[18px] font-semibold text-blue-800 dark:text-blue-200">
               {currentRemainingPct.toFixed(2)}%
             </p>
           </div>
         ) : null}
-        {currentHeader ? (
+        {header ? (
           <div className="w-full rounded-md border border-teal-200/70 bg-teal-50/60 px-3 py-1.5 sm:w-auto dark:border-teal-800/50 dark:bg-teal-950/40">
             <p className="text-[12px] font-normal uppercase tracking-wide text-teal-600 dark:text-teal-400">
-              Total Balance
+              Remaining Balance
             </p>
             <p className="tabular-nums text-[18px] font-semibold text-teal-800 dark:text-teal-200">
               {formatBdt(currentRemainingBdt)} BDT
