@@ -94,10 +94,10 @@ export function WatchlistSectorChart({ holdings }: { holdings: PortfolioHoldingF
                         {/* Center circle for donut effect */}
                         <div className="absolute h-14 w-14 rounded-full bg-white dark:bg-zinc-900" />
                         <div className="absolute flex flex-col items-center gap-0 text-center">
-                            <span className="text-[10px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                            <span className="text-[10px] font-normal uppercase tracking-widest text-zinc-50">
                                 Sectors
                             </span>
-                            <span className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-50">{slices.length}</span>
+                            <span className="text-[14px] font-semibold text-zinc-50">{slices.length}</span>
                         </div>
                     </div>
                 </div>
@@ -111,18 +111,18 @@ export function WatchlistSectorChart({ holdings }: { holdings: PortfolioHoldingF
                             <div key={slice.sector} className="flex items-center gap-2">
                                 <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
                                 <div className="min-w-0 flex-1 truncate">
-                                    <span className="text-[12px] font-normal text-zinc-700 dark:text-zinc-300">{slice.sector}</span>
+                                    <span className="text-[12px] font-normal text-zinc-50">{slice.sector}</span>
                                 </div>
                                 <div className="flex items-baseline gap-0.5 whitespace-nowrap text-right font-mono text-[11px] flex-shrink-0">
-                                    <span className="text-zinc-500 dark:text-zinc-400">{percent}%</span>
-                                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500">({slice.count})</span>
+                                    <span className="text-zinc-50">{percent}%</span>
+                                    <span className="text-[10px] text-zinc-50">({slice.count})</span>
                                 </div>
                             </div>
                         );
                     })}
                     <div className="mt-1.5 border-t border-teal-200/40 pt-1.5 dark:border-teal-900/40">
                         <div className="flex items-center justify-between text-[12px] font-semibold">
-                            <span className="text-zinc-700 dark:text-zinc-300">Total tracked</span>
+                            <span className="text-zinc-50">Total tracked</span>
                             <span className="font-mono text-teal-700 dark:text-teal-300">{formatBdt(total)}</span>
                         </div>
                     </div>

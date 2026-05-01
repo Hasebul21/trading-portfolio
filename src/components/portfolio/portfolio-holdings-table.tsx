@@ -16,7 +16,7 @@ import {
   type WatchlistClassFilter,
   type WatchlistClassification,
 } from "@/lib/watchlist-classification";
-import { Alert, Button, Card, Input, Select, Space, Table, Typography } from "antd";
+import { Alert, Button, Card, Input, Select, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -29,7 +29,7 @@ const { Search } = Input;
 const biasLineColumnTitle = (
   <span className="block whitespace-normal text-right text-[15px] font-normal leading-snug">
     Bias Line
-    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-600 dark:text-zinc-400">
+    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-50">
       (Buy Above / Sell Below)
     </span>
   </span>
@@ -68,7 +68,7 @@ function unrealizedTotals(rows: PortfolioMarketRow[]) {
 
 function fmtPivotCell(n: number | null | undefined) {
   if (n === null || n === undefined || !Number.isFinite(n)) {
-    return <Typography.Text type="secondary">—</Typography.Text>;
+    return <span className="text-zinc-50">—</span>;
   }
   return <span className="tabular-nums">{formatNumberMax2Decimals(n)}</span>;
 }
@@ -431,7 +431,7 @@ export function PortfolioHoldingsTable({
           : {}),
         render: (v: number | null) =>
           v === null ? (
-            <Typography.Text type="secondary">—</Typography.Text>
+            <span className="text-zinc-50">—</span>
           ) : (
             <PlIndicator value={v} />
           ),
@@ -450,7 +450,7 @@ export function PortfolioHoldingsTable({
           : {}),
         render: (v: number | null) =>
           v === null ? (
-            <Typography.Text type="secondary">—</Typography.Text>
+            <span className="text-zinc-50">—</span>
           ) : (
             <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
           ),
@@ -508,32 +508,32 @@ export function PortfolioHoldingsTable({
     >
       <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4 dark:border-teal-900/40">
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
             Total unrealized P/L
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
             {withQuote === 0 ? (
-              <Typography.Text type="secondary" className="text-[15px] font-normal">
+              <span className="text-[15px] font-normal text-zinc-50">
                 —
-              </Typography.Text>
+              </span>
             ) : (
               <PlIndicator value={totalUnrealized} />
             )}
           </div>
           {withQuote > 0 && withQuote < positions ? (
-            <Typography.Text type="secondary" className="mt-0.5 block text-[15px] font-normal leading-snug">
+            <span className="mt-0.5 block text-[15px] font-normal leading-snug text-zinc-50">
               {withQuote}/{positions} with last price
-            </Typography.Text>
+            </span>
           ) : null}
           {withQuote === 0 && positions > 0 ? (
-            <Typography.Text type="secondary" className="mt-0.5 block text-[15px] font-normal leading-snug">
+            <span className="mt-0.5 block text-[15px] font-normal leading-snug text-zinc-50">
               Needs DSE last price
-            </Typography.Text>
+            </span>
           ) : null}
         </div>
 
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[15rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
             Net Gain/Loss
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
@@ -542,10 +542,10 @@ export function PortfolioHoldingsTable({
         </div>
 
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400">
+          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
             Total invested
           </div>
-          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
+          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-50">
             {formatBdt(totalInvestedBdt)}
           </div>
         </div>
@@ -562,7 +562,7 @@ export function PortfolioHoldingsTable({
             size="middle"
           />
           <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <span className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Filter:</span>
+            <span className="text-[13px] font-medium text-zinc-50">Filter:</span>
             <Select<WatchlistClassFilter>
               value={classFilter}
               onChange={setClassFilter}
@@ -638,7 +638,7 @@ export function PortfolioHoldingsTable({
 
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
-          <p className="text-left text-[15px] font-normal leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-left text-[15px] font-normal leading-relaxed text-zinc-50">
             Edit shares, average cost, and total invested for any row. Changing average updates total (and the other way
             around); changing shares keeps average and updates total. You can save even if total and shares × average differ
             slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that
