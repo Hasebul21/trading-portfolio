@@ -101,7 +101,7 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
                     {headerErr.message}
                 </p>
                 {missing ? (
-                    <p className="text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
+                    <p className="text-[15px] font-normal leading-snug text-zinc-50">
                         Run <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">{config.migrationPath}</code> in the
                         Supabase SQL Editor (or merge from <code className="rounded bg-zinc-100 px-1 dark:bg-zinc-900">supabase/schema.sql</code>), then reload.
                     </p>

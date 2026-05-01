@@ -31,7 +31,7 @@ function RuleLine({ tone, label, text }: { tone: Tone; label: string; text: stri
       >
         {label}
       </span>
-      <p className="min-w-0 flex-1 text-left text-[15px] font-normal leading-snug text-zinc-700 dark:text-zinc-300">{text}</p>
+      <p className="min-w-0 flex-1 text-left text-[15px] font-normal leading-snug text-zinc-50">{text}</p>
     </div>
   );
 }

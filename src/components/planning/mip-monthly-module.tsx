@@ -331,13 +331,13 @@ export function MipMonthlyModule({
           if (!record.locked && Number.isFinite(pct) && pct > 0 && effective > 0) {
             const preview = calculatedAllocationBdt(pct, effective);
             return (
-              <span className="tabular-nums text-zinc-500 dark:text-zinc-400">
+              <span className="tabular-nums text-zinc-50">
                 {formatBdt(preview)}
                 <span className="ml-1 text-[13px]">(preview)</span>
               </span>
             );
           }
-          return <Typography.Text type="secondary">—</Typography.Text>;
+          return <span className="text-zinc-50">—</span>;
         },
       },
       {
@@ -349,7 +349,7 @@ export function MipMonthlyModule({
             record.note ? (
               <span>{record.note}</span>
             ) : (
-              <Typography.Text type="secondary">—</Typography.Text>
+              <span className="text-zinc-50">—</span>
             )
           ) : (
             <input
@@ -439,7 +439,7 @@ export function MipMonthlyModule({
 
       {/* ── Month selector & Total Amount ── */}
       <div className={`${shell} flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end`}>
-        <label className="w-full text-[15px] font-normal text-zinc-600 sm:w-auto dark:text-zinc-400">
+        <label className="w-full text-[15px] font-normal text-zinc-50 sm:w-auto">
           <span className="mb-1 block">Select Month</span>
           <Select
             size="middle"
@@ -482,12 +482,12 @@ export function MipMonthlyModule({
           <Typography.Title level={5} className="!mb-2 !mt-0 !text-[15px] !font-normal text-zinc-800 dark:text-zinc-100">
             {sectionTitle} setup (once this month)
           </Typography.Title>
-          <p className="mb-3 text-[15px] font-normal leading-snug text-zinc-600 dark:text-zinc-400">
+          <p className="mb-3 text-[15px] font-normal leading-snug text-zinc-50">
             Choose a date in {ymToDisplayTitle(viewYm)}, and your total monthly investment. After submit, fields lock
             and you fill the allocation table below.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-            <label className="text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+            <label className="text-[15px] font-normal text-zinc-50">
               <span className="mb-1 block">Date</span>
               <input
                 type="date"
@@ -499,7 +499,7 @@ export function MipMonthlyModule({
               />
             </label>
             <label className="min-w-0 flex-1 sm:max-w-xs">
-              <span className="mb-1 block text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
+              <span className="mb-1 block text-[15px] font-normal text-zinc-50">
                 Total monthly investment (BDT)
               </span>
               <input

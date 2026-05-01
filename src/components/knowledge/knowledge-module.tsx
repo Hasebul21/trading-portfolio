@@ -201,7 +201,7 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
         {/* Card body */}
         <div className="flex flex-col gap-4 px-5 py-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">
+            <label className="text-[14px] font-normal text-zinc-50">
               Title
             </label>
             <input
@@ -214,7 +214,7 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">
+            <label className="text-[14px] font-normal text-zinc-50">
               Note
             </label>
             <textarea
@@ -253,7 +253,7 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
       />
 
       {/* ── Results summary ── */}
-      <p className="text-[14px] font-normal text-zinc-500 dark:text-zinc-400">
+      <p className="text-[14px] font-normal text-zinc-50">
         {search.trim()
           ? `${filtered.length} result${filtered.length !== 1 ? "s" : ""} for "${search.trim()}"`
           : `${allEntries.length} entries`}
@@ -272,7 +272,7 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
 
       {/* ── Entry list ── */}
       {pageEntries.length === 0 ? (
-        <p className="rounded-lg border border-zinc-200/70 bg-zinc-50/80 px-4 py-6 text-center text-[15px] font-normal text-zinc-500 dark:border-zinc-700/50 dark:bg-zinc-900/50 dark:text-zinc-400">
+        <p className="rounded-lg border border-zinc-200/70 bg-zinc-50/80 px-4 py-6 text-center text-[15px] font-normal text-zinc-50 dark:border-zinc-700/50 dark:bg-zinc-900/50">
           No entries match your search.
         </p>
       ) : (
@@ -307,11 +307,11 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
                     </Button>
                   ) : null}
                 </div>
-                <p className="text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+                <p className="text-[15px] font-normal leading-relaxed text-zinc-50">
                   {entry.body}
                 </p>
                 {isUser ? (
-                  <p className="mt-1.5 text-[13px] font-normal text-zinc-400 dark:text-zinc-500">
+                  <p className="mt-1.5 text-[13px] font-normal text-zinc-50">
                     Added {new Date(entry.created_at).toLocaleDateString()}
                   </p>
                 ) : null}
@@ -335,7 +335,7 @@ export function KnowledgeModule({ notes }: { notes: KnowledgeNoteDTO[] }) {
         </div>
       ) : null}
 
-      <p className="rounded-lg border border-zinc-200/80 bg-zinc-50/80 px-3 py-2 text-center text-[15px] font-normal leading-snug text-zinc-600 dark:border-zinc-700/60 dark:bg-zinc-900/50 dark:text-zinc-400">
+      <p className="rounded-lg border border-zinc-200/80 bg-zinc-50/80 px-3 py-2 text-center text-[15px] font-normal leading-snug text-zinc-50 dark:border-zinc-700/60 dark:bg-zinc-900/50">
         Personal use only — not financial advice.
       </p>
     </div>

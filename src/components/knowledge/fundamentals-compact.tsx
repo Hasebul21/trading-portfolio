@@ -59,11 +59,11 @@ export function FundamentalsCompact() {
           <h3 className="text-[15px] font-normal leading-snug text-teal-800 dark:text-teal-200">
             {t.n}. {t.title}
           </h3>
-          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-50">
             <span className="text-teal-800 dark:text-teal-200">The simple version: </span>
             {t.simple}
           </p>
-          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-700 dark:text-zinc-300">
+          <p className="mt-2 text-[15px] font-normal leading-relaxed text-zinc-50">
             <span className="text-teal-800 dark:text-teal-200">How it affects you: </span>
             {t.affects}
           </p>

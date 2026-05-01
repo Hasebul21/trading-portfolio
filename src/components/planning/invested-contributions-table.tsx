@@ -24,7 +24,7 @@ export function InvestedContributionsTable({ rows }: { rows: ContributionRow[] }
       dataIndex: "created_at",
       align: "left",
       render: (v: string) => (
-        <span className="text-zinc-600 dark:text-zinc-400">
+        <span className="text-zinc-50">
           {new Date(v).toLocaleString()}
         </span>
       ),
@@ -45,9 +45,9 @@ export function InvestedContributionsTable({ rows }: { rows: ContributionRow[] }
       ellipsis: true,
       render: (v: string | null) =>
         v?.trim() ? (
-          <span className="text-zinc-700 dark:text-zinc-300">{v}</span>
+          <span className="text-zinc-50">{v}</span>
         ) : (
-          <Typography.Text type="secondary">—</Typography.Text>
+          <span className="text-zinc-50">—</span>
         ),
     },
     {

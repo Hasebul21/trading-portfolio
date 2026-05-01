@@ -52,14 +52,14 @@ export function TradePlansTable({ rows }: { rows: TradePlanRow[] }) {
       dataIndex: "planned_budget_bdt",
       align: "right",
       render: (v: number | string | null) =>
-        v == null ? <Typography.Text type="secondary">—</Typography.Text> : <span className="tabular-nums">{formatBdt(Number(v))}</span>,
+        v == null ? <span className="text-zinc-50">—</span> : <span className="tabular-nums">{formatBdt(Number(v))}</span>,
     },
     {
       title: "Note",
       dataIndex: "notes",
       align: "left",
       width: 240,
-      render: (v: string | null) => v ? <span>{v}</span> : <Typography.Text type="secondary">—</Typography.Text>,
+      render: (v: string | null) => v ? <span>{v}</span> : <span className="text-zinc-50">—</span>,
     },
     {
       title: "",

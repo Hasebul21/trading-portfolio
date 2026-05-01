@@ -114,7 +114,7 @@ const costInputClass =
   "box-border h-10 min-h-[2.5rem] w-full min-w-[3.75rem] rounded-md border border-zinc-300/90 bg-white px-2.5 py-2 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none focus:ring-1 focus:ring-teal-500/40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 const fieldLabelClass =
-  "text-[15px] font-normal tracking-normal text-zinc-500 dark:text-zinc-400";
+  "text-[15px] font-normal tracking-normal text-zinc-50";
 
 const rowFieldsLayout =
   "flex w-full min-w-0 flex-wrap items-end gap-x-3 gap-y-3 sm:gap-x-4";
@@ -124,7 +124,7 @@ const costFieldShell = "flex min-w-0 flex-1 basis-[min(100%,10rem)] flex-col gap
 
 function bdtReadCell(n: number | null) {
   if (n === null || !Number.isFinite(n)) {
-    return <Typography.Text type="secondary">—</Typography.Text>;
+    return <span className="text-zinc-50">—</span>;
   }
   return <span className="tabular-nums text-[15px] font-normal">{formatBdt(n)}</span>;
 }
@@ -136,18 +136,18 @@ function LongTermFieldsReadOnly({ row }: { row: LongTermHoldingRow }) {
         <span className={fieldLabelClass}>Buy Amount</span>
         {bdtReadCell(displayFirstBuyZone(row))}
         {!row.liveZones ? (
-          <Typography.Text type="secondary" className="text-[15px] font-normal leading-snug">
+          <span className="text-[15px] font-normal leading-snug text-zinc-50">
             Saved value (no live DSE row)
-          </Typography.Text>
+          </span>
         ) : null}
       </div>
       <div className={pointsFieldShell}>
         <span className={fieldLabelClass}>Sell Amount</span>
         {bdtReadCell(displaySellBlend(row))}
         {!row.liveZones ? (
-          <Typography.Text type="secondary" className="text-[15px] font-normal leading-snug">
+          <span className="text-[15px] font-normal leading-snug text-zinc-50">
             Saved value (no live DSE row)
-          </Typography.Text>
+          </span>
         ) : null}
       </div>
       <div className={costFieldShell}>
@@ -328,7 +328,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       width: 112,
       align: "left",
       render: (v: string) => (
-        <span className="font-mono text-[15px] font-normal text-zinc-900 dark:text-zinc-50">{v}</span>
+        <span className="font-mono text-[15px] font-normal text-zinc-50">{v}</span>
       ),
     },
     {
@@ -338,7 +338,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       align: "left",
       responsive: ["sm"],
       sorter: (a, b) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
-      render: (v: string | null) => v ? <span>{v}</span> : <Typography.Text type="secondary">Unknown</Typography.Text>,
+      render: (v: string | null) => v ? <span>{v}</span> : <span className="text-zinc-50">Unknown</span>,
     },
     {
       title: "Classification",
@@ -380,7 +380,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       align: "left",
       responsive: ["md"],
       render: (v: string) => (
-        <span className="text-zinc-600 dark:text-zinc-400">{new Date(v).toLocaleDateString()}</span>
+        <span className="text-zinc-50">{new Date(v).toLocaleDateString()}</span>
       ),
     },
     {
