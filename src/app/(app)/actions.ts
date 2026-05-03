@@ -148,6 +148,13 @@ export async function recordTransaction(
     return { error: insertError.message };
   }
 
+  // Clear any position override for this symbol so ledger calculation takes precedence
+  await supabase
+    .from("portfolio_position_overrides")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("symbol", symbol);
+
   revalidatePath("/portfolio");
   revalidatePath("/record");
   revalidatePath("/trade-history");
@@ -256,13 +263,23 @@ export async function deleteTransaction(
     .delete()
     .eq("id", id)
     .eq("user_id", user.id)
-    .select("id");
+    .select("id, symbol");
 
   if (error) {
     return { error: error.message };
   }
   if (!data?.length) {
     return { error: "That row was not found or is not yours." };
+  }
+
+  // Clear any position override for this symbol so ledger calculation takes precedence
+  const deletedSymbol = (data[0] as { symbol?: string }).symbol;
+  if (deletedSymbol) {
+    await supabase
+      .from("portfolio_position_overrides")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("symbol", deletedSymbol.trim().toUpperCase());
   }
 
   revalidatePath("/portfolio");
