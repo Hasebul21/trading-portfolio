@@ -2,6 +2,7 @@
 
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { recordTransaction, type RecordState } from "../actions";
 import { CommissionField } from "./commission-field";
 import { Alert } from "antd";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function RecordForm({ instruments, instrumentsError }: Props) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(recordTransaction, initial);
   const formRef = useRef<HTMLFormElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -35,10 +37,12 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
       setPricePerShare("");
       setSymbolInput("");
       setCommissionKey((k) => k + 1);
+      // Refresh router cache so portfolio and other pages show updated data
+      router.refresh();
     });
 
     return () => cancelAnimationFrame(id);
-  }, [state.ok]);
+  }, [state.ok, router]);
 
   useLayoutEffect(() => {
     if (!state.error && !(state.ok && !pending)) return;
