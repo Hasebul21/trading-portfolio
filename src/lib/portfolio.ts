@@ -4,11 +4,30 @@
  */
 export const BROKERAGE_COMMISSION_RATE = 0.004;
 
+/** Smaller than any meaningful share count or BDT amount we care about. */
+const EPSILON_SHARES = 1e-9;
+const EPSILON_BDT = 1e-6;
+
 /**
  * Rounds a price to the nearest DSE tick size (BDT 0.10).
  */
 export function roundToTickSize(price: number): number {
   return Math.round(price * 10) / 10;
+}
+
+/** Round a BDT amount to the nearest paisa. Hides accumulated FP drift. */
+export function roundBdt(amount: number): number {
+  if (!Number.isFinite(amount)) return 0;
+  return Math.round(amount * 100) / 100;
+}
+
+/** Treat sub-paisa amounts as zero (used after subtraction-driven cancellations). */
+function snapZeroBdt(amount: number): number {
+  return Math.abs(amount) < EPSILON_BDT ? 0 : amount;
+}
+
+function snapZeroShares(shares: number): number {
+  return Math.abs(shares) < EPSILON_SHARES ? 0 : shares;
 }
 
 /**
@@ -57,15 +76,17 @@ function num(v: string | number): number {
 }
 
 /**
- * Sum of **sell-only** gain/loss from the ledger, in chronological order.
- * For each sell row (after buys have built the book): take **portfolio average
- * cost per share** just before that sell, **sell quantity** and **sell price**
- * from the row. Each sell adds:
+ * Sum of **realized** gain/loss across every sell in the ledger, in
+ * chronological order.
  *
- * `(sell_price × sell_qty) − (avg_at_sell × sell_qty) − sell_fees`
+ * For each sell, using the running portfolio average cost just before the sell:
  *
- * (same as net proceeds minus cost of shares sold). Buy-side `fees_bdt` are
- * already inside `avg` via {@link aggregateHoldings} rules.
+ *     realizedPnL += (sell_price − avg_cost_before_sell) × sell_qty
+ *
+ * Buy-side `fees_bdt` are folded into `avg_cost_before_sell` inside the
+ * aggregator, so they are accounted for. Sell-side `fees_bdt` are deliberately
+ * **not** subtracted here — they remain a separate trading expense and never
+ * touch realized G/L, which represents the gross trade gain.
  */
 export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
   type State = {
@@ -104,26 +125,24 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
       state.feesInPosition += fees;
       state.totalCost += qty * price + fees;
       state.shares = newShares;
-      state.avg = newShares > 0 ? state.totalCost / newShares : 0;
+      state.avg = newShares > EPSILON_SHARES ? state.totalCost / newShares : 0;
     } else {
       const preShares = state.shares;
       const sellQty = Math.min(qty, preShares);
       const avgCost = state.avg;
 
-      if (preShares > 0 && sellQty > 0) {
+      if (preShares > EPSILON_SHARES && sellQty > 0) {
         // realizedPnL = (sellPrice − avgCost) × qty
-        // Buy fees are already embedded in avgCost; sell fees are not
-        // deducted here so that realizedGainLoss reflects the gross trade gain.
+        // Buy fees are already embedded in avgCost; sell fees are tracked
+        // outside realized G/L so this represents the gross trade gain.
         realized += (price - avgCost) * sellQty;
-      }
 
-      if (preShares > 0 && sellQty > 0) {
         const soldFraction = sellQty / preShares;
         state.feesInPosition -= soldFraction * state.feesInPosition;
       }
-      state.totalCost -= sellQty * avgCost;
-      state.shares -= sellQty;
-      if (state.shares <= 0) {
+      state.totalCost = snapZeroBdt(state.totalCost - sellQty * avgCost);
+      state.shares = snapZeroShares(state.shares - sellQty);
+      if (state.shares <= EPSILON_SHARES) {
         state.shares = 0;
         state.totalCost = 0;
         state.feesInPosition = 0;
@@ -134,7 +153,7 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
     }
   }
 
-  return Math.round(realized * 100) / 100;
+  return roundBdt(realized);
 }
 
 export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
@@ -180,17 +199,17 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
       state.feesInPosition += fees;
       state.totalCost += qty * price + fees;
       state.shares = newShares;
-      state.avg = newShares > 0 ? state.totalCost / newShares : 0;
+      state.avg = newShares > EPSILON_SHARES ? state.totalCost / newShares : 0;
     } else {
       const preShares = state.shares;
       const sellQty = Math.min(qty, preShares);
-      if (preShares > 0 && sellQty > 0) {
+      if (preShares > EPSILON_SHARES && sellQty > 0) {
         const soldFraction = sellQty / preShares;
         state.feesInPosition -= soldFraction * state.feesInPosition;
       }
-      state.totalCost -= sellQty * state.avg;
-      state.shares -= sellQty;
-      if (state.shares <= 0) {
+      state.totalCost = snapZeroBdt(state.totalCost - sellQty * state.avg);
+      state.shares = snapZeroShares(state.shares - sellQty);
+      if (state.shares <= EPSILON_SHARES) {
         state.shares = 0;
         state.totalCost = 0;
         state.feesInPosition = 0;
@@ -202,16 +221,15 @@ export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
   }
 
   return [...bySymbol.entries()]
-    .filter(([, s]) => s.shares > 0)
+    .filter(([, s]) => s.shares > EPSILON_SHARES)
     .map(([symbol, s]) => ({
       symbol,
       shares: s.shares,
       category: s.category,
-      totalCost: s.totalCost,
+      totalCost: roundBdt(s.totalCost),
       avgPrice: s.avg,
       breakEvenPrice: calculateBreakEvenPrice(s.avg),
-      feesInPositionBdt:
-        Math.round(Math.max(0, s.feesInPosition) * 100) / 100,
+      feesInPositionBdt: roundBdt(Math.max(0, s.feesInPosition)),
     }));
 }
 
@@ -247,9 +265,9 @@ export function sharesAvailableForSymbol(
 export function totalInvestedBdt(holdings: HoldingRow[]): number {
   let sum = 0;
   for (const h of holdings) {
-    if (Number.isFinite(h.totalCost)) sum += h.totalCost;
+    if (Number.isFinite(h.totalCost) && h.totalCost > 0) sum += h.totalCost;
   }
-  return Math.round(sum * 100) / 100;
+  return roundBdt(sum);
 }
 
 /**
@@ -270,7 +288,7 @@ export function unrealizedGainLossBdt(
       quotedCount += 1;
     }
   }
-  return { value: Math.round(value * 100) / 100, quotedCount };
+  return { value: roundBdt(value), quotedCount };
 }
 
 export type PortfolioSummary = {
@@ -303,8 +321,8 @@ export function computePortfolioSummary(
     holdings,
     ltpBySymbol,
   );
-  const realized = Math.round(realizedGainLoss * 100) / 100;
-  const net = Math.round((realized + unrealizedGainLoss) * 100) / 100;
+  const realized = roundBdt(realizedGainLoss);
+  const net = roundBdt(realized + unrealizedGainLoss);
   return {
     totalInvested,
     realizedGainLoss: realized,

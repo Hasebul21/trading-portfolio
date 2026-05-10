@@ -21,12 +21,10 @@ const NAV_ITEMS: NavItem[] = [
   // ── Trading group ─────────────────────────────
   { type: "link", href: "/trade-plans", label: "Quick-trade" },
   { type: "link", href: "/mip", label: "MIP" },
-  { type: "link", href: "/draft-mip", label: "Draft MIP" },
   { type: "divider" },
   // ── Records / misc ────────────────────────────
   { type: "link", href: "/trade-history", label: "History" },
   { type: "link", href: "/invested", label: "Capital" },
-  { type: "link", href: "/knowledge", label: "Knowledge" },
   { type: "link", href: "/settings", label: "Settings" },
 ];
 

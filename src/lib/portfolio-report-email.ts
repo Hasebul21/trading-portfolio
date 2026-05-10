@@ -1,6 +1,11 @@
 import { Resend } from "resend";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { aggregateHoldings, totalRealizedProfitLossBdt, type TransactionRow } from "@/lib/portfolio";
+import {
+  aggregateHoldings,
+  computePortfolioSummary,
+  totalRealizedProfitLossBdt,
+  type TransactionRow,
+} from "@/lib/portfolio";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 import { holdingsToMarketRows } from "@/lib/market/portfolio-with-quotes";
@@ -63,13 +68,14 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
   drawText(`Generated: ${new Date().toLocaleString()}`, 300, y, 13);
   y -= 28;
 
-  // Summary cards row
+  // Summary cards row — same four metrics shown on the live portfolio page.
   const summaryItems = [
     { label: "Total Invested", value: `BDT ${fmt2(summary.totalInvested)}` },
+    { label: "Realized G/L", value: `BDT ${fmt2(summary.totalRealizedBdt)}` },
     { label: "Unrealized P/L", value: `BDT ${fmt2(summary.totalUnrealized)}` },
-    { label: "Net Gain/Loss", value: `BDT ${fmt2(summary.totalRealizedBdt)}` },
+    { label: "Net Gain/Loss", value: `BDT ${fmt2(summary.netGainLoss)}` },
   ];
-  const cardW = (tableWidth - 30) / 3;
+  const cardW = (tableWidth - 45) / 4;
   summaryItems.forEach((item, i) => {
     const cx = margin + i * (cardW + 15);
     page.drawRectangle({ x: cx, y: y - 10, width: cardW, height: 48, color: rgb(0.95, 0.97, 0.99), borderColor: rgb(0.82, 0.88, 0.92), borderWidth: 0.8 });
@@ -155,21 +161,19 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
 }
 
 function buildSummary(payload: ReportPayload) {
-  let totalInvested = 0;
-  let totalUnrealized = 0;
-  let quotedCount = 0;
-  for (const row of payload.rows) {
-    totalInvested += Number.isFinite(row.totalCost) ? row.totalCost : 0;
-    if (row.unrealizedPl !== null && Number.isFinite(row.unrealizedPl)) {
-      totalUnrealized += row.unrealizedPl;
-      quotedCount += 1;
-    }
-  }
+  // Use the same `computePortfolioSummary` helper the UI uses so the report
+  // and the live portfolio screen always agree on totals — including the
+  // `netGainLoss = realized + unrealized` rule.
+  const ltpMap = new Map<string, number | null | undefined>();
+  for (const row of payload.rows) ltpMap.set(row.symbol, row.marketLtp);
+  const summary = computePortfolioSummary(payload.rows, payload.totalRealizedBdt, ltpMap);
+
   return {
-    totalInvested,
-    totalUnrealized,
-    totalRealizedBdt: payload.totalRealizedBdt,
-    quotedCount,
+    totalInvested: summary.totalInvested,
+    totalUnrealized: summary.unrealizedGainLoss,
+    totalRealizedBdt: summary.realizedGainLoss,
+    netGainLoss: summary.netGainLoss,
+    quotedCount: summary.quotedPositionCount,
     totalRows: payload.rows.length,
   };
 }
@@ -206,9 +210,10 @@ export async function sendPortfolioReportEmail(
       `Portfolio report (${trigger})`,
       `Date: ${new Date().toLocaleString()}`,
       "",
-      `Total unrealized P/L: BDT ${fmt2(summary.totalUnrealized)}`,
-      `Net Gain/Loss: BDT ${fmt2(summary.totalRealizedBdt)}`,
       `Total invested: BDT ${fmt2(summary.totalInvested)}`,
+      `Realized G/L: BDT ${fmt2(summary.totalRealizedBdt)}`,
+      `Unrealized P/L: BDT ${fmt2(summary.totalUnrealized)}`,
+      `Net Gain/Loss (Realized + Unrealized): BDT ${fmt2(summary.netGainLoss)}`,
       "",
       `Open positions: ${summary.totalRows}`,
       `Positions with market price: ${summary.quotedCount}`,
@@ -219,9 +224,10 @@ export async function sendPortfolioReportEmail(
       <h2>Portfolio report (${trigger})</h2>
       <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
       <ul>
-        <li><strong>Total unrealized P/L:</strong> BDT ${fmt2(summary.totalUnrealized)}</li>
-        <li><strong>Net Gain/Loss:</strong> BDT ${fmt2(summary.totalRealizedBdt)}</li>
         <li><strong>Total invested:</strong> BDT ${fmt2(summary.totalInvested)}</li>
+        <li><strong>Realized G/L:</strong> BDT ${fmt2(summary.totalRealizedBdt)}</li>
+        <li><strong>Unrealized P/L:</strong> BDT ${fmt2(summary.totalUnrealized)}</li>
+        <li><strong>Net Gain/Loss (Realized + Unrealized):</strong> BDT ${fmt2(summary.netGainLoss)}</li>
         <li><strong>Open positions:</strong> ${summary.totalRows}</li>
         <li><strong>Positions with market price:</strong> ${summary.quotedCount}</li>
       </ul>

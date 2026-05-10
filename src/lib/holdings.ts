@@ -42,8 +42,10 @@ export async function fetchUserHoldings() {
   const ledger = aggregateHoldings(txRows);
   const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
-  // Invested capital reflects only active holdings — realized P/L stays out.
-  const totalInvested = totalInvestedBdt(ledger);
+  // Invested capital reflects only active holdings (after merging any user
+  // overrides). Sums the same `totalCost` numbers that the holdings table
+  // displays, so header total and per-row column always agree.
+  const totalInvested = totalInvestedBdt(holdings);
 
   return {
     error: null as string | null,

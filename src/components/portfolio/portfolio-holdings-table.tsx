@@ -9,6 +9,7 @@ import {
   formatNumberMax2Decimals,
   formatPlainNumberMax2Decimals,
 } from "@/lib/format-bdt";
+import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import {
@@ -25,15 +26,6 @@ type Row = PortfolioMarketRow & { key: string };
 type BookDraft = { shares: string; avg: string; total: string };
 
 const { Search } = Input;
-
-const biasLineColumnTitle = (
-  <span className="block whitespace-normal text-right text-[15px] font-normal leading-snug">
-    Bias Line
-    <span className="block pt-0.5 text-[15px] font-normal normal-case text-zinc-50">
-      (Buy Above / Sell Below)
-    </span>
-  </span>
-);
 
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
@@ -53,24 +45,33 @@ function PlIndicator({ value }: { value: number }) {
   );
 }
 
-function unrealizedTotals(rows: PortfolioMarketRow[]) {
-  let sum = 0;
-  let withQuote = 0;
-  for (const h of rows) {
-    const pl = h.unrealizedPl;
-    if (pl !== null && Number.isFinite(pl)) {
-      sum += pl;
-      withQuote += 1;
-    }
-  }
-  return { sum, withQuote, positions: rows.length };
-}
-
-function fmtPivotCell(n: number | null | undefined) {
-  if (n === null || n === undefined || !Number.isFinite(n)) {
-    return <span className="text-zinc-50">—</span>;
-  }
-  return <span className="tabular-nums">{formatNumberMax2Decimals(n)}</span>;
+/**
+ * Single source of truth for the four summary cards: builds the
+ * {@link computePortfolioSummary} structure from the rows currently visible
+ * (so the preview during "Edit book" reflects the draft consistently).
+ */
+function summaryFromRows(
+  rows: PortfolioMarketRow[],
+  totalRealizedBdt: number,
+): {
+  totalInvested: number;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+  netGainLoss: number;
+  withQuote: number;
+  positions: number;
+} {
+  const ltpMap = new Map<string, number | null | undefined>();
+  for (const h of rows) ltpMap.set(h.symbol, h.marketLtp);
+  const summary = computePortfolioSummary(rows, totalRealizedBdt, ltpMap);
+  return {
+    totalInvested: summary.totalInvested,
+    realizedGainLoss: summary.realizedGainLoss,
+    unrealizedGainLoss: summary.unrealizedGainLoss,
+    netGainLoss: summary.netGainLoss,
+    withQuote: summary.quotedPositionCount,
+    positions: rows.length,
+  };
 }
 
 function parseBookNumber(raw: string): number | null {
@@ -143,9 +144,9 @@ export function PortfolioHoldingsTable({
   onAfterBookSave,
 }: {
   holdings: PortfolioMarketRow[];
-  /** Sell-only net: Σ (sell price − avg at sell) × qty − sell fees (from ledger). */
+  /** Realized G/L from completed sells: Σ (sell price − avg at sell) × qty. */
   totalRealizedBdt?: number;
-  /** Ledger-based invested amount: buys add, sells deduct cost basis. */
+  /** Active capital only — buys add, sells deduct cost basis at avg. */
   totalInvestedBdt?: number;
   classificationMap?: Record<string, WatchlistClassification>;
   enableBookEdit?: boolean;
@@ -186,15 +187,39 @@ export function PortfolioHoldingsTable({
       const tot = parseBookNumber(d.total);
       if (sh === null || av === null || tot === null) return h;
       if (!(sh > 0) || av < 0 || tot < 0) return h;
+      // Break-even must follow the edited average so the preview's unrealized P/L
+      // uses the same formula as the live row, `(LTP − breakEvenPrice) × shares`.
+      const breakEvenPrice = calculateBreakEvenPrice(av);
       const unrealizedPl =
         h.marketLtp !== null && Number.isFinite(h.marketLtp)
-          ? (h.marketLtp - av) * sh
+          ? (h.marketLtp - breakEvenPrice) * sh
           : null;
-      return { ...h, shares: sh, avgPrice: av, totalCost: tot, unrealizedPl };
+      return {
+        ...h,
+        shares: sh,
+        avgPrice: av,
+        totalCost: tot,
+        breakEvenPrice,
+        unrealizedPl,
+      };
     });
   }, [holdings, draft, bookEditing]);
 
-  const { sum: totalUnrealized, withQuote, positions } = unrealizedTotals(displayHoldings);
+  const summary = useMemo(
+    () => summaryFromRows(displayHoldings, totalRealizedBdt),
+    [displayHoldings, totalRealizedBdt],
+  );
+  const {
+    totalInvested: totalInvestedComputed,
+    unrealizedGainLoss: totalUnrealized,
+    netGainLoss: netGl,
+    withQuote,
+    positions,
+  } = summary;
+  // Prefer the server-provided invested total when nothing is being edited so
+  // we honour any rounding/aggregation done server-side; while editing, fall
+  // back to the rows-derived total which reflects the draft.
+  const totalInvestedDisplay = bookEditing ? totalInvestedComputed : totalInvestedBdt;
 
   const data: Row[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
@@ -436,67 +461,6 @@ export function PortfolioHoldingsTable({
             <PlIndicator value={v} />
           ),
       },
-      {
-        title: "Last price (DSE)",
-        dataIndex: "marketLtp",
-        width: 118,
-        align: "right",
-        responsive: ["md"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.marketLtp),
-            showSorterTooltip: { title: "Sort by last price" },
-          }
-          : {}),
-        render: (v: number | null) =>
-          v === null ? (
-            <span className="text-zinc-50">—</span>
-          ) : (
-            <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
-          ),
-      },
-      {
-        title: biasLineColumnTitle,
-        key: "pivot",
-        width: 132,
-        align: "right",
-        responsive: ["lg"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.pivot),
-            showSorterTooltip: { title: "Sort by bias line (floor pivot)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.pivot ?? null),
-      },
-      {
-        title: "First Buy Zone",
-        key: "s1",
-        width: 120,
-        align: "right",
-        responsive: ["lg"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.s1),
-            showSorterTooltip: { title: "Sort by first buy zone (S1)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.s1 ?? null),
-      },
-      {
-        title: "Strong Sell Zone",
-        key: "r2",
-        width: 128,
-        align: "right",
-        responsive: ["xl"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.pivot?.r2),
-            showSorterTooltip: { title: "Sort by strong sell zone (R2)" },
-          }
-          : {}),
-        render: (_: unknown, row) => fmtPivotCell(row.pivot?.r2 ?? null),
-      },
     ];
   }, [bookEditing, classificationMap, draft, patchDraft]);
 
@@ -512,7 +476,7 @@ export function PortfolioHoldingsTable({
             Total invested
           </div>
           <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-50">
-            {formatBdt(totalInvestedBdt)}
+            {formatBdt(totalInvestedDisplay)}
           </div>
           <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
             Active holdings only
@@ -571,7 +535,7 @@ export function PortfolioHoldingsTable({
                 —
               </span>
             ) : (
-              <PlIndicator value={totalRealizedBdt + (withQuote === 0 ? 0 : totalUnrealized)} />
+              <PlIndicator value={netGl} />
             )}
           </div>
           <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">

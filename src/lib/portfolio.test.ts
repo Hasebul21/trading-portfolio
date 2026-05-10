@@ -268,4 +268,95 @@ describe("computePortfolioSummary", () => {
     // Only ABC contributes — break-even ~10.1, so ~ (12 − 10.1) × 10 ≈ 19.
     expect(value).toBeGreaterThan(0);
   });
+
+  it("netGainLoss is exactly realized + unrealized (no double-rounding drift)", () => {
+    const rows = [buy("1", "ABC", 17, 13.37, 0, 0), sell("2", "ABC", 5, 14.21, 0, 1)];
+    const holdings = aggregateHoldings(rows);
+    const realized = totalRealizedProfitLossBdt(rows);
+    const ltp = new Map<string, number | null>([["ABC", 13.55]]);
+    const summary = computePortfolioSummary(holdings, realized, ltp);
+    // Fundamental invariant: net = realized + unrealized to within 1 paisa.
+    expect(Math.abs(summary.netGainLoss - (summary.realizedGainLoss + summary.unrealizedGainLoss)))
+      .toBeLessThanOrEqual(0.01);
+  });
+});
+
+describe("transaction edit/delete behavior", () => {
+  it("deleting a sell transaction restores shares, totalCost, and realized G/L", () => {
+    const beforeDelete = [buy("1", "ABC", 20, 10), sell("2", "ABC", 8, 12)];
+    const afterDelete = [buy("1", "ABC", 20, 10)];
+
+    const before = aggregateHoldings(beforeDelete).find((h) => h.symbol === "ABC");
+    const after = aggregateHoldings(afterDelete).find((h) => h.symbol === "ABC");
+
+    expect(before?.shares).toBe(12);
+    expect(after?.shares).toBe(20);
+    expect(after?.totalCost).toBe(200);
+
+    expect(totalRealizedProfitLossBdt(beforeDelete)).toBe(16);
+    expect(totalRealizedProfitLossBdt(afterDelete)).toBe(0);
+  });
+
+  it("deleting a buy transaction recomputes the average correctly from the remaining buys", () => {
+    // 10 @ 10 and 10 @ 20 → avg 15. Delete the 10 @ 20 buy → avg back to 10.
+    const before = [buy("1", "ABC", 10, 10, 0, 0), buy("2", "ABC", 10, 20, 0, 1)];
+    const after = [buy("1", "ABC", 10, 10, 0, 0)];
+
+    const beforeAvg = aggregateHoldings(before).find((h) => h.symbol === "ABC")?.avgPrice;
+    const afterAvg = aggregateHoldings(after).find((h) => h.symbol === "ABC")?.avgPrice;
+    expect(beforeAvg).toBeCloseTo(15, 5);
+    expect(afterAvg).toBeCloseTo(10, 5);
+  });
+
+  it("realized P/L is order-independent: same total regardless of input row order", () => {
+    const a = [buy("1", "ABC", 10, 10, 0, 0), sell("2", "ABC", 5, 12, 0, 1)];
+    const b = [a[1]!, a[0]!]; // reversed
+    expect(totalRealizedProfitLossBdt(a)).toBe(totalRealizedProfitLossBdt(b));
+  });
+});
+
+describe("floating-point precision", () => {
+  it("fully-sold position cleans up to exactly zero with non-integer quantities", () => {
+    // 0.1 + 0.2 ≠ 0.3 in IEEE 754 — make sure totals don't leak through.
+    const rows = [
+      buy("1", "ABC", 0.1, 100, 0, 0),
+      buy("2", "ABC", 0.2, 100, 0, 1),
+      sell("3", "ABC", 0.3, 110, 0, 2),
+    ];
+    const holdings = aggregateHoldings(rows);
+    expect(holdings.find((h) => h.symbol === "ABC")).toBeUndefined();
+  });
+
+  it("totalCost in the output is rounded to paisa (no 1e-13 leftovers)", () => {
+    const rows = [buy("1", "ABC", 7, 14.37), sell("2", "ABC", 3, 14.4)];
+    const holding = aggregateHoldings(rows).find((h) => h.symbol === "ABC")!;
+    // Output should be representable with at most 2 decimals.
+    expect(holding.totalCost).toBeCloseTo(Math.round(holding.totalCost * 100) / 100, 6);
+  });
+});
+
+describe("multiple buys then sells", () => {
+  it("partial sell uses the running weighted average and leaves it unchanged", () => {
+    // Buy 10 @ 10, buy 10 @ 20 → avg 15. Sell 5 @ 25.
+    // Realized = (25 − 15) × 5 = 50. Remaining: 15 sh, totalCost = 225, avg = 15.
+    const rows = [
+      buy("1", "ABC", 10, 10, 0, 0),
+      buy("2", "ABC", 10, 20, 0, 1),
+      sell("3", "ABC", 5, 25, 0, 2),
+    ];
+
+    const holding = aggregateHoldings(rows).find((h) => h.symbol === "ABC")!;
+    expect(holding.shares).toBe(15);
+    expect(holding.totalCost).toBeCloseTo(225, 5);
+    expect(holding.avgPrice).toBeCloseTo(15, 5);
+    expect(totalRealizedProfitLossBdt(rows)).toBe(50);
+  });
+
+  it("buy fees are folded into avg cost and into realized P/L through the average", () => {
+    // Buy 10 @ 100 with 5 BDT fees → totalCost 1005, avg 100.5.
+    // Sell 10 @ 100. Realized = (100 − 100.5) × 10 = −5 (= the buy fee absorbed).
+    const rows = [buy("1", "ABC", 10, 100, 5, 0), sell("2", "ABC", 10, 100, 0, 1)];
+    expect(totalRealizedProfitLossBdt(rows)).toBeCloseTo(-5, 5);
+    expect(aggregateHoldings(rows).length).toBe(0);
+  });
 });

@@ -6,14 +6,9 @@ import {
     type MipMonthlyRowDTO,
 } from "@/components/planning/mip-monthly-module";
 import {
-    addDraftMipMonthlyRow,
     addMipMonthlyRow,
-    deleteDraftMipMonthlyRow,
-    lockDraftMipMonthlyRow,
     lockMipMonthlyRow,
-    resetDraftMipMonthlySetup,
     resetMipMonthlySetup,
-    submitDraftMipMonthlySetup,
     submitMipMonthlySetup,
 } from "@/app/(app)/planning-actions";
 import { getMonthlyPlanSectionConfig, type MonthlyPlanSectionKey } from "@/lib/monthly-plan-sections";
@@ -33,13 +28,6 @@ const ACTIONS = {
         deleteRowAction: undefined,
         lockRowAction: lockMipMonthlyRow,
         resetSetupAction: resetMipMonthlySetup,
-    },
-    draftMip: {
-        submitSetupAction: submitDraftMipMonthlySetup,
-        addRowAction: addDraftMipMonthlyRow,
-        deleteRowAction: deleteDraftMipMonthlyRow,
-        lockRowAction: lockDraftMipMonthlyRow,
-        resetSetupAction: resetDraftMipMonthlySetup,
     },
 } as const;
 
@@ -151,14 +139,12 @@ export async function MonthlyPlanPage({ searchParams, sectionKey }: PageProps) {
     );
     const totalBalanceBdt = Math.round((totalInvestedBdt - totalAllocatedBdt) * 100) / 100;
 
-    // MIP is immutable once created for a month; only Draft MIP allows reset
-    const canResetThisMonth = sectionKey === "draftMip" && !!header;
+    // MIP is immutable once created for a month.
+    const canResetThisMonth = false;
 
     return (
-        <AppPageStack
-            gapClass="gap-4 sm:gap-5"
-            className={`mx-auto min-w-0 text-left ${sectionKey === "draftMip" ? "max-w-6xl" : "max-w-4xl"}`}
-        >
+        <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto min-w-0 max-w-4xl text-left">
+
             <AppPageHeader title={config.title} />
             <MipMonthlyModule
                 key={`${config.routePath}:${viewYm}`}

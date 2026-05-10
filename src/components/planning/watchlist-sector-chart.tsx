@@ -20,61 +20,66 @@ const COLORS = [
     "#8b5cf6", // violet
 ];
 
-function buildSectorSlices(
-    holdings: PortfolioHoldingForChart[],
-): Array<{
+type SectorSlice = {
     sector: string;
     count: number;
+    /** Raw (unrounded) sum of totalCost across the sector. Used for percent math. */
     totalInvested: number;
-}> {
-    const sectorMap: Record<string, { count: number; totalInvested: number }> = {};
+};
+
+function buildSectorSlices(
+    holdings: PortfolioHoldingForChart[],
+): { slices: SectorSlice[]; total: number } {
+    const sectorMap = new Map<string, { count: number; totalInvested: number }>();
+    let total = 0;
 
     for (const holding of holdings) {
-        const sector = holding.sector ?? "Unknown";
-        if (!sectorMap[sector]) {
-            sectorMap[sector] = { count: 0, totalInvested: 0 };
-        }
-        sectorMap[sector].count += 1;
-        sectorMap[sector].totalInvested += holding.totalCost;
+        const cost = Number(holding.totalCost);
+        // Defensive: ignore NaN/Infinity and non-positive book values so they
+        // can't inflate the count without contributing to the total (which
+        // would skew every percentage on the legend).
+        if (!Number.isFinite(cost) || cost <= 0) continue;
+
+        const sector = holding.sector?.trim() || "Unknown";
+        const entry = sectorMap.get(sector) ?? { count: 0, totalInvested: 0 };
+        entry.count += 1;
+        entry.totalInvested += cost;
+        sectorMap.set(sector, entry);
+        total += cost;
     }
 
-    return Object.entries(sectorMap)
-        .map(([sector, { count, totalInvested }]) => ({
-            sector,
-            count,
-            totalInvested: Math.round(totalInvested * 100) / 100,
-        }))
+    const slices = [...sectorMap.entries()]
+        .map(([sector, { count, totalInvested }]) => ({ sector, count, totalInvested }))
         .sort((a, b) => b.totalInvested - a.totalInvested);
+
+    return { slices, total };
 }
 
-function chartBackground(
-    slices: Array<{ sector: string; count: number; totalInvested: number }>,
-): string {
-    if (slices.length === 0) return "transparent";
-
-    const total = slices.reduce((sum, s) => sum + s.totalInvested, 0);
-    if (total === 0) return "transparent";
+function chartBackground(slices: SectorSlice[], total: number): string {
+    if (slices.length === 0 || total <= 0) return "transparent";
 
     const stops: string[] = [];
     let cumulativePercent = 0;
 
-    for (const slice of slices) {
+    slices.forEach((slice, i) => {
         const percent = (slice.totalInvested / total) * 100;
-        const color = COLORS[(stops.length / 2) % COLORS.length];
+        const color = COLORS[i % COLORS.length];
         stops.push(`${color} ${cumulativePercent}%`);
-        cumulativePercent += percent;
+        // Snap the last stop to exactly 100% so cumulative FP error doesn't
+        // leave a hairline gap between the final slice and the start.
+        cumulativePercent =
+            i === slices.length - 1 ? 100 : cumulativePercent + percent;
         stops.push(`${color} ${cumulativePercent}%`);
-    }
+    });
 
     return `conic-gradient(${stops.join(", ")})`;
 }
 
 export function WatchlistSectorChart({ holdings }: { holdings: PortfolioHoldingForChart[] }) {
-    const slices = useMemo(() => buildSectorSlices(holdings), [holdings]);
-    const total = useMemo(() => slices.reduce((sum, s) => sum + s.totalInvested, 0), [slices]);
-    const bg = useMemo(() => chartBackground(slices), [slices]);
+    const { slices, total } = useMemo(() => buildSectorSlices(holdings), [holdings]);
+    const bg = useMemo(() => chartBackground(slices, total), [slices, total]);
 
-    if (slices.length === 0 || total === 0) {
+    if (slices.length === 0 || total <= 0) {
         return null;
     }
 

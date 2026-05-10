@@ -9,7 +9,7 @@ export type PortfolioMarketRow = HoldingRow & {
   sector: string | null;
   marketLtp: number | null;
   pivot: FloorPivot | null;
-  /** (LTP − avg) × shares when LTP known */
+  /** (LTP − breakEvenPrice) × shares when LTP known. Includes round-trip fees. */
   unrealizedPl: number | null;
 };
 

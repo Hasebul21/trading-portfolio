@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { computeTradeCommissionBdt } from "@/lib/fees/trade-commission";
 import {
   aggregateHoldings,
+  roundBdt,
+  type HoldingRow,
   type TransactionRow,
 } from "@/lib/portfolio";
 import {
@@ -14,6 +16,7 @@ import {
 } from "@/lib/portfolio-overrides";
 import { formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
 import { buildReportForUser, sendPortfolioReportEmail } from "@/lib/portfolio-report-email";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -32,6 +35,65 @@ export type PortfolioSaveRow = {
   avgPrice: number;
   totalCost: number;
 };
+
+/**
+ * Reconcile a watchlist row (`long_term_holdings`) with the post-transaction
+ * ledger for one symbol. Centralises the rule used by both `recordTransaction`
+ * and `deleteTransaction` so the watchlist's "tracked amount" never drifts
+ * from the actual portfolio book.
+ *
+ * Rules:
+ * 1. If the user holds nothing for this symbol after the change, both manual
+ *    cost overrides are cleared so the row no longer shows stale figures for
+ *    shares we don't own.
+ * 2. Otherwise, if the user has set `manual_total_invested_bdt` *and* it is
+ *    higher than the new ledger book value, snap it down to ledger book value
+ *    (selling can only reduce invested capital, never increase it).
+ *    `manual_avg_cost_bdt` is left alone — partial sells with cost-basis
+ *    deduction don't change the average price.
+ */
+async function syncWatchlistAfterLedgerChange(
+  supabase: SupabaseClient,
+  userId: string,
+  symbol: string,
+  newLedger: HoldingRow[],
+): Promise<void> {
+  const sym = symbol.trim().toUpperCase();
+  if (!sym) return;
+
+  const remaining = newLedger.find((h) => h.symbol === sym);
+  const remainingShares = remaining?.shares ?? 0;
+  const newBook = remaining?.totalCost ?? 0;
+
+  const { data: ltRow } = await supabase
+    .from("long_term_holdings")
+    .select("id, manual_avg_cost_bdt, manual_total_invested_bdt")
+    .eq("user_id", userId)
+    .ilike("symbol", sym)
+    .maybeSingle();
+
+  if (!ltRow) return;
+
+  const patch: Record<string, number | null> = {};
+
+  if (remainingShares <= 0) {
+    if (ltRow.manual_avg_cost_bdt !== null) patch.manual_avg_cost_bdt = null;
+    if (ltRow.manual_total_invested_bdt !== null) patch.manual_total_invested_bdt = null;
+  } else if (ltRow.manual_total_invested_bdt !== null) {
+    const currentManual = Number(ltRow.manual_total_invested_bdt);
+    if (Number.isFinite(currentManual) && currentManual > newBook) {
+      patch.manual_total_invested_bdt = roundBdt(newBook);
+    }
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  await supabase
+    .from("long_term_holdings")
+    .update(patch)
+    .eq("id", ltRow.id)
+    .eq("user_id", userId);
+}
 
 export async function sendManualPortfolioReportEmail(): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
@@ -107,9 +169,6 @@ export async function recordTransaction(
 
   const txs = (rows ?? []) as TransactionRow[];
 
-  // Resolve current holding for sell validation and watchlist sync.
-  let holdingBeforeSell: import("@/lib/portfolio").HoldingRow | undefined;
-
   if (side === "sell") {
     const ledger = aggregateHoldings(txs);
     const { rows: overrides, error: ovErr } = await fetchPositionOverrides(supabase);
@@ -117,7 +176,7 @@ export async function recordTransaction(
       return { error: ovErr };
     }
     const merged = mergeLedgerWithOverrides(ledger, overrides);
-    holdingBeforeSell = merged.find((h) => h.symbol === symbol);
+    const holdingBeforeSell = merged.find((h) => h.symbol === symbol);
     const available = holdingBeforeSell?.shares ?? 0;
     if (quantity > available) {
       return {
@@ -158,42 +217,23 @@ export async function recordTransaction(
     .eq("user_id", user.id)
     .eq("symbol", symbol);
 
-  // Sync watchlist (long_term_holdings) manual invested amount after a sell.
-  // Partial sell: reduce manual_total_invested_bdt by avgCost × qtySold.
-  // Full sell: clear both manual_total_invested_bdt and manual_avg_cost_bdt.
-  if (side === "sell" && holdingBeforeSell) {
-    const avgCost = holdingBeforeSell.avgPrice;
-    const remainingShares = holdingBeforeSell.shares - quantity;
-
-    const { data: ltRow } = await supabase
-      .from("long_term_holdings")
-      .select("id, manual_total_invested_bdt")
-      .eq("user_id", user.id)
-      .ilike("symbol", symbol)
-      .maybeSingle();
-
-    if (ltRow) {
-      const patch: Record<string, number | null> = {};
-
-      if (remainingShares <= 0) {
-        // Full sell — clear manual overrides so stale cost figures are removed.
-        patch.manual_total_invested_bdt = null;
-        patch.manual_avg_cost_bdt = null;
-      } else if (ltRow.manual_total_invested_bdt !== null) {
-        // Partial sell — reduce tracked amount by the cost basis of the sold shares.
-        const currentManualTotal = Number(ltRow.manual_total_invested_bdt);
-        const deduction = avgCost * quantity;
-        patch.manual_total_invested_bdt = Math.max(0, currentManualTotal - deduction);
-      }
-
-      if (Object.keys(patch).length > 0) {
-        await supabase
-          .from("long_term_holdings")
-          .update(patch)
-          .eq("id", ltRow.id)
-          .eq("user_id", user.id);
-      }
-    }
+  // Re-aggregate **after** the new row to derive the post-trade book, then
+  // sync the watchlist against it. Sourcing the post-insert ledger (rather
+  // than the pre-insert override) keeps watchlist totals consistent with the
+  // numbers the rest of the app shows once the override is gone.
+  if (side === "sell") {
+    const justInserted: TransactionRow = {
+      id: "__just_inserted__",
+      created_at: new Date().toISOString(),
+      symbol,
+      side: "sell",
+      quantity,
+      price_per_share: pricePerShare,
+      category: null,
+      fees_bdt: feesBdt,
+    };
+    const postSellLedger = aggregateHoldings([...txs, justInserted]);
+    await syncWatchlistAfterLedgerChange(supabase, user.id, symbol, postSellLedger);
   }
 
   revalidatePath("/portfolio");
@@ -315,17 +355,32 @@ export async function deleteTransaction(
   }
 
   // Clear any position override for this symbol so ledger calculation takes precedence
-  const deletedSymbol = (data[0] as { symbol?: string }).symbol;
+  const deletedSymbolRaw = (data[0] as { symbol?: string }).symbol;
+  const deletedSymbol = deletedSymbolRaw?.trim().toUpperCase();
   if (deletedSymbol) {
     await supabase
       .from("portfolio_position_overrides")
       .delete()
       .eq("user_id", user.id)
-      .eq("symbol", deletedSymbol.trim().toUpperCase());
+      .eq("symbol", deletedSymbol);
+
+    // Re-aggregate the ledger after the row is gone and reconcile the
+    // watchlist row for this symbol so manual override fields don't lie
+    // about a position that no longer exists (or shrunk).
+    const { data: txAfter } = await supabase
+      .from("transactions")
+      .select(
+        "id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt",
+      )
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+    const newLedger = aggregateHoldings((txAfter ?? []) as TransactionRow[]);
+    await syncWatchlistAfterLedgerChange(supabase, user.id, deletedSymbol, newLedger);
   }
 
   revalidatePath("/portfolio");
   revalidatePath("/record");
   revalidatePath("/trade-history");
+  revalidatePath("/long-term");
   return { ok: true };
 }
