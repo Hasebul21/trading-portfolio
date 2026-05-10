@@ -25,6 +25,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // `viewportFit: cover` lets us paint behind the notch / Dynamic Island and
+  // use env(safe-area-inset-*) padding so content stays clear of the gesture
+  // bar on iPhones running iOS Safari.
+  viewportFit: "cover",
   themeColor: "#030712",
 };
 

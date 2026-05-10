@@ -225,7 +225,7 @@ export function SectorAllocationDetailed({
     }
 
     return (
-        <div className="flex flex-col gap-4 sm:gap-5">
+        <div className="flex flex-col gap-3 sm:gap-5">
             {/* Top summary strip */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                 <SummaryCell label="Total invested" value={formatBdt(total)} />
@@ -257,12 +257,12 @@ export function SectorAllocationDetailed({
             <div className="rounded-2xl border border-teal-200/60 bg-white/80 px-3 py-4 shadow-sm sm:px-5 dark:border-teal-900/40 dark:bg-zinc-900/65">
                 <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
                     <div
-                        className="relative h-40 w-40 flex-shrink-0 rounded-full"
+                        className="relative h-32 w-32 flex-shrink-0 rounded-full sm:h-40 sm:w-40"
                         style={{ background: bg }}
                         aria-label="Sector allocation donut"
                         role="img"
                     >
-                        <div className="absolute inset-[26px] flex items-center justify-center rounded-full border border-white/70 bg-white/95 text-center shadow-inner dark:border-zinc-800/70 dark:bg-zinc-950/90">
+                        <div className="absolute inset-[20px] flex items-center justify-center rounded-full border border-white/70 bg-white/95 text-center shadow-inner sm:inset-[26px] dark:border-zinc-800/70 dark:bg-zinc-950/90">
                             <div>
                                 <p className="text-[10px] font-normal uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
                                     Sectors
@@ -464,9 +464,13 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
                             <tr className="text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                                 <th className="py-1 font-normal">Symbol</th>
                                 <th className="py-1 text-right font-normal">Shares</th>
-                                <th className="py-1 text-right font-normal">Avg cost</th>
+                                <th className="hidden py-1 text-right font-normal sm:table-cell">
+                                    Avg cost
+                                </th>
                                 <th className="py-1 text-right font-normal">Invested</th>
-                                <th className="py-1 text-right font-normal">% sector</th>
+                                <th className="hidden py-1 text-right font-normal sm:table-cell">
+                                    % sector
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -483,13 +487,13 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
                                             maximumFractionDigits: 2,
                                         })}
                                     </td>
-                                    <td className="py-1 text-right tabular-nums text-zinc-700 dark:text-zinc-200">
+                                    <td className="hidden py-1 text-right tabular-nums text-zinc-700 sm:table-cell dark:text-zinc-200">
                                         {formatBdt(h.avgPrice)}
                                     </td>
                                     <td className="py-1 text-right tabular-nums text-zinc-900 dark:text-zinc-50">
                                         {formatBdt(h.totalCost)}
                                     </td>
-                                    <td className="py-1 text-right tabular-nums text-zinc-700 dark:text-zinc-200">
+                                    <td className="hidden py-1 text-right tabular-nums text-zinc-700 sm:table-cell dark:text-zinc-200">
                                         {fmtPct(
                                             slice.investedBdt > 0
                                                 ? (h.totalCost / slice.investedBdt) * 100

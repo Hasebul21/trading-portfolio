@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "../actions";
 import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } from "../settings-actions";
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { UserSettings } from "../settings-actions";
@@ -134,6 +135,7 @@ export function SettingsForm({
   }, []);
 
   return (
+    <div className="space-y-4">
     <Tabs
       activeKey={activeTab}
       onChange={(key) => setActiveTab(key as TabKey)}
@@ -455,5 +457,16 @@ export function SettingsForm({
         },
       ]}
     />
+
+    {/*
+      Mobile log-out — the desktop header keeps its own button, so this only
+      renders on `< md` where the header is minimal.
+    */}
+    <form action={signOut} className="md:hidden">
+      <Button danger type="default" htmlType="submit" size="large" block>
+        Log out
+      </Button>
+    </form>
+    </div>
   );
 }

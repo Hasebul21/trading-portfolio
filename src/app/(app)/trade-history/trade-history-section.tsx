@@ -145,20 +145,122 @@ export function TradeHistorySection({ rows, loadError }: Props) {
       {rows.length === 0 ? (
         <Typography.Paragraph type="secondary">No trades in this range.</Typography.Paragraph>
       ) : (
-        <Table<Row>
-          className="trade-history-table"
-          columns={columns}
-          dataSource={data}
-          pagination={tablePagination("rows", {
-            hideOnSinglePage: false,
-            pageSize: 15,
-            pageSizeOptions: [10, 15, 20, 50],
-          })}
-          size="middle"
-          bordered
-          tableLayout="auto"
-        />
+        <>
+          {/* Mobile (< md): card list — no horizontal scroll. */}
+          <ul className="mobile-card-list md:hidden">
+            {data.map((row) => (
+              <MobileTradeCard
+                key={row.id}
+                row={row}
+                onRemove={(id) => void onRemove(id)}
+                removingId={removingId}
+              />
+            ))}
+          </ul>
+
+          {/* Desktop (≥ md): full Ant Design table. */}
+          <div className="hidden md:block">
+            <Table<Row>
+              className="trade-history-table"
+              columns={columns}
+              dataSource={data}
+              pagination={tablePagination("rows", {
+                hideOnSinglePage: false,
+                pageSize: 15,
+                pageSizeOptions: [10, 15, 20, 50],
+              })}
+              size="middle"
+              bordered
+              tableLayout="auto"
+            />
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+function MobileTradeCard({
+  row,
+  onRemove,
+  removingId,
+}: {
+  row: TransactionRow & { key: string; id: string };
+  onRemove: (id: string) => void;
+  removingId: string | null;
+}) {
+  const isSell = String(row.side).toLowerCase() === "sell";
+  const sideClass = isSell
+    ? "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-200"
+    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200";
+
+  return (
+    <li>
+      <article
+        className={`flex flex-col gap-2 rounded-xl border border-zinc-200/70 bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70 ${
+          isSell
+            ? "border-l-[4px] border-l-red-500/70 dark:border-l-red-400/80"
+            : "border-l-[4px] border-l-emerald-500/70 dark:border-l-emerald-400/80"
+        }`}
+      >
+        <header className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-mono text-[15px] font-medium uppercase text-zinc-900 dark:text-zinc-50">
+              {String(row.symbol).toUpperCase()}
+            </span>
+            <span
+              className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${sideClass}`}
+            >
+              {String(row.side)}
+            </span>
+          </div>
+          <Popconfirm
+            title="Remove this row?"
+            description="Holdings and Net G/L will recalc."
+            okText="Remove"
+            okButtonProps={{ danger: true }}
+            cancelText="Cancel"
+            onConfirm={() => onRemove(row.id)}
+          >
+            <Button
+              type="link"
+              danger
+              size="small"
+              loading={removingId === row.id}
+              disabled={removingId !== null && removingId !== row.id}
+              className="!h-auto !px-1 !py-0"
+            >
+              Remove
+            </Button>
+          </Popconfirm>
+        </header>
+
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+          <div>
+            <dt className="text-zinc-500 dark:text-zinc-400">Qty × Price</dt>
+            <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
+              {formatNumberMax2Decimals(Number(row.quantity))} ×{" "}
+              {formatBdt(Number(row.price_per_share))}
+            </dd>
+          </div>
+          <div className="text-right">
+            <dt className="text-zinc-500 dark:text-zinc-400">Fees</dt>
+            <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
+              {formatBdt(Number(row.fees_bdt ?? 0))}
+            </dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-zinc-500 dark:text-zinc-400">When</dt>
+            <dd className="text-zinc-700 dark:text-zinc-200">
+              {new Date(row.created_at).toLocaleString("en-GB", {
+                timeZone: "Asia/Dhaka",
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </dd>
+          </div>
+        </dl>
+      </article>
+    </li>
   );
 }

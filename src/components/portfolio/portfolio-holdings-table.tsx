@@ -470,8 +470,8 @@ export function PortfolioHoldingsTable({
       className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
       styles={{ body: { padding: 0 } }}
     >
-      <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4 dark:border-teal-900/40">
-        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
+      <div className="grid grid-cols-2 gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4 dark:border-teal-900/40">
+        <div className="min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
           <div className="text-[15px] font-normal tracking-normal text-zinc-50">
             Total invested
           </div>
@@ -610,24 +610,48 @@ export function PortfolioHoldingsTable({
         ) : null}
       </div>
 
-      <Table<Row>
-        key={bookEditorOpen ? "portfolio-book-edit" : "portfolio-book-view"}
-        className="portfolio-holdings-table"
-        columns={columns}
-        dataSource={data}
-        scroll={{ x: "max-content" }}
-        pagination={tablePagination("positions", {
-          hideOnSinglePage: false,
-          pageSize: 15,
-          pageSizeOptions: [10, 15, 20, 50],
-        })}
-        size="middle"
-        bordered={false}
-        tableLayout="auto"
-        locale={{
-          emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
-        }}
-      />
+      {/* Mobile (< md): compact card list — touch-friendly, no horizontal scroll. */}
+      <div className="md:hidden">
+        {data.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[14px] text-zinc-50">
+            {symbolQuery.trim()
+              ? "No symbols match your search."
+              : "No positions yet."}
+          </div>
+        ) : (
+          <ul className="mobile-card-list px-3 py-2">
+            {data.map((row) => (
+              <MobileHoldingCard
+                key={row.symbol}
+                row={row}
+                classification={classificationMap[row.symbol] ?? null}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Desktop (≥ md): full Ant Design table. */}
+      <div className="hidden md:block">
+        <Table<Row>
+          key={bookEditorOpen ? "portfolio-book-edit" : "portfolio-book-view"}
+          className="portfolio-holdings-table"
+          columns={columns}
+          dataSource={data}
+          scroll={{ x: "max-content" }}
+          pagination={tablePagination("positions", {
+            hideOnSinglePage: false,
+            pageSize: 15,
+            pageSizeOptions: [10, 15, 20, 50],
+          })}
+          size="middle"
+          bordered={false}
+          tableLayout="auto"
+          locale={{
+            emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
+          }}
+        />
+      </div>
 
       {bookEditing ? (
         <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
@@ -651,5 +675,71 @@ export function PortfolioHoldingsTable({
         </div>
       ) : null}
     </Card>
+  );
+}
+
+function MobileHoldingCard({
+  row,
+  classification,
+}: {
+  row: Row;
+  classification: WatchlistClassification;
+}) {
+  const accentBorder =
+    classification === "BLUE"
+      ? "border-l-blue-500/70 dark:border-l-blue-400/80"
+      : classification === "GREEN"
+        ? "border-l-emerald-500/70 dark:border-l-emerald-400/80"
+        : "border-l-teal-500/40 dark:border-l-teal-400/40";
+
+  return (
+    <li>
+      <article
+        className={`flex flex-col gap-2 rounded-xl border border-zinc-200/70 border-l-[4px] ${accentBorder} bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70`}
+      >
+        <header className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <ClassificationDot c={classification} />
+            <span className="font-mono text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+              {row.symbol}
+            </span>
+          </div>
+          <span className="font-mono text-[14px] tabular-nums text-zinc-700 dark:text-zinc-200">
+            {formatNumberMax2Decimals(row.shares)} sh
+          </span>
+        </header>
+
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
+          <div>
+            <dt className="text-zinc-500 dark:text-zinc-400">Invested</dt>
+            <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
+              {formatBdt(row.totalCost)}
+            </dd>
+          </div>
+          <div className="text-right">
+            <dt className="text-zinc-500 dark:text-zinc-400">Break-even</dt>
+            <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
+              {formatBdt(row.breakEvenPrice)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-zinc-500 dark:text-zinc-400">Avg cost</dt>
+            <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
+              {formatBdt(row.avgPrice)}
+            </dd>
+          </div>
+          <div className="text-right">
+            <dt className="text-zinc-500 dark:text-zinc-400">Unrealized P/L</dt>
+            <dd className="font-mono tabular-nums">
+              {row.unrealizedPl === null ? (
+                <span className="text-zinc-500 dark:text-zinc-400">—</span>
+              ) : (
+                <PlIndicator value={row.unrealizedPl} />
+              )}
+            </dd>
+          </div>
+        </dl>
+      </article>
+    </li>
   );
 }
