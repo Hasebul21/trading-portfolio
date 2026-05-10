@@ -58,12 +58,19 @@ body {
   font-weight: 400;
 }
 
-/* Large / ultrawide: gentle edge vignette reduces peripheral glare and makes the
-   center panel slightly harder to read from a sharp side angle. */
+/* Large displays: deepen the outer gradient so periphery fades — less glare off-screen,
+   slightly less readable from a steep side glance. */
 @media (min-width: 1280px) {
   body {
-    box-shadow: inset 0 0 clamp(140px, 22vw, 380px) clamp(72px, 14vw, 240px)
-      rgba(10, 12, 16, 0.38);
+    background-image:
+      radial-gradient(
+        ellipse 110% 102% at 50% 50%,
+        color-mix(in srgb, var(--background) 88%, transparent) 34%,
+        rgba(11, 13, 18, 0.78) 100%
+      ),
+      radial-gradient(ellipse 100% 78% at 50% -32%, var(--accent-muted), transparent 60%),
+      radial-gradient(ellipse 62% 44% at 100% 0%, var(--glow-violet), transparent 54%),
+      radial-gradient(ellipse 52% 38% at 0% 22%, var(--glow-violet), transparent 50%);
   }
 }
 

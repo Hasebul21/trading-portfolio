@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   // use env(safe-area-inset-*) padding so content stays clear of the gesture
   // bar on iPhones running iOS Safari.
   viewportFit: "cover",
-  themeColor: "#030712",
+  themeColor: "#1c2029",
 };
 
 export default function RootLayout({

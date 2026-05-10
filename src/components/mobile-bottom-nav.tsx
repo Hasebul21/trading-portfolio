@@ -45,7 +45,7 @@ export function MobileBottomNav() {
     return (
         <nav
             aria-label="Mobile primary"
-            className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/80 bg-white/95 backdrop-blur-lg shadow-[0_-6px_24px_rgba(0,0,0,0.08)] md:hidden dark:border-zinc-800/80 dark:bg-zinc-950/90 dark:shadow-[0_-6px_24px_rgba(0,0,0,0.5)]"
+            className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/80 bg-white/95 backdrop-blur-lg shadow-[0_-6px_24px_rgba(0,0,0,0.08)] md:hidden dark:border-zinc-700/50 dark:bg-[#252b36]/95 dark:shadow-[0_-6px_24px_rgba(0,0,0,0.35)]"
             style={{
                 paddingBottom: "max(env(safe-area-inset-bottom, 0px), 6px)",
             }}
