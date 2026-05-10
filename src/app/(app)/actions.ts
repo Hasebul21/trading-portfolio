@@ -107,6 +107,9 @@ export async function recordTransaction(
 
   const txs = (rows ?? []) as TransactionRow[];
 
+  // Resolve current holding for sell validation and watchlist sync.
+  let holdingBeforeSell: import("@/lib/portfolio").HoldingRow | undefined;
+
   if (side === "sell") {
     const ledger = aggregateHoldings(txs);
     const { rows: overrides, error: ovErr } = await fetchPositionOverrides(supabase);
@@ -114,8 +117,8 @@ export async function recordTransaction(
       return { error: ovErr };
     }
     const merged = mergeLedgerWithOverrides(ledger, overrides);
-    const holding = merged.find((h) => h.symbol === symbol);
-    const available = holding?.shares ?? 0;
+    holdingBeforeSell = merged.find((h) => h.symbol === symbol);
+    const available = holdingBeforeSell?.shares ?? 0;
     if (quantity > available) {
       return {
         error: `Cannot sell ${quantity} shares of ${symbol}; you only hold ${available}.`,
@@ -155,9 +158,40 @@ export async function recordTransaction(
     .eq("user_id", user.id)
     .eq("symbol", symbol);
 
+  // After a sell, keep the watchlist (long_term_holdings) tracked amount in sync.
+  // If the position is fully closed, drop stale manual avg/total overrides so the
+  // watchlist row no longer shows cost figures for shares we no longer own.
+  if (side === "sell") {
+    const postSellLedger = aggregateHoldings([
+      ...txs,
+      {
+        id: "__just_inserted__",
+        created_at: new Date().toISOString(),
+        symbol,
+        side: "sell",
+        quantity,
+        price_per_share: pricePerShare,
+        category: null,
+        fees_bdt: feesBdt,
+      },
+    ]);
+    const remaining = postSellLedger.find((h) => h.symbol === symbol);
+    if (!remaining || remaining.shares <= 0) {
+      await supabase
+        .from("long_term_holdings")
+        .update({
+          manual_avg_cost_bdt: null,
+          manual_total_invested_bdt: null,
+        })
+        .eq("user_id", user.id)
+        .ilike("symbol", symbol);
+    }
+  }
+
   revalidatePath("/portfolio");
   revalidatePath("/record");
   revalidatePath("/trade-history");
+  revalidatePath("/long-term");
   const qtyLabel = quantity % 1 === 0 ? String(quantity) : String(quantity);
   return {
     ok: true,

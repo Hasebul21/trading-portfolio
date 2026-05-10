@@ -5,6 +5,23 @@
 export const BROKERAGE_COMMISSION_RATE = 0.004;
 
 /**
+ * Recommended portfolio summary structure.
+ *
+ * - totalInvested: cost basis of currently open positions only.
+ * - realizedGainLoss: Σ (sellPrice − avgCost) × qty for each sell.
+ * - unrealizedGainLoss: Σ (ltp − breakEvenPrice) × shares for quoted positions.
+ * - netGainLoss: realizedGainLoss + unrealizedGainLoss.
+ * - quotedPositionCount: number of open positions that had a live price.
+ */
+export type PortfolioSummary = {
+  totalInvested: number;
+  realizedGainLoss: number;
+  unrealizedGainLoss: number;
+  netGainLoss: number;
+  quotedPositionCount: number;
+};
+
+/**
  * Rounds a price to the nearest DSE tick size (BDT 0.10).
  */
 export function roundToTickSize(price: number): number {
@@ -111,9 +128,10 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
       const avgCost = state.avg;
 
       if (preShares > 0 && sellQty > 0) {
-        const costBasisSold = sellQty * avgCost;
-        const proceedsNet = sellQty * price - fees;
-        realized += proceedsNet - costBasisSold;
+        // realizedPnL = (sellPrice − avgCost) × qty
+        // Buy fees are already embedded in avgCost; sell fees are not
+        // deducted here so that realizedGainLoss reflects the gross trade gain.
+        realized += (price - avgCost) * sellQty;
       }
 
       if (preShares > 0 && sellQty > 0) {
@@ -234,4 +252,140 @@ export function sharesAvailableForSymbol(
   const holdings = aggregateHoldings(rows);
   const row = holdings.find((h) => h.symbol === sym);
   return row?.shares ?? 0;
+}
+
+/**
+ * Sum of totalCost across all open holdings (currently invested capital).
+ * Sells already reduce totalCost by avgCost × qty, so this reflects only
+ * the cost basis of positions that are still open.
+ */
+export function totalInvestedBdt(holdings: HoldingRow[]): number {
+  return holdings.reduce(
+    (sum, h) => sum + (Number.isFinite(h.totalCost) ? h.totalCost : 0),
+    0,
+  );
+}
+
+/**
+ * Unrealized gain/loss across all open holdings that have a live price.
+ * Uses breakEvenPrice (includes buy + sell commission) so the result turns
+ * positive only when the market price truly covers all round-trip fees.
+ *
+ * @returns value  – BDT sum, rounded to 2 decimal places
+ * @returns quotedCount – number of positions that contributed a quote
+ */
+export function unrealizedGainLossBdt(
+  holdings: HoldingRow[],
+  ltp: Map<string, number | null>,
+): { value: number; quotedCount: number } {
+  let sum = 0;
+  let quotedCount = 0;
+  for (const h of holdings) {
+    const price = ltp.get(h.symbol) ?? null;
+    if (price === null || !Number.isFinite(price)) continue;
+    sum += (price - h.breakEvenPrice) * h.shares;
+    quotedCount += 1;
+  }
+  return { value: Math.round(sum * 100) / 100, quotedCount };
+}
+
+/**
+ * Compute the full recommended portfolio summary in one call.
+ *
+ * @param holdings     Open positions (from aggregateHoldings / mergeLedgerWithOverrides)
+ * @param realized     Total realized gain/loss (from totalRealizedProfitLossBdt)
+ * @param ltp          Symbol → last-traded price map; null values are skipped
+ */
+export function computePortfolioSummary(
+  holdings: HoldingRow[],
+  realized: number,
+  ltp: Map<string, number | null>,
+): PortfolioSummary {
+  const totalInvested = totalInvestedBdt(holdings);
+  const { value: unrealizedGainLoss, quotedCount } = unrealizedGainLossBdt(holdings, ltp);
+  const netGainLoss = Math.round((realized + unrealizedGainLoss) * 100) / 100;
+  return {
+    totalInvested,
+    realizedGainLoss: realized,
+    unrealizedGainLoss,
+    netGainLoss,
+    quotedPositionCount: quotedCount,
+  };
+}
+
+/**
+ * Total invested capital across the currently open positions only.
+ *
+ * Sells deduct cost basis (`avgPrice × sellQty`) inside {@link aggregateHoldings},
+ * so realized profit/loss never leaks into this number — fully sold positions
+ * collapse to zero and are filtered out.
+ */
+export function totalInvestedBdt(holdings: HoldingRow[]): number {
+  let sum = 0;
+  for (const h of holdings) {
+    if (Number.isFinite(h.totalCost)) sum += h.totalCost;
+  }
+  return Math.round(sum * 100) / 100;
+}
+
+/**
+ * Unrealized P/L on currently open positions, using break-even (incl. buy+sell
+ * brokerage) as the comparison price. Symbols without a market quote are
+ * skipped so totals do not include "0" entries from missing prices.
+ */
+export function unrealizedGainLossBdt(
+  holdings: HoldingRow[],
+  ltpBySymbol: ReadonlyMap<string, number | null | undefined>,
+): { value: number; quotedCount: number } {
+  let value = 0;
+  let quotedCount = 0;
+  for (const h of holdings) {
+    const ltp = ltpBySymbol.get(h.symbol);
+    if (ltp !== null && ltp !== undefined && Number.isFinite(ltp)) {
+      value += (ltp - h.breakEvenPrice) * h.shares;
+      quotedCount += 1;
+    }
+  }
+  return { value: Math.round(value * 100) / 100, quotedCount };
+}
+
+export type PortfolioSummary = {
+  /** Currently active capital — never includes realized profit/loss. */
+  totalInvested: number;
+  /** Net realized gain/loss from completed (sell) transactions. */
+  realizedGainLoss: number;
+  /** Mark-to-market gain/loss on still-open positions (vs break-even price). */
+  unrealizedGainLoss: number;
+  /** `realizedGainLoss + unrealizedGainLoss` (rounded to cents). */
+  netGainLoss: number;
+  /** Number of open positions that contributed to {@link unrealizedGainLoss}. */
+  quotedPositionCount: number;
+};
+
+/**
+ * Recommended portfolio structure required by the sell-accounting spec:
+ * `{ totalInvested, realizedGainLoss, unrealizedGainLoss, netGainLoss }`.
+ *
+ * `netGainLoss = realizedGainLoss + unrealizedGainLoss`. Realized P/L is kept
+ * strictly outside `totalInvested` (which only reflects active holdings).
+ */
+export function computePortfolioSummary(
+  holdings: HoldingRow[],
+  realizedGainLoss: number,
+  ltpBySymbol: ReadonlyMap<string, number | null | undefined>,
+): PortfolioSummary {
+  const totalInvested = totalInvestedBdt(holdings);
+  const { value: unrealizedGainLoss, quotedCount } = unrealizedGainLossBdt(
+    holdings,
+    ltpBySymbol,
+  );
+  const realized = Math.round(realizedGainLoss * 100) / 100;
+  const net = Math.round((realized + unrealizedGainLoss) * 100) / 100;
+  return {
+    totalInvested,
+    realizedGainLoss: realized,
+    unrealizedGainLoss,
+    netGainLoss: net,
+    quotedPositionCount: quotedCount,
+  };
 }

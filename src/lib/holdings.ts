@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   aggregateHoldings,
+  totalInvestedBdt,
   totalRealizedProfitLossBdt,
   type TransactionRow,
 } from "@/lib/portfolio";
@@ -41,10 +42,13 @@ export async function fetchUserHoldings() {
   const ledger = aggregateHoldings(txRows);
   const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
-  const totalInvestedBdt = ledger.reduce(
-    (sum, row) => sum + (Number.isFinite(row.totalCost) ? row.totalCost : 0),
-    0,
-  );
+  // Invested capital reflects only active holdings — realized P/L stays out.
+  const totalInvested = totalInvestedBdt(ledger);
 
-  return { error: null as string | null, holdings, totalRealizedBdt, totalInvestedBdt };
+  return {
+    error: null as string | null,
+    holdings,
+    totalRealizedBdt,
+    totalInvestedBdt: totalInvested,
+  };
 }
