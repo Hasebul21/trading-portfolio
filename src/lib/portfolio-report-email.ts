@@ -18,6 +18,8 @@ type ReportPayload = {
   totalRealizedBdt: number;
 };
 
+type ReportTrigger = "manual" | "daily";
+
 const DEFAULT_REPORT_EMAIL = "hasebulhassan21@gmail.com";
 
 function reportRecipient(): string {
@@ -28,7 +30,7 @@ function fmt2(n: number): string {
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
 }
 
-async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): Promise<Uint8Array> {
+async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise<Uint8Array> {
   const summary = buildSummary(payload);
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -63,7 +65,7 @@ async function buildPdf(payload: ReportPayload, trigger: "manual" | "monthly"): 
   y -= 24;
 
   // Meta row
-  const triggerLabel = trigger === "monthly" ? "Monthly" : "Manual";
+  const triggerLabel = trigger === "daily" ? "Daily (5 PM BD)" : "Manual";
   drawText(`Type: ${triggerLabel}`, margin, y, 13);
   drawText(`Generated: ${new Date().toLocaleString()}`, 300, y, 13);
   y -= 28;
@@ -191,7 +193,7 @@ function createResendClient() {
 
 export async function sendPortfolioReportEmail(
   payload: ReportPayload,
-  trigger: "manual" | "monthly",
+  trigger: ReportTrigger,
   overrideRecipient?: string,
 ) {
   const { resend, from } = createResendClient();
@@ -199,7 +201,7 @@ export async function sendPortfolioReportEmail(
   const summary = buildSummary(payload);
   const pdfBytes = await buildPdf(payload, trigger);
   const stamp = new Date().toISOString().slice(0, 10);
-  const subjectPrefix = trigger === "monthly" ? "Monthly" : "Manual";
+  const subjectPrefix = trigger === "daily" ? "Daily" : "Manual";
   const subject = `${subjectPrefix} portfolio report (${stamp})`;
 
   const result = await resend.emails.send({
@@ -281,20 +283,60 @@ export async function buildReportForUser(
   return { rows, totalRealizedBdt };
 }
 
-export async function sendMonthlyPortfolioReportForConfiguredUser() {
+/**
+ * Trigger the daily 5 PM BD portfolio email. Looks up the configured
+ * recipient (`PORTFOLIO_REPORT_RECIPIENT` env or the default) in Supabase
+ * Auth so we know which user's portfolio to compute against, then emails
+ * a PDF + summary via Resend.
+ *
+ * Surfaces the most common misconfigurations as readable error messages so
+ * the cron logs in Vercel show what to fix instead of a generic "failed".
+ */
+export async function sendDailyPortfolioReportForConfiguredUser(): Promise<{
+  ok: true;
+  recipient: string;
+}> {
   const recipient = reportRecipient();
-  const supabase = createAdminClient();
+  if (!recipient) {
+    throw new Error(
+      "No recipient configured. Set PORTFOLIO_REPORT_RECIPIENT in Vercel env.",
+    );
+  }
+
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (e) {
+    throw new Error(
+      `Cannot create Supabase admin client (check NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY): ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
   const { data, error } = await supabase
     .schema("auth")
     .from("users")
     .select("id,email")
-    .eq("email", recipient)
+    .ilike("email", recipient)
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data?.id) {
-    throw new Error(`No Supabase user found for ${recipient}.`);
+
+  if (error) {
+    throw new Error(`Supabase auth lookup failed: ${error.message}`);
   }
+  if (!data?.id) {
+    throw new Error(
+      `No Supabase user found for "${recipient}". Either set PORTFOLIO_REPORT_RECIPIENT to an existing auth.users.email, or sign up that email in Supabase Auth.`,
+    );
+  }
+
   const payload = await buildReportForUser(supabase, String(data.id));
-  await sendPortfolioReportEmail(payload, "monthly");
+  await sendPortfolioReportEmail(payload, "daily");
+  return { ok: true, recipient };
 }
+
+/**
+ * @deprecated Kept as an alias so older callers keep compiling. Use
+ * {@link sendDailyPortfolioReportForConfiguredUser} instead.
+ */
+export const sendMonthlyPortfolioReportForConfiguredUser =
+  sendDailyPortfolioReportForConfiguredUser;
