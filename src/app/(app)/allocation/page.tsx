@@ -3,14 +3,19 @@ import { AppPageStack } from "@/components/app-page-stack";
 import {
     SectorAllocationDetailed,
     type AllocationHolding,
+    type SectorTarget,
 } from "@/components/allocation/sector-allocation-detailed";
+import { getSectorTargets } from "../sector-target-actions";
 import { fetchUserHoldings } from "@/lib/holdings";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 
 export const revalidate = 0;
 
 export default async function AllocationPage() {
-    const holdingsRes = await fetchUserHoldings();
+    const [holdingsRes, targetsRes] = await Promise.all([
+        fetchUserHoldings(),
+        getSectorTargets(),
+    ]);
 
     if (holdingsRes.error) {
         return (
@@ -41,13 +46,22 @@ export default async function AllocationPage() {
         };
     });
 
+    const targets: SectorTarget[] = targetsRes.ok
+        ? targetsRes.data.rows
+              .filter((r) => r.target_percent !== null)
+              .map((r) => ({
+                  sector: r.sector,
+                  target_percent: r.target_percent as number,
+              }))
+        : [];
+
     return (
         <AppPageStack
             gapClass="gap-4 sm:gap-5"
             className="mx-auto w-full min-w-0 max-w-6xl text-left"
         >
             <AppPageHeader title="Sector Allocation" />
-            <SectorAllocationDetailed holdings={allocationRows} />
+            <SectorAllocationDetailed holdings={allocationRows} targets={targets} />
         </AppPageStack>
     );
 }

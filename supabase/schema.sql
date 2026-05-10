@@ -598,3 +598,42 @@ create constraint trigger transactions_no_oversell
   after insert on public.transactions
   deferrable initially immediate
   for each row execute function public.check_transactions_no_oversell();
+
+-- ---------------------------------------------------------------------------
+-- sector_target_allocations: per-user target % for each portfolio sector.
+-- (Same DDL is in 20260510170000_sector_target_allocations.sql.)
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.sector_target_allocations (
+  user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
+  sector text not null check (length(trim(sector)) > 0),
+  target_percent numeric not null check (target_percent >= 0 and target_percent <= 100),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, sector)
+);
+
+create index if not exists sector_target_allocations_user_idx
+  on public.sector_target_allocations (user_id);
+
+alter table public.sector_target_allocations enable row level security;
+
+drop policy if exists "sector_targets_select_own" on public.sector_target_allocations;
+create policy "sector_targets_select_own"
+  on public.sector_target_allocations for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "sector_targets_insert_own" on public.sector_target_allocations;
+create policy "sector_targets_insert_own"
+  on public.sector_target_allocations for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "sector_targets_update_own" on public.sector_target_allocations;
+create policy "sector_targets_update_own"
+  on public.sector_target_allocations for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "sector_targets_delete_own" on public.sector_target_allocations;
+create policy "sector_targets_delete_own"
+  on public.sector_target_allocations for delete
+  using (auth.uid() = user_id);

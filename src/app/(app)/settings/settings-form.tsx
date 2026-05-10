@@ -3,12 +3,22 @@
 import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } from "../settings-actions";
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { UserSettings } from "../settings-actions";
+import type { SectorTargetWithCurrent } from "../sector-target-actions";
+import { SectorTargetsForm } from "./sector-targets-form";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
 
-type TabKey = "profile" | "email" | "password" | "reports";
+type TabKey = "profile" | "email" | "password" | "targets";
 
-export function SettingsForm({ initialSettings }: { initialSettings: UserSettings }) {
+export function SettingsForm({
+  initialSettings,
+  initialSectorTargets,
+  sectorTargetsError,
+}: {
+  initialSettings: UserSettings;
+  initialSectorTargets: SectorTargetWithCurrent[];
+  sectorTargetsError: string | null;
+}) {
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
 
   // Profile state
@@ -339,6 +349,20 @@ export function SettingsForm({ initialSettings }: { initialSettings: UserSetting
                 </p>
               </div>
             </div>
+          ),
+        },
+        {
+          key: "targets",
+          label: "Sector targets",
+          children: sectorTargetsError ? (
+            <Alert
+              type="error"
+              showIcon
+              message="Could not load sector targets"
+              description={sectorTargetsError}
+            />
+          ) : (
+            <SectorTargetsForm initialRows={initialSectorTargets} />
           ),
         },
         {
