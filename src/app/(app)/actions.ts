@@ -158,33 +158,41 @@ export async function recordTransaction(
     .eq("user_id", user.id)
     .eq("symbol", symbol);
 
-  // After a sell, keep the watchlist (long_term_holdings) tracked amount in sync.
-  // If the position is fully closed, drop stale manual avg/total overrides so the
-  // watchlist row no longer shows cost figures for shares we no longer own.
-  if (side === "sell") {
-    const postSellLedger = aggregateHoldings([
-      ...txs,
-      {
-        id: "__just_inserted__",
-        created_at: new Date().toISOString(),
-        symbol,
-        side: "sell",
-        quantity,
-        price_per_share: pricePerShare,
-        category: null,
-        fees_bdt: feesBdt,
-      },
-    ]);
-    const remaining = postSellLedger.find((h) => h.symbol === symbol);
-    if (!remaining || remaining.shares <= 0) {
-      await supabase
-        .from("long_term_holdings")
-        .update({
-          manual_avg_cost_bdt: null,
-          manual_total_invested_bdt: null,
-        })
-        .eq("user_id", user.id)
-        .ilike("symbol", symbol);
+  // Sync watchlist (long_term_holdings) manual invested amount after a sell.
+  // Partial sell: reduce manual_total_invested_bdt by avgCost × qtySold.
+  // Full sell: clear both manual_total_invested_bdt and manual_avg_cost_bdt.
+  if (side === "sell" && holdingBeforeSell) {
+    const avgCost = holdingBeforeSell.avgPrice;
+    const remainingShares = holdingBeforeSell.shares - quantity;
+
+    const { data: ltRow } = await supabase
+      .from("long_term_holdings")
+      .select("id, manual_total_invested_bdt")
+      .eq("user_id", user.id)
+      .ilike("symbol", symbol)
+      .maybeSingle();
+
+    if (ltRow) {
+      const patch: Record<string, number | null> = {};
+
+      if (remainingShares <= 0) {
+        // Full sell — clear manual overrides so stale cost figures are removed.
+        patch.manual_total_invested_bdt = null;
+        patch.manual_avg_cost_bdt = null;
+      } else if (ltRow.manual_total_invested_bdt !== null) {
+        // Partial sell — reduce tracked amount by the cost basis of the sold shares.
+        const currentManualTotal = Number(ltRow.manual_total_invested_bdt);
+        const deduction = avgCost * quantity;
+        patch.manual_total_invested_bdt = Math.max(0, currentManualTotal - deduction);
+      }
+
+      if (Object.keys(patch).length > 0) {
+        await supabase
+          .from("long_term_holdings")
+          .update(patch)
+          .eq("id", ltRow.id)
+          .eq("user_id", user.id);
+      }
     }
   }
 

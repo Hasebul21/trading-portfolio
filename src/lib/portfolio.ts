@@ -5,23 +5,6 @@
 export const BROKERAGE_COMMISSION_RATE = 0.004;
 
 /**
- * Recommended portfolio summary structure.
- *
- * - totalInvested: cost basis of currently open positions only.
- * - realizedGainLoss: Σ (sellPrice − avgCost) × qty for each sell.
- * - unrealizedGainLoss: Σ (ltp − breakEvenPrice) × shares for quoted positions.
- * - netGainLoss: realizedGainLoss + unrealizedGainLoss.
- * - quotedPositionCount: number of open positions that had a live price.
- */
-export type PortfolioSummary = {
-  totalInvested: number;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-  netGainLoss: number;
-  quotedPositionCount: number;
-};
-
-/**
  * Rounds a price to the nearest DSE tick size (BDT 0.10).
  */
 export function roundToTickSize(price: number): number {
@@ -252,65 +235,6 @@ export function sharesAvailableForSymbol(
   const holdings = aggregateHoldings(rows);
   const row = holdings.find((h) => h.symbol === sym);
   return row?.shares ?? 0;
-}
-
-/**
- * Sum of totalCost across all open holdings (currently invested capital).
- * Sells already reduce totalCost by avgCost × qty, so this reflects only
- * the cost basis of positions that are still open.
- */
-export function totalInvestedBdt(holdings: HoldingRow[]): number {
-  return holdings.reduce(
-    (sum, h) => sum + (Number.isFinite(h.totalCost) ? h.totalCost : 0),
-    0,
-  );
-}
-
-/**
- * Unrealized gain/loss across all open holdings that have a live price.
- * Uses breakEvenPrice (includes buy + sell commission) so the result turns
- * positive only when the market price truly covers all round-trip fees.
- *
- * @returns value  – BDT sum, rounded to 2 decimal places
- * @returns quotedCount – number of positions that contributed a quote
- */
-export function unrealizedGainLossBdt(
-  holdings: HoldingRow[],
-  ltp: Map<string, number | null>,
-): { value: number; quotedCount: number } {
-  let sum = 0;
-  let quotedCount = 0;
-  for (const h of holdings) {
-    const price = ltp.get(h.symbol) ?? null;
-    if (price === null || !Number.isFinite(price)) continue;
-    sum += (price - h.breakEvenPrice) * h.shares;
-    quotedCount += 1;
-  }
-  return { value: Math.round(sum * 100) / 100, quotedCount };
-}
-
-/**
- * Compute the full recommended portfolio summary in one call.
- *
- * @param holdings     Open positions (from aggregateHoldings / mergeLedgerWithOverrides)
- * @param realized     Total realized gain/loss (from totalRealizedProfitLossBdt)
- * @param ltp          Symbol → last-traded price map; null values are skipped
- */
-export function computePortfolioSummary(
-  holdings: HoldingRow[],
-  realized: number,
-  ltp: Map<string, number | null>,
-): PortfolioSummary {
-  const totalInvested = totalInvestedBdt(holdings);
-  const { value: unrealizedGainLoss, quotedCount } = unrealizedGainLossBdt(holdings, ltp);
-  const netGainLoss = Math.round((realized + unrealizedGainLoss) * 100) / 100;
-  return {
-    totalInvested,
-    realizedGainLoss: realized,
-    unrealizedGainLoss,
-    netGainLoss,
-    quotedPositionCount: quotedCount,
-  };
 }
 
 /**
