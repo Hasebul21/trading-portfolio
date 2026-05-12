@@ -53,21 +53,24 @@ function PlIndicator({ value }: { value: number }) {
 function summaryFromRows(
   rows: PortfolioMarketRow[],
   totalRealizedBdt: number,
+  cashAdjustmentsBdt: number,
 ): {
   totalInvested: number;
   realizedGainLoss: number;
   unrealizedGainLoss: number;
+  cashAdjustments: number;
   netGainLoss: number;
   withQuote: number;
   positions: number;
 } {
   const ltpMap = new Map<string, number | null | undefined>();
   for (const h of rows) ltpMap.set(h.symbol, h.marketLtp);
-  const summary = computePortfolioSummary(rows, totalRealizedBdt, ltpMap);
+  const summary = computePortfolioSummary(rows, totalRealizedBdt, ltpMap, cashAdjustmentsBdt);
   return {
     totalInvested: summary.totalInvested,
     realizedGainLoss: summary.realizedGainLoss,
     unrealizedGainLoss: summary.unrealizedGainLoss,
+    cashAdjustments: summary.cashAdjustments,
     netGainLoss: summary.netGainLoss,
     withQuote: summary.quotedPositionCount,
     positions: rows.length,
@@ -139,6 +142,7 @@ export function PortfolioHoldingsTable({
   holdings,
   totalRealizedBdt = 0,
   totalInvestedBdt = 0,
+  totalCashAdjustmentsBdt = 0,
   classificationMap = {},
   enableBookEdit = false,
   onAfterBookSave,
@@ -148,6 +152,8 @@ export function PortfolioHoldingsTable({
   totalRealizedBdt?: number;
   /** Active capital only — buys add, sells deduct cost basis at avg. */
   totalInvestedBdt?: number;
+  /** Net of manual cash add/deduct entries from Settings. */
+  totalCashAdjustmentsBdt?: number;
   classificationMap?: Record<string, WatchlistClassification>;
   enableBookEdit?: boolean;
   onAfterBookSave?: () => void | Promise<void>;
@@ -206,12 +212,13 @@ export function PortfolioHoldingsTable({
   }, [holdings, draft, bookEditing]);
 
   const summary = useMemo(
-    () => summaryFromRows(displayHoldings, totalRealizedBdt),
-    [displayHoldings, totalRealizedBdt],
+    () => summaryFromRows(displayHoldings, totalRealizedBdt, totalCashAdjustmentsBdt),
+    [displayHoldings, totalRealizedBdt, totalCashAdjustmentsBdt],
   );
   const {
     totalInvested: totalInvestedComputed,
     unrealizedGainLoss: totalUnrealized,
+    cashAdjustments: totalCashAdjustments,
     netGainLoss: netGl,
     withQuote,
     positions,
@@ -530,7 +537,7 @@ export function PortfolioHoldingsTable({
             Net Gain/Loss
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
-            {withQuote === 0 && totalRealizedBdt === 0 ? (
+            {withQuote === 0 && totalRealizedBdt === 0 && totalCashAdjustments === 0 ? (
               <span className="text-[15px] font-normal text-zinc-50">
                 —
               </span>
@@ -539,7 +546,9 @@ export function PortfolioHoldingsTable({
             )}
           </div>
           <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-            Realized + Unrealized
+            {totalCashAdjustments !== 0
+              ? `Realized + Unrealized + Cash (${fmtSignedBdt(totalCashAdjustments)})`
+              : "Realized + Unrealized"}
           </span>
         </div>
       </div>

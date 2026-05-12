@@ -1,5 +1,5 @@
 import { AppPageStack } from "@/components/app-page-stack";
-import { getUserSettings } from "../settings-actions";
+import { getUserSettings, listCashAdjustments } from "../settings-actions";
 import { getSectorTargets } from "../sector-target-actions";
 import { SettingsForm } from "./settings-form";
 
@@ -8,9 +8,10 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const [settingsRes, targetsRes] = await Promise.all([
+  const [settingsRes, targetsRes, adjustmentsRes] = await Promise.all([
     getUserSettings(),
     getSectorTargets(),
+    listCashAdjustments(),
   ]);
 
   return (
@@ -27,6 +28,9 @@ export default async function SettingsPage() {
           initialSettings={settingsRes.settings}
           initialSectorTargets={targetsRes.ok ? targetsRes.data.rows : []}
           sectorTargetsError={targetsRes.ok ? null : targetsRes.error}
+          initialCashAdjustments={adjustmentsRes.ok ? adjustmentsRes.rows : []}
+          initialCashAdjustmentsTotal={adjustmentsRes.ok ? adjustmentsRes.total : 0}
+          cashAdjustmentsError={adjustmentsRes.ok ? null : adjustmentsRes.error}
         />
       ) : (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-red-800 dark:bg-red-950/40 dark:text-red-200">

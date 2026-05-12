@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 type ReportPayload = {
   rows: ReturnType<typeof holdingsToMarketRows>;
   totalRealizedBdt: number;
+  totalCashAdjustmentsBdt: number;
 };
 
 type ReportTrigger = "manual" | "daily";
@@ -165,15 +166,21 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
 function buildSummary(payload: ReportPayload) {
   // Use the same `computePortfolioSummary` helper the UI uses so the report
   // and the live portfolio screen always agree on totals — including the
-  // `netGainLoss = realized + unrealized` rule.
+  // `netGainLoss = realized + unrealized + cashAdjustments` rule.
   const ltpMap = new Map<string, number | null | undefined>();
   for (const row of payload.rows) ltpMap.set(row.symbol, row.marketLtp);
-  const summary = computePortfolioSummary(payload.rows, payload.totalRealizedBdt, ltpMap);
+  const summary = computePortfolioSummary(
+    payload.rows,
+    payload.totalRealizedBdt,
+    ltpMap,
+    payload.totalCashAdjustmentsBdt,
+  );
 
   return {
     totalInvested: summary.totalInvested,
     totalUnrealized: summary.unrealizedGainLoss,
     totalRealizedBdt: summary.realizedGainLoss,
+    cashAdjustments: summary.cashAdjustments,
     netGainLoss: summary.netGainLoss,
     quotedCount: summary.quotedPositionCount,
     totalRows: payload.rows.length,
@@ -215,7 +222,10 @@ export async function sendPortfolioReportEmail(
       `Total invested: BDT ${fmt2(summary.totalInvested)}`,
       `Realized G/L: BDT ${fmt2(summary.totalRealizedBdt)}`,
       `Unrealized P/L: BDT ${fmt2(summary.totalUnrealized)}`,
-      `Net Gain/Loss (Realized + Unrealized): BDT ${fmt2(summary.netGainLoss)}`,
+      ...(summary.cashAdjustments !== 0
+        ? [`Cash adjustments: BDT ${fmt2(summary.cashAdjustments)}`]
+        : []),
+      `Net Gain/Loss (Realized + Unrealized${summary.cashAdjustments !== 0 ? " + Cash" : ""}): BDT ${fmt2(summary.netGainLoss)}`,
       "",
       `Open positions: ${summary.totalRows}`,
       `Positions with market price: ${summary.quotedCount}`,
@@ -229,7 +239,8 @@ export async function sendPortfolioReportEmail(
         <li><strong>Total invested:</strong> BDT ${fmt2(summary.totalInvested)}</li>
         <li><strong>Realized G/L:</strong> BDT ${fmt2(summary.totalRealizedBdt)}</li>
         <li><strong>Unrealized P/L:</strong> BDT ${fmt2(summary.totalUnrealized)}</li>
-        <li><strong>Net Gain/Loss (Realized + Unrealized):</strong> BDT ${fmt2(summary.netGainLoss)}</li>
+        ${summary.cashAdjustments !== 0 ? `<li><strong>Cash adjustments:</strong> BDT ${fmt2(summary.cashAdjustments)}</li>` : ""}
+        <li><strong>Net Gain/Loss (Realized + Unrealized${summary.cashAdjustments !== 0 ? " + Cash" : ""}):</strong> BDT ${fmt2(summary.netGainLoss)}</li>
         <li><strong>Open positions:</strong> ${summary.totalRows}</li>
         <li><strong>Positions with market price:</strong> ${summary.quotedCount}</li>
       </ul>
@@ -280,7 +291,22 @@ export async function buildReportForUser(
   const companyExtrasRes = await fetchDseCompanyExtrasMap(merged.map((h) => h.symbol));
   const rows = holdingsToMarketRows(merged, lspRes.bySymbol, companyExtrasRes);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
-  return { rows, totalRealizedBdt };
+
+  // Sum any manual cash add/deduct entries; tolerate the table not yet existing.
+  let totalCashAdjustmentsBdt = 0;
+  const caRes = await supabase
+    .from("cash_adjustments")
+    .select("amount_bdt")
+    .eq("user_id", userId);
+  if (!caRes.error) {
+    for (const row of (caRes.data ?? []) as { amount_bdt: number | string | null }[]) {
+      const n = typeof row.amount_bdt === "number" ? row.amount_bdt : Number(row.amount_bdt ?? 0);
+      if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
+    }
+    totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
+  }
+
+  return { rows, totalRealizedBdt, totalCashAdjustmentsBdt };
 }
 
 /**

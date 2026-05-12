@@ -20,13 +20,13 @@ export default async function PortfolioPage() {
     fetchPortfolioWithDseMarket(),
     user
       ? supabase
-          .from("long_term_holdings")
-          .select("symbol, classification")
-          .eq("user_id", user.id)
+        .from("long_term_holdings")
+        .select("symbol, classification")
+        .eq("user_id", user.id)
       : Promise.resolve({ data: null }),
   ]);
 
-  const { error, holdings, marketError, totalRealizedBdt, totalInvestedBdt } = portfolioRes;
+  const { error, holdings, marketError, totalRealizedBdt, totalInvestedBdt, totalCashAdjustmentsBdt } = portfolioRes;
 
   const classificationMap: Record<string, WatchlistClassification> = {};
   for (const row of classificationRes.data ?? []) {
@@ -116,6 +116,7 @@ export default async function PortfolioPage() {
             initialMarketError={marketError}
             initialTotalRealizedBdt={totalRealizedBdt}
             initialTotalInvestedBdt={totalInvestedBdt}
+            initialTotalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
             classificationMap={classificationMap}
           />
         </div>

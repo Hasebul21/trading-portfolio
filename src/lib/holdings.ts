@@ -9,7 +9,7 @@ import { fetchPositionOverrides, mergeLedgerWithOverrides } from "@/lib/portfoli
 
 export async function fetchUserHoldings() {
   const supabase = await createClient();
-  const [txRes, ovRes] = await Promise.all([
+  const [txRes, ovRes, caRes] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -18,6 +18,7 @@ export async function fetchUserHoldings() {
       .order("created_at", { ascending: true })
       .order("id", { ascending: true }),
     fetchPositionOverrides(supabase),
+    supabase.from("cash_adjustments").select("amount_bdt"),
   ]);
 
   if (txRes.error) {
@@ -26,6 +27,7 @@ export async function fetchUserHoldings() {
       holdings: [] as ReturnType<typeof aggregateHoldings>,
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
+      totalCashAdjustmentsBdt: 0,
     };
   }
 
@@ -35,6 +37,7 @@ export async function fetchUserHoldings() {
       holdings: [] as ReturnType<typeof aggregateHoldings>,
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
+      totalCashAdjustmentsBdt: 0,
     };
   }
 
@@ -47,10 +50,22 @@ export async function fetchUserHoldings() {
   // displays, so header total and per-row column always agree.
   const totalInvested = totalInvestedBdt(holdings);
 
+  // `cash_adjustments` may not yet exist on older databases; tolerate the
+  // missing-table error so the rest of the portfolio still renders.
+  let totalCashAdjustmentsBdt = 0;
+  if (!caRes.error) {
+    for (const row of (caRes.data ?? []) as { amount_bdt: number | string | null }[]) {
+      const n = typeof row.amount_bdt === "number" ? row.amount_bdt : Number(row.amount_bdt ?? 0);
+      if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
+    }
+    totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
+  }
+
   return {
     error: null as string | null,
     holdings,
     totalRealizedBdt,
     totalInvestedBdt: totalInvested,
+    totalCashAdjustmentsBdt,
   };
 }

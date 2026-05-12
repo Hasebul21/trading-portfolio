@@ -3,22 +3,29 @@
 import { signOut } from "../actions";
 import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } from "../settings-actions";
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
-import type { UserSettings } from "../settings-actions";
+import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
+import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
 
-type TabKey = "profile" | "email" | "password" | "targets";
+type TabKey = "profile" | "email" | "password" | "targets" | "cash";
 
 export function SettingsForm({
   initialSettings,
   initialSectorTargets,
   sectorTargetsError,
+  initialCashAdjustments,
+  initialCashAdjustmentsTotal,
+  cashAdjustmentsError,
 }: {
   initialSettings: UserSettings;
   initialSectorTargets: SectorTargetWithCurrent[];
   sectorTargetsError: string | null;
+  initialCashAdjustments: CashAdjustmentRow[];
+  initialCashAdjustmentsTotal: number;
+  cashAdjustmentsError: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
 
@@ -365,6 +372,17 @@ export function SettingsForm({
             />
           ) : (
             <SectorTargetsForm initialRows={initialSectorTargets} />
+          ),
+        },
+        {
+          key: "cash",
+          label: "Cash adjustments",
+          children: (
+            <CashAdjustmentsForm
+              initialRows={initialCashAdjustments}
+              initialTotal={initialCashAdjustmentsTotal}
+              initialError={cashAdjustmentsError}
+            />
           ),
         },
         {

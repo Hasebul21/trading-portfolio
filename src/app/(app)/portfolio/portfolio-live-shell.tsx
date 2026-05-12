@@ -20,6 +20,7 @@ type PortfolioMarketApi = {
   holdings: PortfolioMarketRow[];
   totalRealizedBdt: number;
   totalInvestedBdt: number;
+  totalCashAdjustmentsBdt: number;
 };
 
 export function PortfolioLiveShell({
@@ -27,17 +28,22 @@ export function PortfolioLiveShell({
   initialMarketError,
   initialTotalRealizedBdt,
   initialTotalInvestedBdt,
+  initialTotalCashAdjustmentsBdt,
   classificationMap = {},
 }: {
   initialHoldings: PortfolioMarketRow[];
   initialMarketError: string | null;
   initialTotalRealizedBdt: number;
   initialTotalInvestedBdt: number;
+  initialTotalCashAdjustmentsBdt: number;
   classificationMap?: Record<string, WatchlistClassification>;
 }) {
   const [rows, setRows] = useState(initialHoldings);
   const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
   const [totalInvestedBdt, setTotalInvestedBdt] = useState(initialTotalInvestedBdt);
+  const [totalCashAdjustmentsBdt, setTotalCashAdjustmentsBdt] = useState(
+    initialTotalCashAdjustmentsBdt,
+  );
   const [liveLspError, setLiveLspError] = useState<string | null>(null);
   const [hasPolled, setHasPolled] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
@@ -49,8 +55,8 @@ export function PortfolioLiveShell({
           (h) =>
             `${h.symbol}:${h.sector ?? ""}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
         )
-        .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}`,
-    [initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt],
+        .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}|cash:${initialTotalCashAdjustmentsBdt}`,
+    [initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt, initialTotalCashAdjustmentsBdt],
   );
 
   const prevInitialKey = useRef<string | null>(null);
@@ -60,7 +66,14 @@ export function PortfolioLiveShell({
     setRows(initialHoldings);
     setTotalRealizedBdt(initialTotalRealizedBdt);
     setTotalInvestedBdt(initialTotalInvestedBdt);
-  }, [initialKey, initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt]);
+    setTotalCashAdjustmentsBdt(initialTotalCashAdjustmentsBdt);
+  }, [
+    initialKey,
+    initialHoldings,
+    initialTotalRealizedBdt,
+    initialTotalInvestedBdt,
+    initialTotalCashAdjustmentsBdt,
+  ]);
 
   const refresh = useCallback(async () => {
     try {
@@ -84,6 +97,12 @@ export function PortfolioLiveShell({
       }
       if (typeof data.totalInvestedBdt === "number" && Number.isFinite(data.totalInvestedBdt)) {
         setTotalInvestedBdt(data.totalInvestedBdt);
+      }
+      if (
+        typeof data.totalCashAdjustmentsBdt === "number" &&
+        Number.isFinite(data.totalCashAdjustmentsBdt)
+      ) {
+        setTotalCashAdjustmentsBdt(data.totalCashAdjustmentsBdt);
       }
     } catch (e) {
       setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
@@ -130,6 +149,7 @@ export function PortfolioLiveShell({
         holdings={rows}
         totalRealizedBdt={totalRealizedBdt}
         totalInvestedBdt={totalInvestedBdt}
+        totalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
         classificationMap={classificationMap}
         enableBookEdit
         onAfterBookSave={refresh}

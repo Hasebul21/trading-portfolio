@@ -298,7 +298,12 @@ export type PortfolioSummary = {
   realizedGainLoss: number;
   /** Mark-to-market gain/loss on still-open positions (vs break-even price). */
   unrealizedGainLoss: number;
-  /** `realizedGainLoss + unrealizedGainLoss` (rounded to cents). */
+  /**
+   * Net of user-entered cash adjustments (deposits add, withdrawals subtract).
+   * Folded directly into {@link netGainLoss}.
+   */
+  cashAdjustments: number;
+  /** `realizedGainLoss + unrealizedGainLoss + cashAdjustments` (rounded to cents). */
   netGainLoss: number;
   /** Number of open positions that contributed to {@link unrealizedGainLoss}. */
   quotedPositionCount: number;
@@ -306,15 +311,19 @@ export type PortfolioSummary = {
 
 /**
  * Recommended portfolio structure required by the sell-accounting spec:
- * `{ totalInvested, realizedGainLoss, unrealizedGainLoss, netGainLoss }`.
+ * `{ totalInvested, realizedGainLoss, unrealizedGainLoss, cashAdjustments, netGainLoss }`.
  *
- * `netGainLoss = realizedGainLoss + unrealizedGainLoss`. Realized P/L is kept
- * strictly outside `totalInvested` (which only reflects active holdings).
+ * `netGainLoss = realizedGainLoss + unrealizedGainLoss + cashAdjustments`.
+ * Realized P/L is kept strictly outside `totalInvested` (which only reflects
+ * active holdings). `cashAdjustments` is the signed net of manual entries
+ * the user records under Settings → Cash adjustments (positive = deposits,
+ * negative = withdrawals).
  */
 export function computePortfolioSummary(
   holdings: HoldingRow[],
   realizedGainLoss: number,
   ltpBySymbol: ReadonlyMap<string, number | null | undefined>,
+  cashAdjustmentsBdt: number = 0,
 ): PortfolioSummary {
   const totalInvested = totalInvestedBdt(holdings);
   const { value: unrealizedGainLoss, quotedCount } = unrealizedGainLossBdt(
@@ -322,11 +331,15 @@ export function computePortfolioSummary(
     ltpBySymbol,
   );
   const realized = roundBdt(realizedGainLoss);
-  const net = roundBdt(realized + unrealizedGainLoss);
+  const adjustments = roundBdt(
+    Number.isFinite(cashAdjustmentsBdt) ? cashAdjustmentsBdt : 0,
+  );
+  const net = roundBdt(realized + unrealizedGainLoss + adjustments);
   return {
     totalInvested,
     realizedGainLoss: realized,
     unrealizedGainLoss,
+    cashAdjustments: adjustments,
     netGainLoss: net,
     quotedPositionCount: quotedCount,
   };
