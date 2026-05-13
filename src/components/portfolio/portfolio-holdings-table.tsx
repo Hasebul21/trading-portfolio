@@ -219,7 +219,6 @@ export function PortfolioHoldingsTable({
     totalInvested: totalInvestedComputed,
     unrealizedGainLoss: totalUnrealized,
     cashAdjustments: totalCashAdjustments,
-    netGainLoss: netGl,
     withQuote,
     positions,
   } = summary;
@@ -492,7 +491,7 @@ export function PortfolioHoldingsTable({
             Realized G/L
           </div>
           <div className="mt-0.5 min-h-[1.25rem]">
-            <PlIndicator value={totalRealizedBdt} />
+            <PlIndicator value={totalRealizedBdt + totalCashAdjustments} />
           </div>
         </div>
 
@@ -519,21 +518,6 @@ export function PortfolioHoldingsTable({
               Needs DSE last price
             </span>
           ) : null}
-        </div>
-
-        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[15rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
-            Net Gain/Loss
-          </div>
-          <div className="mt-0.5 min-h-[1.25rem]">
-            {withQuote === 0 && totalRealizedBdt === 0 && totalCashAdjustments === 0 ? (
-              <span className="text-[15px] font-normal text-zinc-50">
-                —
-              </span>
-            ) : (
-              <PlIndicator value={netGl} />
-            )}
-          </div>
         </div>
       </div>
 
