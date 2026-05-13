@@ -12,7 +12,7 @@ import {
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import { Alert, Button, Card, Input, Space, Table } from "antd";
+import { Alert, AutoComplete, Button, Card, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -57,8 +57,6 @@ function groupBySector(rows: PortfolioMarketRow[]): SectorGroup[] {
 }
 
 type BookDraft = { shares: string; avg: string; total: string };
-
-const { Search } = Input;
 
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
@@ -237,6 +235,15 @@ export function PortfolioHoldingsTable({
     );
     return groupBySector(filtered);
   }, [displayHoldings, symbolQuery]);
+
+  const symbolOptions = useMemo(
+    () =>
+      [...holdings]
+        .map((h) => h.symbol)
+        .sort((a, b) => a.localeCompare(b))
+        .map((symbol) => ({ value: symbol, label: symbol })),
+    [holdings],
+  );
 
   const patchDraft = useCallback(
     (symbol: string, field: keyof BookDraft, value: string) => {
@@ -436,38 +443,45 @@ export function PortfolioHoldingsTable({
 
   return (
     <Card
-      variant="outlined"
-      className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-teal-200/50 bg-white/75 shadow-xl shadow-teal-950/[0.07] ring-1 ring-black/[0.04] backdrop-blur-md dark:border-teal-900/35 dark:bg-zinc-900/65 dark:shadow-black/40 dark:ring-white/[0.06]"
+      variant="borderless"
+      className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-zinc-700/40 bg-[#1d2127] shadow-lg shadow-black/30"
       styles={{ body: { padding: 0 } }}
     >
-      <div className="grid grid-cols-2 gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4 dark:border-teal-900/40">
-        <div className="min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
+      <div className="grid grid-cols-2 gap-2 border-b border-zinc-700/40 px-3 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4">
+        <div className="min-w-0 rounded-xl border border-zinc-700/50 bg-[#262c34] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
+          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-zinc-400">
             Total invested
           </div>
-          <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-50">
+          <div className="mt-1 text-[15px] font-medium tabular-nums text-zinc-200">
             {formatBdt(totalInvestedDisplay)}
           </div>
         </div>
 
-        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
+        <div className="w-full min-w-0 rounded-xl border border-zinc-700/50 bg-[#262c34] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
+          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-zinc-400">
             Realized G/L
           </div>
-          <div className="mt-0.5 min-h-[1.25rem]">
+          <div className="mt-1 min-h-[1.25rem]">
             <PlIndicator value={totalRealizedBdt + totalCashAdjustments} />
           </div>
         </div>
 
       </div>
 
-      <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4 dark:border-teal-900/40">
+      <div className="flex flex-col gap-2 border-b border-zinc-700/40 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
         <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
-          <Search
+          <AutoComplete
             allowClear
-            placeholder="Search symbol…"
             value={symbolQuery}
-            onChange={(e) => setSymbolQuery(e.target.value)}
+            onChange={(v) => setSymbolQuery(typeof v === "string" ? v : "")}
+            onSelect={(v) => setSymbolQuery(typeof v === "string" ? v : "")}
+            options={symbolOptions}
+            placeholder="Search symbol…"
+            filterOption={(input, option) =>
+              String(option?.value ?? "")
+                .toUpperCase()
+                .includes(input.toUpperCase())
+            }
             className="w-full max-w-full sm:max-w-sm"
             size="middle"
           />
@@ -502,34 +516,21 @@ export function PortfolioHoldingsTable({
       {/* Mobile (< md): one section per sector with a compact card list. */}
       <div className="md:hidden">
         {data.length === 0 ? (
-          <div className="px-4 py-10 text-center text-[14px] text-zinc-50">
+          <div className="px-4 py-10 text-center text-[14px] text-zinc-400">
             {symbolQuery.trim()
               ? "No symbols match your search."
               : "No positions yet."}
           </div>
         ) : (
-          <div className="flex flex-col gap-3 px-3 py-2">
+          <div className="flex flex-col gap-3 px-3 py-3">
             {data.map((group) => (
-              <section
-                key={group.sector}
-                className="rounded-xl px-3 py-2"
-                style={{ backgroundColor: "#7A7371" }}
-              >
-                <header className="flex items-baseline justify-between gap-2 px-1 pb-1">
-                  <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-zinc-50">
-                    {group.sector}
-                  </span>
-                  <span className="text-[11px] font-normal tabular-nums text-zinc-100">
-                    {group.items.length}{" "}
-                    {group.items.length === 1 ? "position" : "positions"}
-                  </span>
-                </header>
+              <SectorSection key={group.sector} sector={group.sector} count={group.items.length}>
                 <ul className="mobile-card-list">
                   {group.items.map((row) => (
                     <MobileHoldingCard key={row.key} row={row} />
                   ))}
                 </ul>
-              </section>
+              </SectorSection>
             ))}
           </div>
         )}
@@ -538,7 +539,7 @@ export function PortfolioHoldingsTable({
       {/* Desktop (≥ md): one full table per sector. */}
       <div className="hidden md:block">
         {data.length === 0 ? (
-          <div className="px-4 py-10 text-center text-[14px] text-zinc-50">
+          <div className="px-4 py-10 text-center text-[14px] text-zinc-400">
             {symbolQuery.trim()
               ? "No symbols match your search."
               : "No positions yet."}
@@ -546,20 +547,7 @@ export function PortfolioHoldingsTable({
         ) : (
           <div className="flex flex-col gap-3 px-3 py-3 sm:px-4">
             {data.map((group) => (
-              <section
-                key={group.sector}
-                className="rounded-xl px-3 py-2"
-                style={{ backgroundColor: "#7A7371" }}
-              >
-                <header className="flex items-baseline justify-between gap-2 pb-2">
-                  <h3 className="text-[15px] font-semibold text-zinc-50">
-                    {group.sector}
-                  </h3>
-                  <span className="text-[13px] font-normal tabular-nums text-zinc-100">
-                    {group.items.length}{" "}
-                    {group.items.length === 1 ? "position" : "positions"}
-                  </span>
-                </header>
+              <SectorSection key={group.sector} sector={group.sector} count={group.items.length}>
                 <Table<DataRow>
                   key={bookEditorOpen ? `book-edit-${group.sector}` : `book-view-${group.sector}`}
                   className="portfolio-holdings-table"
@@ -575,15 +563,15 @@ export function PortfolioHoldingsTable({
                   bordered={false}
                   tableLayout="auto"
                 />
-              </section>
+              </SectorSection>
             ))}
           </div>
         )}
       </div>
 
       {bookEditing ? (
-        <div className="space-y-3 border-t border-teal-100/80 px-3 py-4 sm:px-4 dark:border-teal-900/40">
-          <p className="text-left text-[15px] font-normal leading-relaxed text-zinc-50">
+        <div className="space-y-3 border-t border-zinc-700/40 px-3 py-4 sm:px-4">
+          <p className="text-left text-[15px] font-normal leading-relaxed text-zinc-300">
             Edit shares, average cost, and total invested for any row. Changing average updates total (and the other way
             around); changing shares keeps average and updates total. You can save even if total and shares × average differ
             slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that
@@ -606,6 +594,33 @@ export function PortfolioHoldingsTable({
   );
 }
 
+function SectorSection({
+  sector,
+  count,
+  children,
+}: {
+  sector: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-zinc-700/40 bg-[#262c34]">
+      <header
+        className="flex items-baseline justify-between gap-2 border-b border-zinc-700/40 px-3 py-2"
+        style={{ backgroundColor: "#7A7371" }}
+      >
+        <h3 className="text-[14px] font-semibold uppercase tracking-[0.12em] text-zinc-50">
+          {sector}
+        </h3>
+        <span className="text-[12px] font-normal tabular-nums text-zinc-100">
+          {count} {count === 1 ? "position" : "positions"}
+        </span>
+      </header>
+      <div className="px-2 py-2 sm:px-3">{children}</div>
+    </section>
+  );
+}
+
 function MobileHoldingCard({
   row,
 }: {
@@ -614,35 +629,35 @@ function MobileHoldingCard({
   return (
     <li>
       <article
-        className="flex flex-col gap-2 rounded-xl border border-zinc-200/70 border-l-[4px] border-l-teal-500/40 bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:border-l-teal-400/40 dark:bg-zinc-900/70"
+        className="flex flex-col gap-2 rounded-lg border border-zinc-700/40 bg-[#1d2127] px-3 py-3 text-left"
       >
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+            <span className="font-mono text-[15px] font-medium text-zinc-100">
               {row.symbol}
             </span>
           </div>
-          <span className="font-mono text-[14px] tabular-nums text-zinc-700 dark:text-zinc-200">
+          <span className="font-mono text-[14px] tabular-nums text-zinc-300">
             {formatNumberMax2Decimals(row.shares)} sh
           </span>
         </header>
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
           <div>
-            <dt className="text-zinc-500 dark:text-zinc-400">Invested</dt>
-            <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
+            <dt className="text-zinc-400">Invested</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
               {formatBdt(row.totalCost)}
             </dd>
           </div>
           <div className="text-right">
-            <dt className="text-zinc-500 dark:text-zinc-400">Break-even</dt>
-            <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
+            <dt className="text-zinc-400">Break-even</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
               {formatBdt(row.breakEvenPrice)}
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-500 dark:text-zinc-400">Avg cost</dt>
-            <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
+            <dt className="text-zinc-400">Avg cost</dt>
+            <dd className="font-mono tabular-nums text-zinc-300">
               {formatBdt(row.avgPrice)}
             </dd>
           </div>
