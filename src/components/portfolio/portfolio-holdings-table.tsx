@@ -16,14 +16,11 @@ import { Alert, Button, Card, Input, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type DataRow = PortfolioMarketRow & { key: string; isHeader?: false };
-type SectorHeaderRow = {
-  key: string;
-  isHeader: true;
+type DataRow = PortfolioMarketRow & { key: string };
+type SectorGroup = {
   sector: string;
-  count: number;
+  items: DataRow[];
 };
-type Row = DataRow | SectorHeaderRow;
 
 const SECTOR_FALLBACK = "Unsectorised";
 
@@ -33,11 +30,10 @@ function sectorLabel(s: string | null | undefined): string {
 }
 
 /**
- * Build the table rows: data rows are sorted by sector then symbol, and a
- * single sector-header row is inserted before each group so the table reads
- * as separate per-sector sections within one table.
+ * Group holdings by sector, sorted with the fallback bucket pushed last and
+ * symbols sorted alphabetically inside each group.
  */
-function groupBySector(rows: PortfolioMarketRow[]): Row[] {
+function groupBySector(rows: PortfolioMarketRow[]): SectorGroup[] {
   const bySector = new Map<string, PortfolioMarketRow[]>();
   for (const r of rows) {
     const k = sectorLabel(r.sector);
@@ -46,18 +42,18 @@ function groupBySector(rows: PortfolioMarketRow[]): Row[] {
     bySector.set(k, list);
   }
   const sectors = [...bySector.keys()].sort((a, b) => {
-    // Push the fallback bucket to the bottom so real sectors lead.
     if (a === SECTOR_FALLBACK && b !== SECTOR_FALLBACK) return 1;
     if (b === SECTOR_FALLBACK && a !== SECTOR_FALLBACK) return -1;
     return a.localeCompare(b);
   });
-  const out: Row[] = [];
-  for (const s of sectors) {
-    const items = bySector.get(s)!.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
-    out.push({ key: `__sector__:${s}`, isHeader: true, sector: s, count: items.length });
-    for (const h of items) out.push({ ...h, key: h.symbol });
-  }
-  return out;
+  return sectors.map((sector) => ({
+    sector,
+    items: bySector
+      .get(sector)!
+      .slice()
+      .sort((a, b) => a.symbol.localeCompare(b.symbol))
+      .map((h) => ({ ...h, key: h.symbol })),
+  }));
 }
 
 type BookDraft = { shares: string; avg: string; total: string };
@@ -234,7 +230,7 @@ export function PortfolioHoldingsTable({
   // back to the rows-derived total which reflects the draft.
   const totalInvestedDisplay = bookEditing ? totalInvestedComputed : totalInvestedBdt;
 
-  const data: Row[] = useMemo(() => {
+  const data: SectorGroup[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
     const filtered = displayHoldings.filter(
       (h) => !q || h.symbol.toUpperCase().includes(q),
@@ -329,30 +325,21 @@ export function PortfolioHoldingsTable({
     }
   };
 
-  const columns: ColumnsType<Row> = useMemo(() => {
-    // Sector header rows span the full table width; the other columns return
-    // a zero colSpan so antd hides them for header rows only.
-    const headerCellHidden = (record: Row) =>
-      record.isHeader ? { colSpan: 0 as const } : {};
-
-    const avgCol: ColumnsType<Row>[0] = bookEditing
+  const columns: ColumnsType<DataRow> = useMemo(() => {
+    const avgCol: ColumnsType<DataRow>[0] = bookEditing
       ? {
         title: "Average cost / share",
         key: "avgPrice",
         width: 132,
         align: "right",
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <input
-              aria-label={`${row.symbol} average cost per share`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
-              onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
-            />
-          );
-        },
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} average cost per share`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
+            onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
+          />
+        ),
       }
       : {
         title: "Average cost / share",
@@ -360,33 +347,25 @@ export function PortfolioHoldingsTable({
         width: 128,
         align: "right",
         responsive: ["sm"],
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
-          );
-        },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
+        ),
       };
 
-    const sharesCol: ColumnsType<Row>[0] = bookEditing
+    const sharesCol: ColumnsType<DataRow>[0] = bookEditing
       ? {
         title: "Shares",
         key: "shares",
         width: 96,
         align: "right",
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <input
-              aria-label={`${row.symbol} shares`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
-              onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
-            />
-          );
-        },
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} shares`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
+            onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
+          />
+        ),
       }
       : {
         title: "Shares",
@@ -394,35 +373,27 @@ export function PortfolioHoldingsTable({
         width: 80,
         align: "right",
         responsive: ["sm"],
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <span className="tabular-nums text-[15px] font-normal">
-              {formatNumberMax2Decimals(row.shares)}
-            </span>
-          );
-        },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">
+            {formatNumberMax2Decimals(row.shares)}
+          </span>
+        ),
       };
 
-    const totalCol: ColumnsType<Row>[0] = bookEditing
+    const totalCol: ColumnsType<DataRow>[0] = bookEditing
       ? {
         title: "Total invested",
         key: "totalCost",
         width: 120,
         align: "right",
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <input
-              aria-label={`${row.symbol} total invested`}
-              className={bookInputClass}
-              value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
-              onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
-            />
-          );
-        },
+        render: (_: unknown, row) => (
+          <input
+            aria-label={`${row.symbol} total invested`}
+            className={bookInputClass}
+            value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
+            onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
+          />
+        ),
       }
       : {
         title: "Total invested",
@@ -430,13 +401,9 @@ export function PortfolioHoldingsTable({
         width: 112,
         align: "right",
         responsive: ["md"],
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
-          );
-        },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
+        ),
       };
 
     return [
@@ -445,42 +412,22 @@ export function PortfolioHoldingsTable({
         key: "symbol",
         width: 88,
         align: "left",
-        onCell: (record: Row) =>
-          record.isHeader ? { colSpan: 4 as const } : {},
-        render: (_: unknown, row) => {
-          if (row.isHeader) {
-            return (
-              <div className="flex items-baseline gap-2 py-1 text-left">
-                <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
-                  {row.sector}
-                </span>
-                <span className="text-[11px] font-normal tabular-nums text-zinc-500 dark:text-zinc-400">
-                  {row.count} {row.count === 1 ? "position" : "positions"}
-                </span>
-              </div>
-            );
-          }
-          return (
-            <span className="font-mono text-[15px] font-normal text-zinc-50">
-              {row.symbol}
-            </span>
-          );
-        },
+        render: (_: unknown, row) => (
+          <span className="font-mono text-[15px] font-normal text-zinc-50">
+            {row.symbol}
+          </span>
+        ),
       },
       {
         title: "Break-even",
         key: "breakEvenPrice",
         width: 100,
         align: "right",
-        onCell: headerCellHidden,
-        render: (_: unknown, row) => {
-          if (row.isHeader) return null;
-          return (
-            <span className="tabular-nums text-[15px] font-normal">
-              {formatBdt(row.breakEvenPrice)}
-            </span>
-          );
-        },
+        render: (_: unknown, row) => (
+          <span className="tabular-nums text-[15px] font-normal">
+            {formatBdt(row.breakEvenPrice)}
+          </span>
+        ),
       },
       sharesCol,
       totalCol,
@@ -552,7 +499,7 @@ export function PortfolioHoldingsTable({
         ) : null}
       </div>
 
-      {/* Mobile (< md): compact card list — touch-friendly, no horizontal scroll. */}
+      {/* Mobile (< md): one section per sector with a compact card list. */}
       <div className="md:hidden">
         {data.length === 0 ? (
           <div className="px-4 py-10 text-center text-[14px] text-zinc-50">
@@ -561,47 +508,77 @@ export function PortfolioHoldingsTable({
               : "No positions yet."}
           </div>
         ) : (
-          <ul className="mobile-card-list px-3 py-2">
-            {data.map((row) =>
-              row.isHeader ? (
-                <li key={row.key} className="px-1 pb-1 pt-3 first:pt-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
-                      {row.sector}
-                    </span>
-                    <span className="text-[11px] font-normal tabular-nums text-zinc-500 dark:text-zinc-400">
-                      {row.count} {row.count === 1 ? "position" : "positions"}
-                    </span>
-                  </div>
-                </li>
-              ) : (
-                <MobileHoldingCard key={row.key} row={row} />
-              ),
-            )}
-          </ul>
+          <div className="flex flex-col gap-3 px-3 py-2">
+            {data.map((group) => (
+              <section
+                key={group.sector}
+                className="rounded-xl px-3 py-2"
+                style={{ backgroundColor: "#7A7371" }}
+              >
+                <header className="flex items-baseline justify-between gap-2 px-1 pb-1">
+                  <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-zinc-50">
+                    {group.sector}
+                  </span>
+                  <span className="text-[11px] font-normal tabular-nums text-zinc-100">
+                    {group.items.length}{" "}
+                    {group.items.length === 1 ? "position" : "positions"}
+                  </span>
+                </header>
+                <ul className="mobile-card-list">
+                  {group.items.map((row) => (
+                    <MobileHoldingCard key={row.key} row={row} />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Desktop (≥ md): full Ant Design table. */}
+      {/* Desktop (≥ md): one full table per sector. */}
       <div className="hidden md:block">
-        <Table<Row>
-          key={bookEditorOpen ? "portfolio-book-edit" : "portfolio-book-view"}
-          className="portfolio-holdings-table"
-          columns={columns}
-          dataSource={data}
-          scroll={{ x: "max-content" }}
-          pagination={tablePagination("positions", {
-            hideOnSinglePage: false,
-            pageSize: 15,
-            pageSizeOptions: [10, 15, 20, 50],
-          })}
-          size="middle"
-          bordered={false}
-          tableLayout="auto"
-          locale={{
-            emptyText: symbolQuery.trim() ? "No symbols match your search." : undefined,
-          }}
-        />
+        {data.length === 0 ? (
+          <div className="px-4 py-10 text-center text-[14px] text-zinc-50">
+            {symbolQuery.trim()
+              ? "No symbols match your search."
+              : "No positions yet."}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 px-3 py-3 sm:px-4">
+            {data.map((group) => (
+              <section
+                key={group.sector}
+                className="rounded-xl px-3 py-2"
+                style={{ backgroundColor: "#7A7371" }}
+              >
+                <header className="flex items-baseline justify-between gap-2 pb-2">
+                  <h3 className="text-[15px] font-semibold text-zinc-50">
+                    {group.sector}
+                  </h3>
+                  <span className="text-[13px] font-normal tabular-nums text-zinc-100">
+                    {group.items.length}{" "}
+                    {group.items.length === 1 ? "position" : "positions"}
+                  </span>
+                </header>
+                <Table<DataRow>
+                  key={bookEditorOpen ? `book-edit-${group.sector}` : `book-view-${group.sector}`}
+                  className="portfolio-holdings-table"
+                  columns={columns}
+                  dataSource={group.items}
+                  scroll={{ x: "max-content" }}
+                  pagination={tablePagination("positions", {
+                    hideOnSinglePage: true,
+                    pageSize: 15,
+                    pageSizeOptions: [10, 15, 20, 50],
+                  })}
+                  size="middle"
+                  bordered={false}
+                  tableLayout="auto"
+                />
+              </section>
+            ))}
+          </div>
+        )}
       </div>
 
       {bookEditing ? (
