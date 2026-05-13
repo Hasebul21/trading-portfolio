@@ -268,37 +268,6 @@ export async function deleteTradePlan(formData: FormData) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Single nullable field: BLUE, GREEN, or unclassified (null). */
-export async function setWatchlistClassification(
-  rowId: string,
-  classification: "BLUE" | "GREEN" | null,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!UUID_RE.test(rowId)) return { ok: false, error: "Invalid row." };
-  if (classification !== null && classification !== "BLUE" && classification !== "GREEN") {
-    return { ok: false, error: "Invalid classification." };
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in." };
-
-  const { error } = await supabase
-    .from("long_term_holdings")
-    .update({ classification })
-    .eq("id", rowId)
-    .eq("user_id", user.id);
-
-  if (error) {
-    console.error("setWatchlistClassification", error.message);
-    return { ok: false, error: error.message };
-  }
-
-  revalidatePath("/long-term");
-  return { ok: true };
-}
-
 function parseYmdDhakaCalendar(dateStr: string): { ym: string; day: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr ?? "").trim());
   if (!m) return null;

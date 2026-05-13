@@ -46,9 +46,6 @@ const COLORS = [
     "#16a34a", // green-600
 ] as const;
 
-/** Anything > this single-sector share is flagged as concentration risk. */
-const CONCENTRATION_WARNING_THRESHOLD_PERCENT = 40;
-
 function buildSectorSlices(
     holdings: AllocationHolding[],
     targets: SectorTarget[],
@@ -211,19 +208,6 @@ export function SectorAllocationDetailed({
         [visibleSlices],
     );
 
-    const concentrated = visibleSlices.filter(
-        (s) => s.percentOfPortfolio > CONCENTRATION_WARNING_THRESHOLD_PERCENT,
-    );
-
-    const targetSum = useMemo(() => {
-        let s = 0;
-        for (const slice of slices) {
-            if (slice.targetPercent !== null) s += slice.targetPercent;
-        }
-        return Math.round(s * 100) / 100;
-    }, [slices]);
-    const hasAnyTarget = slices.some((s) => s.targetPercent !== null);
-
     if (slices.length === 0 || total <= 0) {
         return (
             <div className="rounded-2xl border border-dashed border-teal-300/70 bg-white/80 px-6 py-10 text-center text-[15px] font-normal text-zinc-600 dark:border-teal-800/60 dark:bg-zinc-900/70 dark:text-zinc-400">
@@ -235,35 +219,11 @@ export function SectorAllocationDetailed({
     return (
         <div className="flex flex-col gap-3 sm:gap-5">
             {/* Top summary strip */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <SummaryCell label="Total invested" value={formatBdt(total)} />
                 <SummaryCell label="Sectors" value={String(visibleSlices.length)} />
                 <SummaryCell label="Positions" value={String(positionCount)} />
-                <SummaryCell
-                    label="Largest sector"
-                    value={
-                        visibleSlices[0]
-                            ? `${visibleSlices[0].sector} · ${fmtPct(visibleSlices[0].percentOfPortfolio)}`
-                            : "—"
-                    }
-                />
             </div>
-
-            {/* Concentration warning */}
-            {concentrated.length > 0 ? (
-                <div className="rounded-xl border border-amber-300/70 bg-amber-50/80 px-3 py-2 text-[15px] font-normal text-amber-900 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100">
-                    <span className="font-medium">Concentration risk: </span>
-                    {concentrated
-                        .map(
-                            (s) =>
-                                `${s.sector} (${fmtPct(s.percentOfPortfolio)})`,
-                        )
-                        .join(", ")}{" "}
-                    exceed{concentrated.length === 1 ? "s" : ""}{" "}
-                    {CONCENTRATION_WARNING_THRESHOLD_PERCENT}% of the portfolio. Consider
-                    diversifying.
-                </div>
-            ) : null}
 
             {/* Donut + legend */}
             <div className="rounded-2xl border border-teal-200/60 bg-white/80 px-3 py-4 shadow-sm sm:px-5 dark:border-teal-900/40 dark:bg-zinc-900/65">
@@ -316,30 +276,6 @@ export function SectorAllocationDetailed({
                         ))}
                     </div>
                 </div>
-                {hasAnyTarget ? (
-                    <p className="mt-3 text-right text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
-                        Each sector shows{" "}
-                        <span className="font-mono">current / target</span>. Configured
-                        target sum: {fmtPct(targetSum)}.{" "}
-                        <a
-                            href="/settings"
-                            className="text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
-                        >
-                            Edit targets
-                        </a>
-                    </p>
-                ) : (
-                    <p className="mt-3 text-right text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
-                        No sector targets set.{" "}
-                        <a
-                            href="/settings"
-                            className="text-teal-700 underline-offset-2 hover:underline dark:text-teal-300"
-                        >
-                            Set targets in Settings
-                        </a>{" "}
-                        to track drift.
-                    </p>
-                )}
             </div>
 
             {/* Per-sector detail cards */}
@@ -366,16 +302,6 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
 }
 
 function SectorCard({ slice }: { slice: SectorSlice }) {
-    const top = slice.holdings[0];
-    const status = deltaStatus(slice.deltaPercent);
-    const deltaClass =
-        status === "over"
-            ? "bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200"
-            : status === "under"
-              ? "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-              : status === "ok"
-                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200";
     const isEmptyTarget = slice.investedBdt === 0 && slice.targetPercent !== null;
 
     return (
@@ -412,15 +338,6 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
                 </div>
             </header>
 
-            {slice.deltaPercent !== null ? (
-                <p
-                    className={`self-start rounded-md px-2 py-0.5 font-mono text-[11px] tabular-nums ${deltaClass}`}
-                >
-                    {fmtSignedPct(slice.deltaPercent)} vs target
-                    {status === "ok" ? " · on track" : ""}
-                </p>
-            ) : null}
-
             {isEmptyTarget ? (
                 <p className="text-[12px] font-normal text-amber-800 dark:text-amber-200">
                     No position yet — buy into this sector to reach your{" "}
@@ -430,7 +347,7 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
 
             {!isEmptyTarget ? (
                 <>
-                    <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="grid grid-cols-2 gap-2 text-center">
                         <div>
                             <p className="text-[10px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                                 Invested
@@ -447,29 +364,7 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
                                 {slice.holdings.length}
                             </p>
                         </div>
-                        <div>
-                            <p className="text-[10px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                Wt. avg cost
-                            </p>
-                            <p className="mt-0.5 text-[14px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
-                                {formatBdt(slice.weightedAvgPrice)}
-                            </p>
-                        </div>
                     </div>
-
-                    {top ? (
-                        <p className="rounded-md border border-dashed border-teal-200/70 bg-teal-50/30 px-2 py-1 text-center text-[12px] font-normal text-teal-900 dark:border-teal-800/50 dark:bg-teal-950/20 dark:text-teal-200">
-                            Top holding:{" "}
-                            <span className="font-mono tabular-nums">{top.symbol}</span>{" "}
-                            · {formatBdt(top.totalCost)} ·{" "}
-                            {fmtPct(
-                                slice.investedBdt > 0
-                                    ? (top.totalCost / slice.investedBdt) * 100
-                                    : 0,
-                            )}{" "}
-                            of sector
-                        </p>
-                    ) : null}
 
                     <table className="w-full text-left text-[13px] font-normal">
                         <thead>

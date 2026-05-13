@@ -94,8 +94,7 @@ create table if not exists public.long_term_holdings (
   buy_point_bdt numeric,
   sell_point_bdt numeric,
   manual_avg_cost_bdt numeric,
-  manual_total_invested_bdt numeric,
-  classification text
+  manual_total_invested_bdt numeric
 );
 
 create index if not exists long_term_holdings_user_idx
@@ -484,15 +483,13 @@ alter table public.long_term_holdings
   add column if not exists buy_point_bdt numeric,
   add column if not exists sell_point_bdt numeric,
   add column if not exists manual_avg_cost_bdt numeric,
-  add column if not exists manual_total_invested_bdt numeric,
-  add column if not exists classification text;
+  add column if not exists manual_total_invested_bdt numeric;
 
 alter table public.long_term_holdings
   drop constraint if exists long_term_holdings_classification_check;
 
 alter table public.long_term_holdings
-  add constraint long_term_holdings_classification_check
-  check (classification is null or classification in ('BLUE', 'GREEN'));
+  drop column if exists classification;
 
 -- ---------------------------------------------------------------------------
 -- knowledge_notes

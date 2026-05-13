@@ -12,12 +12,7 @@ import {
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import {
-  WATCHLIST_CLASS_FILTER_OPTIONS,
-  type WatchlistClassFilter,
-  type WatchlistClassification,
-} from "@/lib/watchlist-classification";
-import { Alert, Button, Card, Input, Select, Space, Table } from "antd";
+import { Alert, Button, Card, Input, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -111,39 +106,11 @@ function sortNullableNumber(
   };
 }
 
-function rowMeetsClassFilter(c: WatchlistClassification, filter: WatchlistClassFilter): boolean {
-  if (filter === "ALL") return true;
-  if (filter === "CLASSIFIED") return c === "BLUE" || c === "GREEN";
-  if (filter === "NONE") return c === null;
-  return c === filter;
-}
-
-function ClassificationDot({ c }: { c: WatchlistClassification }) {
-  if (c === "BLUE") {
-    return (
-      <span
-        title="Blue chip"
-        className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400"
-      />
-    );
-  }
-  if (c === "GREEN") {
-    return (
-      <span
-        title="Green chip"
-        className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400"
-      />
-    );
-  }
-  return null;
-}
-
 export function PortfolioHoldingsTable({
   holdings,
   totalRealizedBdt = 0,
   totalInvestedBdt = 0,
   totalCashAdjustmentsBdt = 0,
-  classificationMap = {},
   enableBookEdit = false,
   onAfterBookSave,
 }: {
@@ -154,7 +121,6 @@ export function PortfolioHoldingsTable({
   totalInvestedBdt?: number;
   /** Net of manual cash add/deduct entries from Settings. */
   totalCashAdjustmentsBdt?: number;
-  classificationMap?: Record<string, WatchlistClassification>;
   enableBookEdit?: boolean;
   onAfterBookSave?: () => void | Promise<void>;
 }) {
@@ -165,7 +131,6 @@ export function PortfolioHoldingsTable({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [bookEditorOpen, setBookEditorOpen] = useState(false);
-  const [classFilter, setClassFilter] = useState<WatchlistClassFilter>("ALL");
 
   const fp = useMemo(() => bookFingerprint(holdings), [holdings]);
   const prevFp = useRef(fp);
@@ -230,13 +195,9 @@ export function PortfolioHoldingsTable({
   const data: Row[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
     return displayHoldings
-      .filter((h) => {
-        const c = classificationMap[h.symbol] ?? null;
-        if (!rowMeetsClassFilter(c, classFilter)) return false;
-        return !q || h.symbol.toUpperCase().includes(q);
-      })
+      .filter((h) => !q || h.symbol.toUpperCase().includes(q))
       .map((h) => ({ ...h, key: h.symbol }));
-  }, [displayHoldings, symbolQuery, classFilter, classificationMap]);
+  }, [displayHoldings, symbolQuery]);
 
   const patchDraft = useCallback(
     (symbol: string, field: keyof BookDraft, value: string) => {
@@ -423,11 +384,8 @@ export function PortfolioHoldingsTable({
           }
           : {}),
         render: (v: string) => (
-          <span className="flex items-center gap-1.5">
-            <ClassificationDot c={classificationMap[v] ?? null} />
-            <span className="font-mono text-[15px] font-normal text-zinc-50">
-              {v}
-            </span>
+          <span className="font-mono text-[15px] font-normal text-zinc-50">
+            {v}
           </span>
         ),
       },
@@ -449,7 +407,7 @@ export function PortfolioHoldingsTable({
       sharesCol,
       totalCol,
     ];
-  }, [bookEditing, classificationMap, draft, patchDraft]);
+  }, [bookEditing, draft, patchDraft]);
 
   return (
     <Card
@@ -488,34 +446,6 @@ export function PortfolioHoldingsTable({
             className="w-full max-w-full sm:max-w-sm"
             size="middle"
           />
-          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <span className="text-[13px] font-medium text-zinc-50">Filter:</span>
-            <Select<WatchlistClassFilter>
-              value={classFilter}
-              onChange={setClassFilter}
-              options={WATCHLIST_CLASS_FILTER_OPTIONS.map((opt) => ({
-                ...opt,
-                label: (
-                  <span className="inline-flex items-center gap-1.5">
-                    {opt.value === "BLUE" ? (
-                      <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
-                    ) : opt.value === "GREEN" ? (
-                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                    ) : opt.value === "CLASSIFIED" ? (
-                      <span className="inline-flex items-center gap-0.5">
-                        <span className="inline-block h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
-                        <span className="inline-block h-2 w-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                      </span>
-                    ) : null}
-                    {opt.label}
-                  </span>
-                ),
-              }))}
-              aria-label="Filter portfolio by chip classification"
-              className="w-full min-w-0 sm:min-w-[11rem]"
-              size="middle"
-            />
-          </div>
         </Space>
         {enableBookEdit ? (
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -558,7 +488,6 @@ export function PortfolioHoldingsTable({
               <MobileHoldingCard
                 key={row.symbol}
                 row={row}
-                classification={classificationMap[row.symbol] ?? null}
               />
             ))}
           </ul>
@@ -614,26 +543,16 @@ export function PortfolioHoldingsTable({
 
 function MobileHoldingCard({
   row,
-  classification,
 }: {
   row: Row;
-  classification: WatchlistClassification;
 }) {
-  const accentBorder =
-    classification === "BLUE"
-      ? "border-l-blue-500/70 dark:border-l-blue-400/80"
-      : classification === "GREEN"
-        ? "border-l-emerald-500/70 dark:border-l-emerald-400/80"
-        : "border-l-teal-500/40 dark:border-l-teal-400/40";
-
   return (
     <li>
       <article
-        className={`flex flex-col gap-2 rounded-xl border border-zinc-200/70 border-l-[4px] ${accentBorder} bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70`}
+        className="flex flex-col gap-2 rounded-xl border border-zinc-200/70 border-l-[4px] border-l-teal-500/40 bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:border-l-teal-400/40 dark:bg-zinc-900/70"
       >
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <ClassificationDot c={classification} />
             <span className="font-mono text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
               {row.symbol}
             </span>

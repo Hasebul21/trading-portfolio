@@ -2,7 +2,6 @@
 
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import type { WatchlistClassification } from "@/lib/watchlist-classification";
 import { Alert } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -29,14 +28,12 @@ export function PortfolioLiveShell({
   initialTotalRealizedBdt,
   initialTotalInvestedBdt,
   initialTotalCashAdjustmentsBdt,
-  classificationMap = {},
 }: {
   initialHoldings: PortfolioMarketRow[];
   initialMarketError: string | null;
   initialTotalRealizedBdt: number;
   initialTotalInvestedBdt: number;
   initialTotalCashAdjustmentsBdt: number;
-  classificationMap?: Record<string, WatchlistClassification>;
 }) {
   const [rows, setRows] = useState(initialHoldings);
   const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
@@ -150,7 +147,6 @@ export function PortfolioLiveShell({
         totalRealizedBdt={totalRealizedBdt}
         totalInvestedBdt={totalInvestedBdt}
         totalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
-        classificationMap={classificationMap}
         enableBookEdit
         onAfterBookSave={refresh}
       />

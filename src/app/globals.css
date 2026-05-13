@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Softer “twilight” base: not OLED black — easier on eyes, less harsh on large / bright panels. */
-  --background: #1c2029;
-  --background-edge: #13161d;
+  /* Softer dark base — lighter than typical “twilight” for an easier-on-eyes feel. */
+  --background: #262b36;
+  --background-edge: #1d2129;
   --foreground: #d4d9e4;
   --foreground-strong: #e6eaf2;
   --accent: #129187;
   --accent-muted: rgba(45, 212, 191, 0.055);
   --glow-violet: rgba(129, 140, 248, 0.035);
-  --surface-raised: rgba(38, 43, 54, 0.88);
-  --surface-popover: #2a303c;
-  --border-subtle: rgba(110, 120, 140, 0.38);
+  --surface-raised: rgba(48, 54, 66, 0.88);
+  --surface-popover: #333a47;
+  --border-subtle: rgba(120, 130, 150, 0.4);
 }
 
 @theme inline {
@@ -66,7 +66,7 @@ body {
       radial-gradient(
         ellipse 110% 102% at 50% 50%,
         color-mix(in srgb, var(--background) 88%, transparent) 34%,
-        rgba(11, 13, 18, 0.78) 100%
+        rgba(20, 24, 32, 0.78) 100%
       ),
       radial-gradient(ellipse 100% 78% at 50% -32%, var(--accent-muted), transparent 60%),
       radial-gradient(ellipse 62% 44% at 100% 0%, var(--glow-violet), transparent 54%),

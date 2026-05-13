@@ -9,7 +9,6 @@ import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 import { zoneLevelsFromLspQuote } from "@/lib/market/dse-zone-levels";
 import { fetchUserHoldings } from "@/lib/holdings";
-import { normalizeWatchlistClassification } from "@/lib/watchlist-classification";
 import { createClient } from "@/lib/supabase/server";
 
 const toolbarShell =
@@ -20,15 +19,7 @@ const LONG_TERM_SCHEMA_PATCH = `alter table public.long_term_holdings
   add column if not exists buy_point_bdt numeric,
   add column if not exists sell_point_bdt numeric,
   add column if not exists manual_avg_cost_bdt numeric,
-  add column if not exists manual_total_invested_bdt numeric,
-  add column if not exists classification text;
-
-alter table public.long_term_holdings
-  drop constraint if exists long_term_holdings_classification_check;
-
-alter table public.long_term_holdings
-  add constraint long_term_holdings_classification_check
-  check (classification is null or classification in ('BLUE', 'GREEN'));`;
+  add column if not exists manual_total_invested_bdt numeric;`;
 
 export default async function LongTermPage() {
   const supabase = await createClient();
@@ -39,7 +30,7 @@ export default async function LongTermPage() {
       supabase
         .from("long_term_holdings")
         .select(
-          "id, created_at, symbol, buy_point_bdt, sell_point_bdt, manual_avg_cost_bdt, manual_total_invested_bdt, classification",
+          "id, created_at, symbol, buy_point_bdt, sell_point_bdt, manual_avg_cost_bdt, manual_total_invested_bdt",
         )
         .order("symbol", { ascending: true }),
       fetchDseLspQuoteMap(),
@@ -49,7 +40,7 @@ export default async function LongTermPage() {
 
   if (error) {
     const missingLtColumns =
-      /buy_point_bdt|sell_point_bdt|manual_avg_cost_bdt|manual_total_invested_bdt|classification|column .* does not exist/i.test(
+      /buy_point_bdt|sell_point_bdt|manual_avg_cost_bdt|manual_total_invested_bdt|column .* does not exist/i.test(
         error.message,
       );
 
@@ -79,10 +70,6 @@ export default async function LongTermPage() {
               ,{" "}
               <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/50">
                 20260420200000_long_term_manual_costs.sql
-              </code>
-              ,{" "}
-              <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/50">
-                20260422130000_watchlist_classification.sql
               </code>
               ).
             </p>
@@ -127,7 +114,6 @@ export default async function LongTermPage() {
       portfolio_avg_cost_bdt: h ? h.avgPrice : null,
       portfolio_total_invested_bdt: h ? h.totalCost : null,
       liveZones,
-      classification: normalizeWatchlistClassification(row.classification),
     };
   });
 

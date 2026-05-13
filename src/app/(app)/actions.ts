@@ -240,6 +240,7 @@ export async function recordTransaction(
   revalidatePath("/record");
   revalidatePath("/trade-history");
   revalidatePath("/long-term");
+  revalidatePath("/allocation");
   const qtyLabel = quantity % 1 === 0 ? String(quantity) : String(quantity);
   return {
     ok: true,
@@ -318,6 +319,7 @@ export async function savePortfolioPositions(
   }
 
   revalidatePath("/portfolio");
+  revalidatePath("/allocation");
   return { ok: true };
 }
 
@@ -382,5 +384,6 @@ export async function deleteTransaction(
   revalidatePath("/record");
   revalidatePath("/trade-history");
   revalidatePath("/long-term");
+  revalidatePath("/allocation");
   return { ok: true };
 }
