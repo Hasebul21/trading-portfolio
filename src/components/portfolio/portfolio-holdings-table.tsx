@@ -485,9 +485,6 @@ export function PortfolioHoldingsTable({
           <div className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-50">
             {formatBdt(totalInvestedDisplay)}
           </div>
-          <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-            Active holdings only
-          </span>
         </div>
 
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
@@ -497,9 +494,6 @@ export function PortfolioHoldingsTable({
           <div className="mt-0.5 min-h-[1.25rem]">
             <PlIndicator value={totalRealizedBdt} />
           </div>
-          <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-            From completed sells
-          </span>
         </div>
 
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
@@ -525,11 +519,6 @@ export function PortfolioHoldingsTable({
               Needs DSE last price
             </span>
           ) : null}
-          {withQuote > 0 && withQuote === positions ? (
-            <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-              vs. break-even
-            </span>
-          ) : null}
         </div>
 
         <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[15rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
@@ -545,11 +534,6 @@ export function PortfolioHoldingsTable({
               <PlIndicator value={netGl} />
             )}
           </div>
-          <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-            {totalCashAdjustments !== 0
-              ? `Realized + Unrealized + Cash (${fmtSignedBdt(totalCashAdjustments)})`
-              : "Realized + Unrealized"}
-          </span>
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+import { realizedPnlByTransaction } from "@/lib/portfolio";
 import {
   fetchAllUserTransactions,
   filterTransactionsDhakaCalendarDay,
@@ -17,15 +18,22 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
       : null;
 
   const txRes = await fetchAllUserTransactions();
+  const pnlById = realizedPnlByTransaction(txRes.rows);
   const historyRows = dayParam
     ? filterTransactionsDhakaCalendarDay(txRes.rows, dayParam)
     : filterTransactionsLastNDays(txRes.rows, 7);
+  const pnlForRows = Object.fromEntries(
+    historyRows
+      .map((r) => [r.id, pnlById.get(r.id)] as const)
+      .filter(([, v]) => typeof v === "number"),
+  ) as Record<string, number>;
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl text-left">
       <TradeHistorySection
         key={dayParam ?? "last-7-days"}
         rows={historyRows}
+        pnlById={pnlForRows}
         loadError={txRes.error}
       />
     </div>

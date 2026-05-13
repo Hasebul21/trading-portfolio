@@ -156,6 +156,85 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
   return roundBdt(realized);
 }
 
+/**
+ * Per-transaction realized gain/loss in BDT, keyed by transaction id.
+ *
+ * For each sell, computed using the running portfolio average cost just
+ * before the sell — same formula as {@link totalRealizedProfitLossBdt}:
+ *
+ *     pnl = (sell_price − avg_cost_before_sell) × sell_qty
+ *
+ * Only sells with a realized component appear in the map. Buys are omitted
+ * (caller can treat them as N/A). Pass the **full** transaction ledger so
+ * the running average is correct, even when only a slice will be displayed.
+ */
+export function realizedPnlByTransaction(
+  rows: TransactionRow[],
+): Map<string, number> {
+  type State = {
+    shares: number;
+    totalCost: number;
+    feesInPosition: number;
+    avg: number;
+  };
+
+  const bySymbol = new Map<string, State>();
+  const result = new Map<string, number>();
+
+  const sorted = [...rows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime();
+    const tb = new Date(b.created_at).getTime();
+    if (ta !== tb) return ta - tb;
+    return a.id.localeCompare(b.id);
+  });
+
+  for (const row of sorted) {
+    const symbol = row.symbol.trim().toUpperCase();
+    if (!symbol) continue;
+
+    let state = bySymbol.get(symbol);
+    if (!state) {
+      state = { shares: 0, totalCost: 0, feesInPosition: 0, avg: 0 };
+      bySymbol.set(symbol, state);
+    }
+
+    const qty = num(row.quantity);
+    const price = num(row.price_per_share);
+    const fees = Math.max(0, num(row.fees_bdt ?? 0));
+
+    if (row.side === "buy") {
+      const newShares = state.shares + qty;
+      state.feesInPosition += fees;
+      state.totalCost += qty * price + fees;
+      state.shares = newShares;
+      state.avg = newShares > EPSILON_SHARES ? state.totalCost / newShares : 0;
+    } else {
+      const preShares = state.shares;
+      const sellQty = Math.min(qty, preShares);
+      const avgCost = state.avg;
+
+      if (preShares > EPSILON_SHARES && sellQty > 0) {
+        result.set(row.id, roundBdt((price - avgCost) * sellQty));
+
+        const soldFraction = sellQty / preShares;
+        state.feesInPosition -= soldFraction * state.feesInPosition;
+      }
+      state.totalCost = snapZeroBdt(state.totalCost - sellQty * avgCost);
+      state.shares = snapZeroShares(state.shares - sellQty);
+      if (state.shares <= EPSILON_SHARES) {
+        state.shares = 0;
+        state.totalCost = 0;
+        state.feesInPosition = 0;
+        state.avg = 0;
+      } else {
+        state.avg = state.totalCost / state.shares;
+      }
+    }
+  }
+
+  return result;
+}
+
 export function aggregateHoldings(rows: TransactionRow[]): HoldingRow[] {
   type State = {
     shares: number;

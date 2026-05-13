@@ -198,12 +198,20 @@ export function SectorAllocationDetailed({
     );
     const bg = useMemo(() => chartBackground(slices, total), [slices, total]);
 
-    const positionCount = useMemo(
-        () => slices.reduce((sum, s) => sum + s.holdings.length, 0),
+    // Sectors that currently have a non-zero allocation. A sector that drops
+    // to 0% is auto-removed from the donut/legend/per-sector list, and a new
+    // sector with >0% is auto-added (because it appears in `slices`).
+    const visibleSlices = useMemo(
+        () => slices.filter((s) => s.percentOfPortfolio > 0),
         [slices],
     );
 
-    const concentrated = slices.filter(
+    const positionCount = useMemo(
+        () => visibleSlices.reduce((sum, s) => sum + s.holdings.length, 0),
+        [visibleSlices],
+    );
+
+    const concentrated = visibleSlices.filter(
         (s) => s.percentOfPortfolio > CONCENTRATION_WARNING_THRESHOLD_PERCENT,
     );
 
@@ -229,11 +237,15 @@ export function SectorAllocationDetailed({
             {/* Top summary strip */}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
                 <SummaryCell label="Total invested" value={formatBdt(total)} />
-                <SummaryCell label="Sectors" value={String(slices.length)} />
+                <SummaryCell label="Sectors" value={String(visibleSlices.length)} />
                 <SummaryCell label="Positions" value={String(positionCount)} />
                 <SummaryCell
                     label="Largest sector"
-                    value={`${slices[0]!.sector} · ${fmtPct(slices[0]!.percentOfPortfolio)}`}
+                    value={
+                        visibleSlices[0]
+                            ? `${visibleSlices[0].sector} · ${fmtPct(visibleSlices[0].percentOfPortfolio)}`
+                            : "—"
+                    }
                 />
             </div>
 
@@ -268,7 +280,7 @@ export function SectorAllocationDetailed({
                                     Sectors
                                 </p>
                                 <p className="mt-0.5 text-[20px] font-semibold leading-none text-zinc-900 dark:text-zinc-50">
-                                    {slices.length}
+                                    {visibleSlices.length}
                                 </p>
                                 <p className="mt-1 text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
                                     {positionCount} {positionCount === 1 ? "position" : "positions"}
@@ -278,7 +290,7 @@ export function SectorAllocationDetailed({
                     </div>
 
                     <div className="grid w-full min-w-0 gap-1.5 sm:grid-cols-2">
-                        {slices.map((slice) => (
+                        {visibleSlices.map((slice) => (
                             <div
                                 key={slice.sector}
                                 className="flex items-center gap-2 rounded-md border border-zinc-200/70 bg-zinc-50/60 px-2.5 py-1.5 dark:border-zinc-800/80 dark:bg-zinc-950/60"
@@ -332,7 +344,7 @@ export function SectorAllocationDetailed({
 
             {/* Per-sector detail cards */}
             <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-                {slices.map((slice) => (
+                {visibleSlices.map((slice) => (
                     <SectorCard key={slice.sector} slice={slice} />
                 ))}
             </div>

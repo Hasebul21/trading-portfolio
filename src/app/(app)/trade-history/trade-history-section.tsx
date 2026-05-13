@@ -11,12 +11,20 @@ import { useCallback, useMemo, useState } from "react";
 
 type Props = {
   rows: TransactionRow[];
+  pnlById?: Record<string, number>;
   loadError: string | null;
 };
 
-export function TradeHistorySection({ rows, loadError }: Props) {
-  type Row = TransactionRow & { key: string };
-  const data: Row[] = rows.map((r) => ({ ...r, key: r.id }));
+export function TradeHistorySection({ rows, pnlById, loadError }: Props) {
+  type Row = TransactionRow & { key: string; realizedPnl: number | null };
+  const data: Row[] = rows.map((r) => ({
+    ...r,
+    key: r.id,
+    realizedPnl:
+      pnlById && Object.prototype.hasOwnProperty.call(pnlById, r.id)
+        ? pnlById[r.id]
+        : null,
+  }));
   const router = useRouter();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -96,6 +104,27 @@ export function TradeHistorySection({ rows, loadError }: Props) {
         render: (v: string | number | null | undefined) => (
           <span className="tabular-nums">{formatBdt(Number(v ?? 0))}</span>
         ),
+      },
+      {
+        title: "P/L",
+        dataIndex: "realizedPnl",
+        align: "right",
+        render: (v: number | null) => {
+          if (v === null) {
+            return (
+              <span className="text-zinc-400 dark:text-zinc-500">—</span>
+            );
+          }
+          const cls =
+            v > 0
+              ? "text-emerald-600 dark:text-emerald-400"
+              : v < 0
+                ? "text-red-600 dark:text-red-400"
+                : "text-zinc-600 dark:text-zinc-400";
+          return (
+            <span className={`tabular-nums ${cls}`}>{formatBdt(v)}</span>
+          );
+        },
       },
       {
         title: "",
@@ -185,7 +214,7 @@ function MobileTradeCard({
   onRemove,
   removingId,
 }: {
-  row: TransactionRow & { key: string; id: string };
+  row: TransactionRow & { key: string; id: string; realizedPnl: number | null };
   onRemove: (id: string) => void;
   removingId: string | null;
 }) {
@@ -247,6 +276,22 @@ function MobileTradeCard({
             <dt className="text-zinc-500 dark:text-zinc-400">Fees</dt>
             <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
               {formatBdt(Number(row.fees_bdt ?? 0))}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-zinc-500 dark:text-zinc-400">P/L</dt>
+            <dd
+              className={`font-mono tabular-nums ${
+                row.realizedPnl === null
+                  ? "text-zinc-400 dark:text-zinc-500"
+                  : row.realizedPnl > 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : row.realizedPnl < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              {row.realizedPnl === null ? "—" : formatBdt(row.realizedPnl)}
             </dd>
           </div>
           <div className="col-span-2">
