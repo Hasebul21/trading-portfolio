@@ -31,13 +31,21 @@ function snapZeroShares(shares: number): number {
 }
 
 /**
- * Calculates the break-even price including both buy and sell brokerage fees.
- * Formula: breakEvenPrice = avgPrice × (1 + rate) / (1 − rate)
- * where rate is BROKERAGE_COMMISSION_RATE (0.40%).
+ * Calculates the break-even sell price given an average cost that already
+ * includes buy-side brokerage fees (0.40%).
+ *
+ * Since avgPrice = rawPrice × (1 + rate), we only need to divide out the
+ * sell-side fee to find the price at which P/L = 0:
+ *
+ *   breakEven = avgPrice / (1 − rate)
+ *
+ * Proof: P/L = (breakEven − avgPrice) × qty − breakEven × qty × rate = 0
+ *   → breakEven × (1 − rate) = avgPrice
+ *   → breakEven = avgPrice / (1 − rate)
  */
 export function calculateBreakEvenPrice(avgPrice: number): number {
   const rate = BROKERAGE_COMMISSION_RATE;
-  return roundToTickSize((avgPrice * (1 + rate)) / (1 - rate));
+  return roundToTickSize(avgPrice / (1 - rate));
 }
 
 export type TransactionRow = {

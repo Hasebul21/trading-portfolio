@@ -101,7 +101,7 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
         responsive: ["md"],
         render: (v: number | null) => {
           if (v === null) return <span className="text-zinc-400 dark:text-zinc-500">—</span>;
-          // avg cost per share (buy fees included) + sell commission = break-even
+          // avgCost already includes buy fees; divide out sell commission only
           const breakEven = roundToTickSize(v / (1 - BROKERAGE_COMMISSION_RATE));
           return <span className="tabular-nums">{formatBdt(breakEven)}</span>;
         },
