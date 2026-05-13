@@ -14,13 +14,15 @@
   /* Warm taupe ("mocha") palette built around #A3897F. */
   --background: #a3897f;
   --background-edge: #8c7268;
-  --foreground: #2a201c;
-  --foreground-strong: #1a120e;
+  /* Body / heading text: pure black for maximum contrast on the warm bg. */
+  --foreground: #000000;
+  --foreground-strong: #000000;
   --accent: #4a342b;
   --accent-muted: rgba(74, 52, 43, 0.08);
   --glow-violet: rgba(255, 255, 255, 0.06);
-  --surface-raised: rgba(255, 248, 244, 0.92);
-  --surface-popover: #fbf5f1;
+  /* Card surfaces: soft ash instead of bright white — easier on the eyes. */
+  --surface-raised: #ececea;
+  --surface-popover: #ececea;
   --border-subtle: rgba(74, 52, 43, 0.28);
 }
 
@@ -375,4 +377,46 @@ b {
   .pt-safe {
     padding-top: max(env(safe-area-inset-top, 0px), 0px);
   }
+}
+
+/* ── Eye-comfort overrides ────────────────────────────────────────────────
+ * Soften every "white" card surface to a low-glare ash, and force body /
+ * card text to pure black for maximum contrast on the warm mocha bg.
+ * Targets the Tailwind utilities that are sprinkled across the app
+ * (bg-white, bg-white/70..95) without touching every component file.
+ * ───────────────────────────────────────────────────────────────────────── */
+.bg-white,
+.bg-white\/95,
+.bg-white\/90,
+.bg-white\/85,
+.bg-white\/80,
+.bg-white\/75,
+.bg-white\/70,
+.bg-white\/65,
+.bg-white\/60 {
+  background-color: #ececea !important;
+}
+
+/* Text utilities → black for body/heading copy. Mono/tabular numbers and
+   muted labels both become #000 so cards read as crisp black-on-ash. */
+.text-zinc-50,
+.text-zinc-100,
+.text-zinc-200,
+.text-zinc-300,
+.text-zinc-400,
+.text-zinc-500,
+.text-zinc-600,
+.text-zinc-700,
+.text-zinc-800,
+.text-zinc-900,
+.text-neutral-700,
+.text-neutral-800,
+.text-neutral-900,
+.text-slate-700,
+.text-slate-800,
+.text-slate-900,
+.text-gray-700,
+.text-gray-800,
+.text-gray-900 {
+  color: #000000 !important;
 }
