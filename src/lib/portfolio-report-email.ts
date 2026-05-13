@@ -75,10 +75,9 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
   const summaryItems = [
     { label: "Total Invested", value: `BDT ${fmt2(summary.totalInvested)}` },
     { label: "Realized G/L", value: `BDT ${fmt2(summary.totalRealizedBdt)}` },
-    { label: "Unrealized P/L", value: `BDT ${fmt2(summary.totalUnrealized)}` },
     { label: "Net Gain/Loss", value: `BDT ${fmt2(summary.netGainLoss)}` },
   ];
-  const cardW = (tableWidth - 45) / 4;
+  const cardW = (tableWidth - 30) / 3;
   summaryItems.forEach((item, i) => {
     const cx = margin + i * (cardW + 15);
     page.drawRectangle({ x: cx, y: y - 10, width: cardW, height: 48, color: rgb(0.95, 0.97, 0.99), borderColor: rgb(0.82, 0.88, 0.92), borderWidth: 0.8 });
@@ -94,10 +93,9 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
   // ── Table ──
   const columns = [
     { title: "Symbol", w: 0.22 },
-    { title: "Shares", w: 0.18 },
-    { title: "Avg (BDT)", w: 0.20 },
-    { title: "Invested (BDT)", w: 0.20 },
-    { title: "Unrealized P/L", w: 0.20 },
+    { title: "Shares", w: 0.20 },
+    { title: "Avg (BDT)", w: 0.24 },
+    { title: "Invested (BDT)", w: 0.34 },
   ];
   const colWidths = columns.map((c) => c.w * tableWidth);
   const rowH = 26;
@@ -136,17 +134,10 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
       fmt2(row.shares),
       fmt2(row.avgPrice),
       fmt2(row.totalCost),
-      row.unrealizedPl === null ? "N/A" : fmt2(row.unrealizedPl),
     ];
 
     values.forEach((v, idx) => {
-      // Color P/L column
-      let color = rgb(0.14, 0.14, 0.14);
-      if (idx === 4 && v !== "N/A") {
-        const num = parseFloat(v);
-        if (num > 0) color = rgb(0.0, 0.5, 0.2);
-        else if (num < 0) color = rgb(0.75, 0.15, 0.1);
-      }
+      const color = rgb(0.14, 0.14, 0.14);
       drawText(v.slice(0, 24), x, y, fontSize, idx === 0, color);
       x += colWidths[idx]!;
     });
@@ -221,12 +212,10 @@ export async function sendPortfolioReportEmail(
       "",
       `Total invested: BDT ${fmt2(summary.totalInvested)}`,
       `Realized G/L: BDT ${fmt2(summary.totalRealizedBdt)}`,
-      `Unrealized P/L: BDT ${fmt2(summary.totalUnrealized)}`,
       ...(summary.cashAdjustments !== 0
         ? [`Cash adjustments: BDT ${fmt2(summary.cashAdjustments)}`]
         : []),
-      `Net Gain/Loss (Realized + Unrealized${summary.cashAdjustments !== 0 ? " + Cash" : ""}): BDT ${fmt2(summary.netGainLoss)}`,
-      "",
+      `Net Gain/Loss: BDT ${fmt2(summary.netGainLoss)}`,      "",
       `Open positions: ${summary.totalRows}`,
       `Positions with market price: ${summary.quotedCount}`,
       "",
@@ -238,9 +227,8 @@ export async function sendPortfolioReportEmail(
       <ul>
         <li><strong>Total invested:</strong> BDT ${fmt2(summary.totalInvested)}</li>
         <li><strong>Realized G/L:</strong> BDT ${fmt2(summary.totalRealizedBdt)}</li>
-        <li><strong>Unrealized P/L:</strong> BDT ${fmt2(summary.totalUnrealized)}</li>
         ${summary.cashAdjustments !== 0 ? `<li><strong>Cash adjustments:</strong> BDT ${fmt2(summary.cashAdjustments)}</li>` : ""}
-        <li><strong>Net Gain/Loss (Realized + Unrealized${summary.cashAdjustments !== 0 ? " + Cash" : ""}):</strong> BDT ${fmt2(summary.netGainLoss)}</li>
+        <li><strong>Net Gain/Loss:</strong> BDT ${fmt2(summary.netGainLoss)}</li>
         <li><strong>Open positions:</strong> ${summary.totalRows}</li>
         <li><strong>Positions with market price:</strong> ${summary.quotedCount}</li>
       </ul>

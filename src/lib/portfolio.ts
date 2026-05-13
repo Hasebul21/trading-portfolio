@@ -81,12 +81,12 @@ function num(v: string | number): number {
  *
  * For each sell, using the running portfolio average cost just before the sell:
  *
- *     realizedPnL += (sell_price − avg_cost_before_sell) × sell_qty
+ *     realizedPnL += (sell_price − avg_cost_before_sell) × sell_qty − sell_fees
  *
- * Buy-side `fees_bdt` are folded into `avg_cost_before_sell` inside the
- * aggregator, so they are accounted for. Sell-side `fees_bdt` are deliberately
- * **not** subtracted here — they remain a separate trading expense and never
- * touch realized G/L, which represents the gross trade gain.
+ * Both buy-side and sell-side `fees_bdt` are accounted for: buy fees are folded
+ * into `avg_cost_before_sell`, and sell fees are subtracted directly. The
+ * combined effect is the typical ~0.40% commission on each leg (i.e. ~0.80%
+ * round-trip) baked into the realized number.
  */
 export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
   type State = {
@@ -132,10 +132,10 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
       const avgCost = state.avg;
 
       if (preShares > EPSILON_SHARES && sellQty > 0) {
-        // realizedPnL = (sellPrice − avgCost) × qty
-        // Buy fees are already embedded in avgCost; sell fees are tracked
-        // outside realized G/L so this represents the gross trade gain.
-        realized += (price - avgCost) * sellQty;
+        // realizedPnL = (sellPrice − avgCost) × qty − sellFees
+        // Buy fees are already embedded in avgCost; sell fees are subtracted
+        // here so the round-trip commission (~0.40% per leg) is reflected.
+        realized += (price - avgCost) * sellQty - fees;
 
         const soldFraction = sellQty / preShares;
         state.feesInPosition -= soldFraction * state.feesInPosition;
@@ -162,7 +162,10 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
  * For each sell, computed using the running portfolio average cost just
  * before the sell — same formula as {@link totalRealizedProfitLossBdt}:
  *
- *     pnl = (sell_price − avg_cost_before_sell) × sell_qty
+ *     pnl = (sell_price − avg_cost_before_sell) × sell_qty − sell_fees
+ *
+ * Buy-side fees are folded into avg cost; sell-side fees are subtracted from
+ * the row directly, so the value is **net** of round-trip commissions.
  *
  * Only sells with a realized component appear in the map. Buys are omitted
  * (caller can treat them as N/A). Pass the **full** transaction ledger so
@@ -214,7 +217,7 @@ export function realizedPnlByTransaction(
       const avgCost = state.avg;
 
       if (preShares > EPSILON_SHARES && sellQty > 0) {
-        result.set(row.id, roundBdt((price - avgCost) * sellQty));
+        result.set(row.id, roundBdt((price - avgCost) * sellQty - fees));
 
         const soldFraction = sellQty / preShares;
         state.feesInPosition -= soldFraction * state.feesInPosition;

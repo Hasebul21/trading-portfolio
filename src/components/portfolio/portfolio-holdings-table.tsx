@@ -448,25 +448,6 @@ export function PortfolioHoldingsTable({
       },
       sharesCol,
       totalCol,
-      {
-        title: "Unrealized P/L",
-        dataIndex: "unrealizedPl",
-        width: 118,
-        align: "right",
-        responsive: ["sm"],
-        ...(!bookEditing
-          ? {
-            sorter: sortNullableNumber((r) => r.unrealizedPl),
-            showSorterTooltip: { title: "Sort by unrealized P/L" },
-          }
-          : {}),
-        render: (v: number | null) =>
-          v === null ? (
-            <span className="text-zinc-50">—</span>
-          ) : (
-            <PlIndicator value={v} />
-          ),
-      },
     ];
   }, [bookEditing, classificationMap, draft, patchDraft]);
 
@@ -495,30 +476,6 @@ export function PortfolioHoldingsTable({
           </div>
         </div>
 
-        <div className="w-full min-w-0 rounded-xl border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-center shadow-sm sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1 dark:border-teal-800/50 dark:bg-teal-950/25">
-          <div className="text-[15px] font-normal tracking-normal text-zinc-50">
-            Unrealized P/L
-          </div>
-          <div className="mt-0.5 min-h-[1.25rem]">
-            {withQuote === 0 ? (
-              <span className="text-[15px] font-normal text-zinc-50">
-                —
-              </span>
-            ) : (
-              <PlIndicator value={totalUnrealized} />
-            )}
-          </div>
-          {withQuote > 0 && withQuote < positions ? (
-            <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-              {withQuote}/{positions} with last price
-            </span>
-          ) : null}
-          {withQuote === 0 && positions > 0 ? (
-            <span className="mt-0.5 block text-[13px] font-normal leading-snug text-zinc-50/80">
-              Needs DSE last price
-            </span>
-          ) : null}
-        </div>
       </div>
 
       <div className="flex flex-col gap-2 border-b border-teal-100/80 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4 dark:border-teal-900/40">
@@ -703,16 +660,6 @@ function MobileHoldingCard({
             <dt className="text-zinc-500 dark:text-zinc-400">Avg cost</dt>
             <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
               {formatBdt(row.avgPrice)}
-            </dd>
-          </div>
-          <div className="text-right">
-            <dt className="text-zinc-500 dark:text-zinc-400">Unrealized P/L</dt>
-            <dd className="font-mono tabular-nums">
-              {row.unrealizedPl === null ? (
-                <span className="text-zinc-500 dark:text-zinc-400">—</span>
-              ) : (
-                <PlIndicator value={row.unrealizedPl} />
-              )}
             </dd>
           </div>
         </dl>
