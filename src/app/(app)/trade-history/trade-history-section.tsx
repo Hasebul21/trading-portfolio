@@ -95,7 +95,7 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
         ),
       },
       {
-        title: "Avg Cost",
+        title: "Break-even",
         dataIndex: "avgCostAtSell",
         align: "right",
         responsive: ["md"],
@@ -112,15 +112,6 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
         align: "right",
         render: (v: string | number) => (
           <span className="tabular-nums">{formatBdt(Number(v))}</span>
-        ),
-      },
-      {
-        title: "Fees",
-        dataIndex: "fees_bdt",
-        align: "right",
-        responsive: ["md"],
-        render: (v: string | number | null | undefined) => (
-          <span className="tabular-nums">{formatBdt(Number(v ?? 0))}</span>
         ),
       },
       {
@@ -193,8 +184,8 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
         <Typography.Paragraph type="secondary">No trades in this range.</Typography.Paragraph>
       ) : (
         <>
-          {/* Mobile (< md): card list — no horizontal scroll. */}
-          <ul className="mobile-card-list md:hidden">
+          {/* Mobile (< md): compact card grid — 2 per row. */}
+          <ul className="grid grid-cols-2 gap-2 md:hidden">
             {data.map((row) => (
               <MobileTradeCard
                 key={row.id}
@@ -244,19 +235,19 @@ function MobileTradeCard({
   return (
     <li>
       <article
-        className={`flex flex-col gap-2 rounded-xl border border-zinc-200/70 bg-white/85 px-3 py-3 text-left shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70 ${
+        className={`flex flex-col gap-1.5 rounded-lg border border-zinc-200/70 bg-white/85 px-2 py-2 text-left shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/70 ${
           isSell
-            ? "border-l-[4px] border-l-red-500/70 dark:border-l-red-400/80"
-            : "border-l-[4px] border-l-emerald-500/70 dark:border-l-emerald-400/80"
+            ? "border-l-[3px] border-l-red-500/70 dark:border-l-red-400/80"
+            : "border-l-[3px] border-l-emerald-500/70 dark:border-l-emerald-400/80"
         }`}
       >
-        <header className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-mono text-[15px] font-medium uppercase text-zinc-900 dark:text-zinc-50">
+        <header className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-mono text-[13px] font-medium uppercase text-zinc-900 dark:text-zinc-50 truncate">
               {String(row.symbol).toUpperCase()}
             </span>
             <span
-              className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wider ${sideClass}`}
+              className={`rounded px-1 py-0.5 text-[10px] font-medium uppercase tracking-wider ${sideClass}`}
             >
               {String(row.side)}
             </span>
@@ -275,36 +266,22 @@ function MobileTradeCard({
               size="small"
               loading={removingId === row.id}
               disabled={removingId !== null && removingId !== row.id}
-              className="!h-auto !px-1 !py-0"
+              className="!h-auto !px-1 !py-0 !text-[11px]"
             >
               Remove
             </Button>
           </Popconfirm>
         </header>
 
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
-          <div>
+        <dl className="flex flex-col gap-1 text-[11px]">
+          <div className="flex items-center justify-between gap-2">
             <dt className="text-zinc-500 dark:text-zinc-400">Qty × Price</dt>
             <dd className="font-mono tabular-nums text-zinc-900 dark:text-zinc-50">
               {formatNumberMax2Decimals(Number(row.quantity))} ×{" "}
               {formatBdt(Number(row.price_per_share))}
             </dd>
           </div>
-          {row.avgCostAtSell !== null && (
-            <div className="text-right">
-              <dt className="text-zinc-500 dark:text-zinc-400">Avg Cost</dt>
-              <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
-                {formatBdt(roundToTickSize(row.avgCostAtSell / (1 - BROKERAGE_COMMISSION_RATE)))}
-              </dd>
-            </div>
-          )}
-          <div>
-            <dt className="text-zinc-500 dark:text-zinc-400">Fees</dt>
-            <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
-              {formatBdt(Number(row.fees_bdt ?? 0))}
-            </dd>
-          </div>
-          <div>
+          <div className="flex items-center justify-between gap-2">
             <dt className="text-zinc-500 dark:text-zinc-400">P/L</dt>
             <dd
               className={`font-mono tabular-nums ${
@@ -318,16 +295,6 @@ function MobileTradeCard({
               }`}
             >
               {row.realizedPnl === null ? "—" : formatBdt(row.realizedPnl)}
-            </dd>
-          </div>
-          <div className="col-span-2">
-            <dt className="text-zinc-500 dark:text-zinc-400">When</dt>
-            <dd className="text-zinc-700 dark:text-zinc-200">
-              {new Date(row.created_at).toLocaleString("en-GB", {
-                timeZone: "Asia/Dhaka",
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
             </dd>
           </div>
         </dl>
