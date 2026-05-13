@@ -6,8 +6,9 @@ import {
   type TransactionRow,
 } from "@/lib/portfolio";
 import { fetchPositionOverrides, mergeLedgerWithOverrides } from "@/lib/portfolio-overrides";
+import { cache } from "react";
 
-export async function fetchUserHoldings() {
+export const fetchUserHoldings = cache(async () => {
   const supabase = await createClient();
   const [txRes, ovRes, caRes] = await Promise.all([
     supabase
@@ -68,4 +69,4 @@ export async function fetchUserHoldings() {
     totalInvestedBdt: totalInvested,
     totalCashAdjustmentsBdt,
   };
-}
+});

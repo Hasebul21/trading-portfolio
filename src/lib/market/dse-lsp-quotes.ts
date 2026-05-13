@@ -2,11 +2,15 @@
  * Today's LTP / high / low from DSE latest share price page (all listed equities).
  * Unofficial HTML parse; layout may change.
  */
+import { cache } from "react";
 
 const DEFAULT_LSP_URLS = [
   "https://dsebd.org/latest_share_price_scroll_l.php",
   "https://dsebd.com.bd/latest_share_price_scroll_l.php",
 ] as const;
+
+/** Quotes refresh frequently but not every second; 60s smooths a thundering herd. */
+const LSP_REVALIDATE_SECONDS = 60;
 
 export type DseLspQuote = {
   ltp: number;
@@ -68,10 +72,10 @@ function parseLspHtml(html: string): Map<string, DseLspQuote> {
   return bySymbol;
 }
 
-export async function fetchDseLspQuoteMap(): Promise<{
+export const fetchDseLspQuoteMap = cache(async (): Promise<{
   bySymbol: Map<string, DseLspQuote>;
   error: string | null;
-}> {
+}> => {
   const urls = process.env.DSE_LSP_URL?.trim()
     ? [process.env.DSE_LSP_URL.trim()]
     : [...DEFAULT_LSP_URLS];
@@ -82,7 +86,7 @@ export async function fetchDseLspQuoteMap(): Promise<{
     try {
       const res = await fetch(url, {
         headers: { Accept: "text/html,*/*" },
-        cache: "no-store",
+        next: { revalidate: LSP_REVALIDATE_SECONDS },
       });
       if (!res.ok) {
         lastErr = `DSE LSP HTTP ${res.status}`;
@@ -101,7 +105,7 @@ export async function fetchDseLspQuoteMap(): Promise<{
   }
 
   return { bySymbol: new Map(), error: lastErr };
-}
+});
 
 /** Same as {@link fetchDseLspQuoteMap} but bypasses cache for live polling (API / client refresh). */
 export async function fetchDseLspQuoteMapFresh(): Promise<{

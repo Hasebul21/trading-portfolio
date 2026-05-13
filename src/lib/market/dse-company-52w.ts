@@ -2,6 +2,7 @@
  * 52-week range and sector from the DSE company page.
  * Unofficial HTML parse; layout may change.
  */
+import { cache } from "react";
 
 const DEFAULT_COMPANY_BASE = "https://dsebd.org/displayCompany.php";
 const SECTOR_REVALIDATE_SECONDS = 60 * 60 * 24;
@@ -51,9 +52,9 @@ export type DseCompanyExtras = {
   sector: string | null;
 };
 
-export async function fetchDseCompanyExtras(
+export const fetchDseCompanyExtras = cache(async (
   symbol: string,
-): Promise<DseCompanyExtras> {
+): Promise<DseCompanyExtras> => {
   const sym = symbol.trim();
   if (!sym) {
     return { week52Low: null, week52High: null, sector: null };
@@ -66,7 +67,6 @@ export async function fetchDseCompanyExtras(
   try {
     const res = await fetch(url, {
       headers: { Accept: "text/html,*/*" },
-      cache: "force-cache",
       next: { revalidate: SECTOR_REVALIDATE_SECONDS },
     });
     if (!res.ok) {
@@ -83,14 +83,14 @@ export async function fetchDseCompanyExtras(
   } catch {
     return { week52Low: null, week52High: null, sector: null };
   }
-}
+});
 
-export async function fetchDseCompanyExtrasMap(
+export const fetchDseCompanyExtrasMap = cache(async (
   symbols: string[],
-): Promise<Map<string, DseCompanyExtras>> {
+): Promise<Map<string, DseCompanyExtras>> => {
   const uniqueSymbols = [...new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean))];
   const entries = await Promise.all(
     uniqueSymbols.map(async (symbol) => [symbol, await fetchDseCompanyExtras(symbol)] as const),
   );
   return new Map(entries);
-}
+});

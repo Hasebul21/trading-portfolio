@@ -2,6 +2,7 @@
  * DSE trading codes from the exchange data file (official source).
  * @see https://dsebd.org/datafile/quotes.txt
  */
+import { cache } from "react";
 
 export type DseInstrument = {
   /** DSE trading / scrip code (e.g. GP, BRACBANK, AMCL(PRAN)). */
@@ -17,6 +18,8 @@ const DEFAULT_QUOTES_URLS = [
 
 const FETCH_TIMEOUT_MS = 22_000;
 const MIN_INSTRUMENTS = 30;
+/** Trading-code list is essentially static day-to-day; cache for 6h on the data layer. */
+const INSTRUMENTS_REVALIDATE_SECONDS = 60 * 60 * 6;
 
 /** Line after the "Instr. Code" header: trading code, whitespace, last price. */
 const ROW_RE = /^(\S+)\s+([\d.]+)\s*$/;
@@ -70,7 +73,7 @@ async function fetchQuotesFromUrls(): Promise<{ instruments: DseInstrument[]; er
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        cache: "no-store",
+        next: { revalidate: INSTRUMENTS_REVALIDATE_SECONDS },
       });
       if (!res.ok) {
         lastErr = `HTTP ${res.status}`;
@@ -91,10 +94,10 @@ async function fetchQuotesFromUrls(): Promise<{ instruments: DseInstrument[]; er
   return { instruments: [], error: lastErr };
 }
 
-export async function getCachedDseInstruments(): Promise<{
+export const getCachedDseInstruments = cache(async (): Promise<{
   instruments: DseInstrument[];
   error: string | null;
-}> {
+}> => {
   const { instruments, error } = await fetchQuotesFromUrls();
   return { instruments, error };
-}
+});
