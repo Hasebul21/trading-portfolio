@@ -29,10 +29,27 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     });
   }, [rows, searchText]);
 
-  const data: Row[] = useMemo(
-    () => filteredRows.map((r) => ({ ...r, key: r.id })),
-    [filteredRows],
-  );
+  const groups = useMemo(() => {
+    const bySector = new Map<string, Row[]>();
+    for (const r of filteredRows) {
+      const key = (r.sector ?? "").trim() || "Unknown";
+      const list = bySector.get(key) ?? [];
+      list.push({ ...r, key: r.id });
+      bySector.set(key, list);
+    }
+    return Array.from(bySector.entries())
+      .sort(([a], [b]) => {
+        if (a === "Unknown") return 1;
+        if (b === "Unknown") return -1;
+        return a.localeCompare(b);
+      })
+      .map(([sector, items]) => ({
+        sector,
+        items: items.sort((x, y) =>
+          String(x.symbol).localeCompare(String(y.symbol)),
+        ),
+      }));
+  }, [filteredRows]);
 
   const columns: ColumnsType<Row> = [
     {
@@ -43,15 +60,6 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       render: (v: string) => (
         <span className="font-mono text-[15px] font-normal text-zinc-50">{v}</span>
       ),
-    },
-    {
-      title: "Sector",
-      dataIndex: "sector",
-      width: 144,
-      align: "left",
-      responsive: ["sm"],
-      sorter: (a, b) => (a.sector ?? "Unknown").localeCompare(b.sector ?? "Unknown"),
-      render: (v: string | null) => v ? <span>{v}</span> : <span className="text-zinc-50">Unknown</span>,
     },
     {
       title: "Added",
@@ -93,20 +101,46 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
           />
         </Space>
       </div>
-      <Table<Row>
-        className="long-term-holdings-table"
-        columns={columns}
-        dataSource={data}
-        scroll={{ x: "max-content" }}
-        locale={{ emptyText: "No symbols yet." }}
-        pagination={tablePagination("symbols", {
-          hideOnSinglePage: false,
-          pageSize: 15,
-          pageSizeOptions: [10, 15, 20, 50],
-        })}
-        size="middle"
-        bordered
-      />
+      {groups.length === 0 ? (
+        <Table<Row>
+          className="long-term-holdings-table"
+          columns={columns}
+          dataSource={[]}
+          scroll={{ x: "max-content" }}
+          locale={{ emptyText: "No symbols yet." }}
+          pagination={false}
+          size="middle"
+          bordered
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {groups.map(({ sector, items }) => (
+            <div key={sector} className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <h3 className="text-[15px] font-semibold text-zinc-50">
+                  {sector}
+                </h3>
+                <span className="text-[13px] font-normal text-zinc-400">
+                  {items.length} {items.length === 1 ? "symbol" : "symbols"}
+                </span>
+              </div>
+              <Table<Row>
+                className="long-term-holdings-table"
+                columns={columns}
+                dataSource={items}
+                scroll={{ x: "max-content" }}
+                pagination={tablePagination("symbols", {
+                  hideOnSinglePage: true,
+                  pageSize: 15,
+                  pageSizeOptions: [10, 15, 20, 50],
+                })}
+                size="middle"
+                bordered
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
