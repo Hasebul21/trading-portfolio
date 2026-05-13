@@ -18,13 +18,18 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
       : null;
 
   const txRes = await fetchAllUserTransactions();
-  const pnlById = realizedPnlByTransaction(txRes.rows);
+  const detailsById = realizedPnlByTransaction(txRes.rows);
   const historyRows = dayParam
     ? filterTransactionsDhakaCalendarDay(txRes.rows, dayParam)
     : filterTransactionsLastNDays(txRes.rows, 7);
   const pnlForRows = Object.fromEntries(
     historyRows
-      .map((r) => [r.id, pnlById.get(r.id)] as const)
+      .map((r) => [r.id, detailsById.get(r.id)?.pnl] as const)
+      .filter(([, v]) => typeof v === "number"),
+  ) as Record<string, number>;
+  const avgCostForRows = Object.fromEntries(
+    historyRows
+      .map((r) => [r.id, detailsById.get(r.id)?.avgCost] as const)
       .filter(([, v]) => typeof v === "number"),
   ) as Record<string, number>;
 
@@ -34,6 +39,7 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
         key={dayParam ?? "last-7-days"}
         rows={historyRows}
         pnlById={pnlForRows}
+        avgCostById={avgCostForRows}
         loadError={txRes.error}
       />
     </div>

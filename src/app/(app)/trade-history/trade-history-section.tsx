@@ -4,6 +4,7 @@ import { deleteTransaction } from "@/app/(app)/actions";
 import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { TransactionRow } from "@/lib/portfolio";
+import { BROKERAGE_COMMISSION_RATE, roundToTickSize } from "@/lib/portfolio";
 import { Button, Popconfirm, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
@@ -12,17 +13,22 @@ import { useCallback, useMemo, useState } from "react";
 type Props = {
   rows: TransactionRow[];
   pnlById?: Record<string, number>;
+  avgCostById?: Record<string, number>;
   loadError: string | null;
 };
 
-export function TradeHistorySection({ rows, pnlById, loadError }: Props) {
-  type Row = TransactionRow & { key: string; realizedPnl: number | null };
+export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: Props) {
+  type Row = TransactionRow & { key: string; realizedPnl: number | null; avgCostAtSell: number | null };
   const data: Row[] = rows.map((r) => ({
     ...r,
     key: r.id,
     realizedPnl:
       pnlById && Object.prototype.hasOwnProperty.call(pnlById, r.id)
         ? pnlById[r.id]
+        : null,
+    avgCostAtSell:
+      avgCostById && Object.prototype.hasOwnProperty.call(avgCostById, r.id)
+        ? avgCostById[r.id]
         : null,
   }));
   const router = useRouter();
@@ -87,6 +93,18 @@ export function TradeHistorySection({ rows, pnlById, loadError }: Props) {
             {formatNumberMax2Decimals(Number(v))}
           </span>
         ),
+      },
+      {
+        title: "Avg Cost",
+        dataIndex: "avgCostAtSell",
+        align: "right",
+        responsive: ["md"],
+        render: (v: number | null) => {
+          if (v === null) return <span className="text-zinc-400 dark:text-zinc-500">—</span>;
+          // avg cost per share (buy fees included) + sell commission = break-even
+          const breakEven = roundToTickSize(v / (1 - BROKERAGE_COMMISSION_RATE));
+          return <span className="tabular-nums">{formatBdt(breakEven)}</span>;
+        },
       },
       {
         title: "Price",
@@ -214,7 +232,7 @@ function MobileTradeCard({
   onRemove,
   removingId,
 }: {
-  row: TransactionRow & { key: string; id: string; realizedPnl: number | null };
+  row: TransactionRow & { key: string; id: string; realizedPnl: number | null; avgCostAtSell: number | null };
   onRemove: (id: string) => void;
   removingId: string | null;
 }) {
@@ -272,7 +290,15 @@ function MobileTradeCard({
               {formatBdt(Number(row.price_per_share))}
             </dd>
           </div>
-          <div className="text-right">
+          {row.avgCostAtSell !== null && (
+            <div className="text-right">
+              <dt className="text-zinc-500 dark:text-zinc-400">Avg Cost</dt>
+              <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
+                {formatBdt(roundToTickSize(row.avgCostAtSell / (1 - BROKERAGE_COMMISSION_RATE)))}
+              </dd>
+            </div>
+          )}
+          <div>
             <dt className="text-zinc-500 dark:text-zinc-400">Fees</dt>
             <dd className="font-mono tabular-nums text-zinc-700 dark:text-zinc-200">
               {formatBdt(Number(row.fees_bdt ?? 0))}

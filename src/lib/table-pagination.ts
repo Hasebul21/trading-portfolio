@@ -16,10 +16,10 @@ export function tablePagination(
   showTotalLabel: string,
   options?: TablePaginationOptions,
 ): TablePaginationConfig {
-  const pageSize = options?.pageSize ?? 10;
+  const defaultPageSize = options?.pageSize ?? 10;
   const pageSizeOptions = options?.pageSizeOptions ?? [...DEFAULT_PAGE_SIZES];
   return {
-    pageSize,
+    defaultPageSize,
     showSizeChanger: true,
     pageSizeOptions: pageSizeOptions.map(String),
     showTotal: (total) => `${total} ${showTotalLabel}`,

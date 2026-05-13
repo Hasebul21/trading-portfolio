@@ -171,9 +171,20 @@ export function totalRealizedProfitLossBdt(rows: TransactionRow[]): number {
  * (caller can treat them as N/A). Pass the **full** transaction ledger so
  * the running average is correct, even when only a slice will be displayed.
  */
+export type SellTransactionDetail = {
+  /** Net realized P/L in BDT (buy fees folded into avg cost, sell fees subtracted). */
+  pnl: number;
+  /**
+   * Running FIFO average cost per share at the moment of this sell.
+   * Includes buy-side brokerage fees, so it represents the true cost basis.
+   * Divide by (1 − BROKERAGE_COMMISSION_RATE) to get the break-even sell price.
+   */
+  avgCost: number;
+};
+
 export function realizedPnlByTransaction(
   rows: TransactionRow[],
-): Map<string, number> {
+): Map<string, SellTransactionDetail> {
   type State = {
     shares: number;
     totalCost: number;
@@ -182,7 +193,7 @@ export function realizedPnlByTransaction(
   };
 
   const bySymbol = new Map<string, State>();
-  const result = new Map<string, number>();
+  const result = new Map<string, SellTransactionDetail>();
 
   const sorted = [...rows].sort((a, b) => {
     const ta = new Date(a.created_at).getTime();
@@ -217,7 +228,10 @@ export function realizedPnlByTransaction(
       const avgCost = state.avg;
 
       if (preShares > EPSILON_SHARES && sellQty > 0) {
-        result.set(row.id, roundBdt((price - avgCost) * sellQty - fees));
+        result.set(row.id, {
+          pnl: roundBdt((price - avgCost) * sellQty - fees),
+          avgCost,
+        });
 
         const soldFraction = sellQty / preShares;
         state.feesInPosition -= soldFraction * state.feesInPosition;
