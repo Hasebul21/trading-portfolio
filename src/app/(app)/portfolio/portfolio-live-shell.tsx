@@ -3,7 +3,7 @@
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Alert } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function pollIntervalMs(): number {
   const raw = process.env.NEXT_PUBLIC_PORTFOLIO_POLL_MS;

@@ -178,11 +178,10 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
 
     return (
         <section
-            className={`flex flex-col gap-2 rounded-2xl border bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-zinc-900/70 ${
-                isEmptyTarget
+            className={`flex flex-col gap-2 rounded-2xl border bg-white/85 p-3 shadow-sm sm:p-4 dark:bg-zinc-900/70 ${isEmptyTarget
                     ? "border-dashed border-amber-300/70 dark:border-amber-700/60"
                     : "border-teal-200/60 dark:border-teal-900/40"
-            }`}
+                }`}
         >
             <header className="flex items-baseline justify-between gap-2">
                 <h3 className="truncate text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
