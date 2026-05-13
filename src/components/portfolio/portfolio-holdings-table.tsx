@@ -16,7 +16,49 @@ import { Alert, Button, Card, Input, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Row = PortfolioMarketRow & { key: string };
+type DataRow = PortfolioMarketRow & { key: string; isHeader?: false };
+type SectorHeaderRow = {
+  key: string;
+  isHeader: true;
+  sector: string;
+  count: number;
+};
+type Row = DataRow | SectorHeaderRow;
+
+const SECTOR_FALLBACK = "Unsectorised";
+
+function sectorLabel(s: string | null | undefined): string {
+  const t = (s ?? "").trim();
+  return t || SECTOR_FALLBACK;
+}
+
+/**
+ * Build the table rows: data rows are sorted by sector then symbol, and a
+ * single sector-header row is inserted before each group so the table reads
+ * as separate per-sector sections within one table.
+ */
+function groupBySector(rows: PortfolioMarketRow[]): Row[] {
+  const bySector = new Map<string, PortfolioMarketRow[]>();
+  for (const r of rows) {
+    const k = sectorLabel(r.sector);
+    const list = bySector.get(k) ?? [];
+    list.push(r);
+    bySector.set(k, list);
+  }
+  const sectors = [...bySector.keys()].sort((a, b) => {
+    // Push the fallback bucket to the bottom so real sectors lead.
+    if (a === SECTOR_FALLBACK && b !== SECTOR_FALLBACK) return 1;
+    if (b === SECTOR_FALLBACK && a !== SECTOR_FALLBACK) return -1;
+    return a.localeCompare(b);
+  });
+  const out: Row[] = [];
+  for (const s of sectors) {
+    const items = bySector.get(s)!.slice().sort((a, b) => a.symbol.localeCompare(b.symbol));
+    out.push({ key: `__sector__:${s}`, isHeader: true, sector: s, count: items.length });
+    for (const h of items) out.push({ ...h, key: h.symbol });
+  }
+  return out;
+}
 
 type BookDraft = { shares: string; avg: string; total: string };
 
@@ -92,8 +134,8 @@ const bookInputClass =
   "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none ring-teal-500/25 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
 
 function sortNullableNumber(
-  pick: (r: Row) => number | null | undefined,
-): (a: Row, b: Row) => number {
+  pick: (r: DataRow) => number | null | undefined,
+): (a: DataRow, b: DataRow) => number {
   return (a, b) => {
     const av = pick(a);
     const bv = pick(b);
@@ -194,9 +236,10 @@ export function PortfolioHoldingsTable({
 
   const data: Row[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
-    return displayHoldings
-      .filter((h) => !q || h.symbol.toUpperCase().includes(q))
-      .map((h) => ({ ...h, key: h.symbol }));
+    const filtered = displayHoldings.filter(
+      (h) => !q || h.symbol.toUpperCase().includes(q),
+    );
+    return groupBySector(filtered);
   }, [displayHoldings, symbolQuery]);
 
   const patchDraft = useCallback(
@@ -287,20 +330,29 @@ export function PortfolioHoldingsTable({
   };
 
   const columns: ColumnsType<Row> = useMemo(() => {
+    // Sector header rows span the full table width; the other columns return
+    // a zero colSpan so antd hides them for header rows only.
+    const headerCellHidden = (record: Row) =>
+      record.isHeader ? { colSpan: 0 as const } : {};
+
     const avgCol: ColumnsType<Row>[0] = bookEditing
       ? {
         title: "Average cost / share",
         key: "avgPrice",
         width: 132,
         align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} average cost per share`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
-            onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
-          />
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <input
+              aria-label={`${row.symbol} average cost per share`}
+              className={bookInputClass}
+              value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
+              onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
+            />
+          );
+        },
       }
       : {
         title: "Average cost / share",
@@ -308,101 +360,127 @@ export function PortfolioHoldingsTable({
         width: 128,
         align: "right",
         responsive: ["sm"],
-        sorter: (a, b) => a.avgPrice - b.avgPrice,
-        showSorterTooltip: { title: "Sort by average cost" },
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
+          );
+        },
       };
 
     const sharesCol: ColumnsType<Row>[0] = bookEditing
       ? {
         title: "Shares",
-        dataIndex: "shares",
+        key: "shares",
         width: 96,
         align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} shares`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
-            onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
-          />
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <input
+              aria-label={`${row.symbol} shares`}
+              className={bookInputClass}
+              value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
+              onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
+            />
+          );
+        },
       }
       : {
         title: "Shares",
-        dataIndex: "shares",
+        key: "shares",
         width: 80,
         align: "right",
         responsive: ["sm"],
-        sorter: (a, b) => a.shares - b.shares,
-        showSorterTooltip: { title: "Sort by shares" },
-        render: (v: number) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatNumberMax2Decimals(v)}</span>
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <span className="tabular-nums text-[15px] font-normal">
+              {formatNumberMax2Decimals(row.shares)}
+            </span>
+          );
+        },
       };
 
     const totalCol: ColumnsType<Row>[0] = bookEditing
       ? {
         title: "Total invested",
-        dataIndex: "totalCost",
+        key: "totalCost",
         width: 120,
         align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} total invested`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
-            onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
-          />
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <input
+              aria-label={`${row.symbol} total invested`}
+              className={bookInputClass}
+              value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
+              onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
+            />
+          );
+        },
       }
       : {
         title: "Total invested",
-        dataIndex: "totalCost",
+        key: "totalCost",
         width: 112,
         align: "right",
         responsive: ["md"],
-        sorter: (a, b) => a.totalCost - b.totalCost,
-        showSorterTooltip: { title: "Sort by total invested" },
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
+          );
+        },
       };
 
     return [
       {
         title: "Symbol",
-        dataIndex: "symbol",
+        key: "symbol",
         width: 88,
         align: "left",
-        ...(!bookEditing
-          ? {
-            sorter: (a: Row, b: Row) => a.symbol.localeCompare(b.symbol),
-            showSorterTooltip: { title: "Sort by symbol" },
+        onCell: (record: Row) =>
+          record.isHeader ? { colSpan: 4 as const } : {},
+        render: (_: unknown, row) => {
+          if (row.isHeader) {
+            return (
+              <div className="flex items-baseline gap-2 py-1 text-left">
+                <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+                  {row.sector}
+                </span>
+                <span className="text-[11px] font-normal tabular-nums text-zinc-500 dark:text-zinc-400">
+                  {row.count} {row.count === 1 ? "position" : "positions"}
+                </span>
+              </div>
+            );
           }
-          : {}),
-        render: (v: string) => (
-          <span className="font-mono text-[15px] font-normal text-zinc-50">
-            {v}
-          </span>
-        ),
+          return (
+            <span className="font-mono text-[15px] font-normal text-zinc-50">
+              {row.symbol}
+            </span>
+          );
+        },
       },
       {
         title: "Break-even",
-        dataIndex: "breakEvenPrice",
+        key: "breakEvenPrice",
         width: 100,
         align: "right",
-        ...(!bookEditing
-          ? {
-            sorter: (a: Row, b: Row) => a.breakEvenPrice - b.breakEvenPrice,
-            showSorterTooltip: { title: "Sort by break-even price" },
-          }
-          : {}),
-        render: (v: number) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(v)}</span>
-        ),
+        onCell: headerCellHidden,
+        render: (_: unknown, row) => {
+          if (row.isHeader) return null;
+          return (
+            <span className="tabular-nums text-[15px] font-normal">
+              {formatBdt(row.breakEvenPrice)}
+            </span>
+          );
+        },
       },
       sharesCol,
       totalCol,
@@ -484,12 +562,22 @@ export function PortfolioHoldingsTable({
           </div>
         ) : (
           <ul className="mobile-card-list px-3 py-2">
-            {data.map((row) => (
-              <MobileHoldingCard
-                key={row.symbol}
-                row={row}
-              />
-            ))}
+            {data.map((row) =>
+              row.isHeader ? (
+                <li key={row.key} className="px-1 pb-1 pt-3 first:pt-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[12px] font-normal uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">
+                      {row.sector}
+                    </span>
+                    <span className="text-[11px] font-normal tabular-nums text-zinc-500 dark:text-zinc-400">
+                      {row.count} {row.count === 1 ? "position" : "positions"}
+                    </span>
+                  </div>
+                </li>
+              ) : (
+                <MobileHoldingCard key={row.key} row={row} />
+              ),
+            )}
           </ul>
         )}
       </div>
@@ -544,7 +632,7 @@ export function PortfolioHoldingsTable({
 function MobileHoldingCard({
   row,
 }: {
-  row: Row;
+  row: DataRow;
 }) {
   return (
     <li>
