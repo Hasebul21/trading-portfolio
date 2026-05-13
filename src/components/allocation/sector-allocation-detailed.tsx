@@ -30,21 +30,7 @@ type SectorSlice = {
     targetPercent: number | null;
     /** current − target. Positive = over-allocated, negative = under-allocated. */
     deltaPercent: number | null;
-    color: string;
 };
-
-const COLORS = [
-    "#0f766e", // teal-700
-    "#0891b2", // cyan-600
-    "#2563eb", // blue-600
-    "#7c3aed", // violet-600
-    "#db2777", // pink-600
-    "#ea580c", // orange-600
-    "#ca8a04", // yellow-600
-    "#65a30d", // lime-600
-    "#dc2626", // red-600
-    "#16a34a", // green-600
-] as const;
 
 function buildSectorSlices(
     holdings: AllocationHolding[],
@@ -129,7 +115,7 @@ function buildSectorSlices(
     });
 
     const slices: SectorSlice[] = baseSlices.map(
-        ({ label, holdings: hs, investedBdt, sharesTotal, weightedAvgPrice, percentOfPortfolio, targetPercent, deltaPercent }, i) => ({
+        ({ label, holdings: hs, investedBdt, sharesTotal, weightedAvgPrice, percentOfPortfolio, targetPercent, deltaPercent }) => ({
             sector: label,
             holdings: hs,
             investedBdt,
@@ -138,48 +124,14 @@ function buildSectorSlices(
             percentOfPortfolio,
             targetPercent,
             deltaPercent,
-            color: COLORS[i % COLORS.length],
         }),
     );
 
     return { slices, total };
 }
 
-function chartBackground(slices: SectorSlice[], total: number): string {
-    if (slices.length === 0 || total <= 0) return "transparent";
-
-    // Only sectors with real exposure contribute to the donut. Targeted-but-
-    // empty sectors are listed elsewhere so they aren't lost.
-    const real = slices.filter((s) => s.percentOfPortfolio > 0);
-    if (real.length === 0) return "transparent";
-
-    const stops: string[] = [];
-    let cumulative = 0;
-    real.forEach((slice, i) => {
-        stops.push(`${slice.color} ${cumulative}%`);
-        cumulative =
-            i === real.length - 1 ? 100 : cumulative + slice.percentOfPortfolio;
-        stops.push(`${slice.color} ${cumulative}%`);
-    });
-    return `conic-gradient(${stops.join(", ")})`;
-}
-
 function fmtPct(n: number): string {
     return `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
-}
-
-function fmtSignedPct(n: number): string {
-    const abs = fmtPct(Math.abs(n));
-    if (n > 0) return `+${abs}`;
-    if (n < 0) return `−${abs}`;
-    return abs;
-}
-
-/** "ok" if within ±1.5pp, otherwise over/under so we can colour the indicator. */
-function deltaStatus(delta: number | null): "none" | "ok" | "over" | "under" {
-    if (delta === null) return "none";
-    if (Math.abs(delta) <= 1.5) return "ok";
-    return delta > 0 ? "over" : "under";
 }
 
 export function SectorAllocationDetailed({
@@ -193,22 +145,18 @@ export function SectorAllocationDetailed({
         () => buildSectorSlices(holdings, targets),
         [holdings, targets],
     );
-    const bg = useMemo(() => chartBackground(slices, total), [slices, total]);
 
-    // Sectors that currently have a non-zero allocation. A sector that drops
-    // to 0% is auto-removed from the donut/legend/per-sector list, and a new
-    // sector with >0% is auto-added (because it appears in `slices`).
+    // Sectors with non-zero allocation come first; targeted-but-empty sectors
+    // (no current position) are rendered after so the user still sees the gap.
     const visibleSlices = useMemo(
-        () => slices.filter((s) => s.percentOfPortfolio > 0),
+        () =>
+            slices.filter(
+                (s) => s.percentOfPortfolio > 0 || s.targetPercent !== null,
+            ),
         [slices],
     );
 
-    const positionCount = useMemo(
-        () => visibleSlices.reduce((sum, s) => sum + s.holdings.length, 0),
-        [visibleSlices],
-    );
-
-    if (slices.length === 0 || total <= 0) {
+    if (visibleSlices.length === 0 || total <= 0) {
         return (
             <div className="rounded-2xl border border-dashed border-teal-300/70 bg-white/80 px-6 py-10 text-center text-[15px] font-normal text-zinc-600 dark:border-teal-800/60 dark:bg-zinc-900/70 dark:text-zinc-400">
                 No open positions to allocate. Record a buy first.
@@ -217,86 +165,10 @@ export function SectorAllocationDetailed({
     }
 
     return (
-        <div className="flex flex-col gap-3 sm:gap-5">
-            {/* Top summary strip */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <SummaryCell label="Total invested" value={formatBdt(total)} />
-                <SummaryCell label="Sectors" value={String(visibleSlices.length)} />
-                <SummaryCell label="Positions" value={String(positionCount)} />
-            </div>
-
-            {/* Donut + legend */}
-            <div className="rounded-2xl border border-teal-200/60 bg-white/80 px-3 py-4 shadow-sm sm:px-5 dark:border-teal-900/40 dark:bg-zinc-900/65">
-                <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-                    <div
-                        className="relative h-32 w-32 flex-shrink-0 rounded-full sm:h-40 sm:w-40"
-                        style={{ background: bg }}
-                        aria-label="Sector allocation donut"
-                        role="img"
-                    >
-                        <div className="absolute inset-[20px] flex items-center justify-center rounded-full border border-white/70 bg-white/95 text-center shadow-inner sm:inset-[26px] dark:border-zinc-800/70 dark:bg-zinc-950/90">
-                            <div>
-                                <p className="text-[10px] font-normal uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-                                    Sectors
-                                </p>
-                                <p className="mt-0.5 text-[20px] font-semibold leading-none text-zinc-900 dark:text-zinc-50">
-                                    {visibleSlices.length}
-                                </p>
-                                <p className="mt-1 text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                                    {positionCount} {positionCount === 1 ? "position" : "positions"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid w-full min-w-0 gap-1.5 sm:grid-cols-2">
-                        {visibleSlices.map((slice) => (
-                            <div
-                                key={slice.sector}
-                                className="flex items-center gap-2 rounded-md border border-zinc-200/70 bg-zinc-50/60 px-2.5 py-1.5 dark:border-zinc-800/80 dark:bg-zinc-950/60"
-                            >
-                                <span
-                                    className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                                    style={{ backgroundColor: slice.color }}
-                                    aria-hidden
-                                />
-                                <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-zinc-700 dark:text-zinc-100">
-                                    {slice.sector}
-                                </span>
-                                <span className="whitespace-nowrap font-mono text-[12px] tabular-nums text-zinc-700 dark:text-zinc-100">
-                                    {fmtPct(slice.percentOfPortfolio)}
-                                </span>
-                                <span className="whitespace-nowrap text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">
-                                    /{" "}
-                                    {slice.targetPercent === null
-                                        ? "—"
-                                        : fmtPct(slice.targetPercent)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Per-sector detail cards */}
-            <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-                {visibleSlices.map((slice) => (
-                    <SectorCard key={slice.sector} slice={slice} />
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function SummaryCell({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="rounded-xl border border-teal-200/60 bg-white/80 px-3 py-2 text-center shadow-sm dark:border-teal-900/40 dark:bg-zinc-900/65">
-            <p className="text-[11px] font-normal uppercase tracking-widest text-teal-700 dark:text-teal-300">
-                {label}
-            </p>
-            <p className="mt-0.5 text-[15px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
-                {value}
-            </p>
+        <div className="flex flex-col gap-4">
+            {visibleSlices.map((slice) => (
+                <SectorCard key={slice.sector} slice={slice} />
+            ))}
         </div>
     );
 }
@@ -312,28 +184,27 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
                     : "border-teal-200/60 dark:border-teal-900/40"
             }`}
         >
-            <header className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                    <span
-                        className="h-3 w-3 flex-shrink-0 rounded-full"
-                        style={{ backgroundColor: slice.color }}
-                        aria-hidden
-                    />
-                    <h3 className="truncate text-[15px] font-normal text-zinc-900 dark:text-zinc-50">
-                        {slice.sector}
-                    </h3>
-                </div>
-                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="rounded-md bg-teal-50/70 px-2 py-0.5 font-mono text-[12px] tabular-nums text-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
-                        {fmtPct(slice.percentOfPortfolio)}
+            <header className="flex items-baseline justify-between gap-2">
+                <h3 className="truncate text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+                    {slice.sector}
+                </h3>
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-[13px] font-normal text-zinc-500 dark:text-zinc-400">
+                        {slice.holdings.length}{" "}
+                        {slice.holdings.length === 1 ? "symbol" : "symbols"}
                     </span>
-                    <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
-                        /
-                    </span>
-                    <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[12px] tabular-nums text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200">
-                        {slice.targetPercent === null
-                            ? "—"
-                            : fmtPct(slice.targetPercent)}
+                    <span className="flex items-center gap-1.5">
+                        <span className="rounded-md bg-teal-50/70 px-2 py-0.5 font-mono text-[12px] tabular-nums text-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
+                            {fmtPct(slice.percentOfPortfolio)}
+                        </span>
+                        <span className="text-[12px] text-zinc-400 dark:text-zinc-500">
+                            /
+                        </span>
+                        <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[12px] tabular-nums text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-200">
+                            {slice.targetPercent === null
+                                ? "—"
+                                : fmtPct(slice.targetPercent)}
+                        </span>
                     </span>
                 </div>
             </header>
@@ -347,24 +218,12 @@ function SectorCard({ slice }: { slice: SectorSlice }) {
 
             {!isEmptyTarget ? (
                 <>
-                    <div className="grid grid-cols-2 gap-2 text-center">
-                        <div>
-                            <p className="text-[10px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                Invested
-                            </p>
-                            <p className="mt-0.5 text-[14px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
-                                {formatBdt(slice.investedBdt)}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-normal uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                                Holdings
-                            </p>
-                            <p className="mt-0.5 text-[14px] font-normal tabular-nums text-zinc-900 dark:text-zinc-50">
-                                {slice.holdings.length}
-                            </p>
-                        </div>
-                    </div>
+                    <p className="text-[12px] font-normal text-zinc-500 dark:text-zinc-400">
+                        Invested:{" "}
+                        <span className="tabular-nums text-zinc-900 dark:text-zinc-50">
+                            {formatBdt(slice.investedBdt)}
+                        </span>
+                    </p>
 
                     <table className="w-full text-left text-[13px] font-normal">
                         <thead>
