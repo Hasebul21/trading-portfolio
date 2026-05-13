@@ -107,6 +107,8 @@ export default async function LongTermPage() {
       created_at: row.created_at,
       symbol: row.symbol,
       sector,
+      ltp: quote?.ltp ?? null,
+      breakEvenPrice: h ? h.breakEvenPrice : null,
       buy_point_bdt: row.buy_point_bdt,
       sell_point_bdt: row.sell_point_bdt,
       manual_avg_cost_bdt: row.manual_avg_cost_bdt,

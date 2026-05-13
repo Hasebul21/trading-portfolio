@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteLongTermHolding } from "@/app/(app)/planning-actions";
+import { formatBdt } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import { Button, Input, Space, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -11,6 +12,10 @@ export type LongTermHoldingRow = {
   created_at: string;
   symbol: string;
   sector: string | null;
+  /** Last trade price from DSE (null if not quoted today). */
+  ltp: number | null;
+  /** Break-even cost from portfolio holdings (null if not held). */
+  breakEvenPrice: number | null;
 };
 
 type Row = LongTermHoldingRow & { key: string };
@@ -62,14 +67,32 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
       ),
     },
     {
-      title: "Added",
-      dataIndex: "created_at",
+      title: "LTP",
+      dataIndex: "ltp",
       width: 100,
-      align: "left",
-      responsive: ["md"],
-      render: (v: string) => (
-        <span className="text-zinc-50">{new Date(v).toLocaleDateString()}</span>
-      ),
+      align: "right",
+      render: (v: number | null) =>
+        v !== null && Number.isFinite(v) ? (
+          <span className="font-mono text-[15px] font-normal text-zinc-50">
+            {formatBdt(v)}
+          </span>
+        ) : (
+          <span className="text-zinc-400">—</span>
+        ),
+    },
+    {
+      title: "Break-even",
+      dataIndex: "breakEvenPrice",
+      width: 120,
+      align: "right",
+      render: (v: number | null) =>
+        v !== null && Number.isFinite(v) ? (
+          <span className="font-mono text-[15px] font-normal text-zinc-50">
+            {formatBdt(v)}
+          </span>
+        ) : (
+          <span className="text-zinc-400">—</span>
+        ),
     },
     {
       title: "",
@@ -88,7 +111,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
   ];
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-x-auto">
+    <div className="w-full min-w-0 max-w-full">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
           <Input
@@ -106,7 +129,6 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
           className="long-term-holdings-table"
           columns={columns}
           dataSource={[]}
-          scroll={{ x: "max-content" }}
           locale={{ emptyText: "No symbols yet." }}
           pagination={false}
           size="middle"
@@ -128,7 +150,6 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                 className="long-term-holdings-table"
                 columns={columns}
                 dataSource={items}
-                scroll={{ x: "max-content" }}
                 pagination={tablePagination("symbols", {
                   hideOnSinglePage: true,
                   pageSize: 15,
