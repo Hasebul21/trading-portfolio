@@ -6,7 +6,7 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.darkAlgorithm,
+        algorithm: theme.defaultAlgorithm,
         token: {
           fontFamily:
             "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
@@ -25,26 +25,27 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
           fontWeightStrong: 400,
           borderRadius: 10,
           borderRadiusLG: 14,
-          colorBgLayout: "#1c2029",
-          colorBgContainer: "rgba(38, 43, 54, 0.65)",
-          colorBgElevated: "#2a303c",
-          colorBorder: "rgba(110, 120, 140, 0.38)",
-          colorPrimary: "#129187",
-          colorSuccess: "#34d399",
-          colorWarning: "#fbbf24",
-          colorError: "#f87171",
-          colorInfo: "#818cf8",
-          colorText: "#d4d9e4",
-          colorTextSecondary: "#b8bfcc",
-          colorTextTertiary: "#8b95a8",
-          colorTextHeading: "#e6eaf2",
+          // Warm taupe palette (#A3897F base).
+          colorBgLayout: "#a3897f",
+          colorBgContainer: "rgba(255, 248, 244, 0.92)",
+          colorBgElevated: "#fbf5f1",
+          colorBorder: "rgba(74, 52, 43, 0.28)",
+          colorPrimary: "#4a342b",
+          colorSuccess: "#2f7d4f",
+          colorWarning: "#b25c00",
+          colorError: "#b3261e",
+          colorInfo: "#5b6acb",
+          colorText: "#2a201c",
+          colorTextSecondary: "#4a3a32",
+          colorTextTertiary: "#6a574c",
+          colorTextHeading: "#1a120e",
         },
         components: {
           Card: {
             paddingLG: 22,
           },
           Button: {
-            primaryShadow: "0 4px 14px rgba(18, 145, 135, 0.32)",
+            primaryShadow: "0 4px 14px rgba(74, 52, 43, 0.22)",
             fontWeight: 400,
             contentFontSize: 15,
           },
@@ -53,8 +54,8 @@ export function AntdAppProvider({ children }: { children: React.ReactNode }) {
             cellFontSize: 15,
             cellFontSizeMD: 15,
             cellFontSizeSM: 15,
-            headerColor: "#e6eaf2",
-            colorText: "#d4d9e4",
+            headerColor: "#1a120e",
+            colorText: "#2a201c",
           },
           Typography: {
             fontWeightStrong: 400,

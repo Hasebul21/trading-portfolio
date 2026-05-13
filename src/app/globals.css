@@ -1,17 +1,27 @@
 @import "tailwindcss";
 
+/*
+ * Force `dark:` utilities to be opt-in via an explicit `.dark` ancestor
+ * (default in Tailwind v4 is `prefers-color-scheme`). We render a single
+ * light theme for everyone, so by gating dark behind `.dark` (never set on
+ * <html>) those utilities effectively no-op and OS dark mode no longer flips
+ * the UI.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  /* Softer dark base — lighter than typical “twilight” for an easier-on-eyes feel. */
-  --background: #262b36;
-  --background-edge: #1d2129;
-  --foreground: #d4d9e4;
-  --foreground-strong: #e6eaf2;
-  --accent: #129187;
-  --accent-muted: rgba(45, 212, 191, 0.055);
-  --glow-violet: rgba(129, 140, 248, 0.035);
-  --surface-raised: rgba(48, 54, 66, 0.88);
-  --surface-popover: #333a47;
-  --border-subtle: rgba(120, 130, 150, 0.4);
+  color-scheme: light;
+  /* Warm taupe ("mocha") palette built around #A3897F. */
+  --background: #a3897f;
+  --background-edge: #8c7268;
+  --foreground: #2a201c;
+  --foreground-strong: #1a120e;
+  --accent: #4a342b;
+  --accent-muted: rgba(74, 52, 43, 0.08);
+  --glow-violet: rgba(255, 255, 255, 0.06);
+  --surface-raised: rgba(255, 248, 244, 0.92);
+  --surface-popover: #fbf5f1;
+  --border-subtle: rgba(74, 52, 43, 0.28);
 }
 
 @theme inline {
@@ -43,7 +53,7 @@ body {
   background-image:
     radial-gradient(
       ellipse 105% 95% at 50% 48%,
-      color-mix(in srgb, var(--background) 92%, transparent) 40%,
+      color-mix(in srgb, var(--background) 96%, transparent) 40%,
       var(--background-edge) 100%
     ),
     radial-gradient(ellipse 100% 80% at 50% -30%, var(--accent-muted), transparent 58%),
@@ -65,8 +75,8 @@ body {
     background-image:
       radial-gradient(
         ellipse 110% 102% at 50% 50%,
-        color-mix(in srgb, var(--background) 88%, transparent) 34%,
-        rgba(20, 24, 32, 0.78) 100%
+        color-mix(in srgb, var(--background) 92%, transparent) 34%,
+        color-mix(in srgb, var(--background-edge) 88%, transparent) 100%
       ),
       radial-gradient(ellipse 100% 78% at 50% -32%, var(--accent-muted), transparent 60%),
       radial-gradient(ellipse 62% 44% at 100% 0%, var(--glow-violet), transparent 54%),
@@ -121,27 +131,27 @@ b {
   text-transform: none;
   color: var(--foreground-strong);
   background: linear-gradient(to bottom,
-      rgba(6, 78, 59, 0.55),
-      rgba(4, 47, 46, 0.72)) !important;
-  border-bottom: 1px solid rgba(45, 212, 191, 0.2) !important;
+      rgba(74, 52, 43, 0.16),
+      rgba(74, 52, 43, 0.10)) !important;
+  border-bottom: 1px solid rgba(74, 52, 43, 0.22) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr>td,
 .long-term-holdings-table .ant-table-tbody>tr>td {
-  border-color: rgba(45, 212, 191, 0.08) !important;
+  border-color: rgba(74, 52, 43, 0.10) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
 .long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
-  background: rgba(6, 78, 59, 0.22);
+  background: rgba(255, 248, 244, 0.45);
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
 .long-term-holdings-table .ant-table-tbody>tr:hover>td {
-  background: rgba(161, 161, 170, 0.13) !important;
+  background: rgba(74, 52, 43, 0.10) !important;
 }
 
-/* Force white text globally for Ant Design dark mode */
+/* Force Ant Design components to use the warm palette text colour. */
 .ant-typography,
 .ant-table-cell,
 .ant-card,
@@ -215,7 +225,7 @@ b {
   color: var(--foreground) !important;
 }
 
-/* Dropdown and popover backgrounds for dark mode */
+/* Dropdown and popover surfaces. */
 .ant-dropdown-menu,
 .ant-popover-inner,
 .ant-popconfirm-inner-content,
@@ -230,7 +240,7 @@ b {
 .ant-dropdown-menu-item:hover,
 .ant-select-item-option-active,
 .ant-select-item-option-selected {
-  background-color: rgba(45, 212, 191, 0.12) !important;
+  background-color: rgba(74, 52, 43, 0.10) !important;
 }
 
 .ant-select-item,
@@ -252,12 +262,12 @@ b {
 .ant-input::placeholder,
 .ant-input-number-input::placeholder,
 .ant-picker-input>input::placeholder {
-  color: rgba(161, 161, 170, 0.7) !important;
+  color: rgba(74, 52, 43, 0.55) !important;
 }
 
 /* Card backgrounds */
 .ant-card {
-  background-color: color-mix(in srgb, var(--surface-raised) 72%, transparent) !important;
+  background-color: color-mix(in srgb, var(--surface-raised) 92%, transparent) !important;
   border-color: var(--border-subtle) !important;
 }
 
@@ -267,7 +277,7 @@ b {
 
 .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
 .long-term-holdings-table .ant-table-tbody>tr:hover>td {
-  background: rgba(113, 113, 122, 0.09) !important;
+  background: rgba(74, 52, 43, 0.10) !important;
 }
 
 @media (max-width: 640px) {

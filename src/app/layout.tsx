@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   // use env(safe-area-inset-*) padding so content stays clear of the gesture
   // bar on iPhones running iOS Safari.
   viewportFit: "cover",
-  themeColor: "#1c2029",
+  themeColor: "#A3897F",
 };
 
 export default function RootLayout({
@@ -40,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AntdRegistry>{children}</AntdRegistry>

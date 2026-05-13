@@ -1,6 +1,10 @@
 "use client";
 
 import { PortfolioHoldingsTable } from "@/components/portfolio/portfolio-holdings-table";
+import {
+  SectorAllocationDetailed,
+  type AllocationHolding,
+} from "@/components/allocation/sector-allocation-detailed";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Alert } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -124,6 +128,18 @@ export function PortfolioLiveShell({
 
   const marketWarning = liveLspError ?? (!hasPolled ? initialMarketError : null);
 
+  const sectorRows: AllocationHolding[] = useMemo(
+    () =>
+      rows.map((r) => ({
+        symbol: r.symbol,
+        sector: r.sector,
+        totalCost: r.totalCost,
+        shares: r.shares,
+        avgPrice: r.avgPrice,
+      })),
+    [rows],
+  );
+
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
       <div className="flex flex-wrap items-center justify-center gap-2">
@@ -150,6 +166,15 @@ export function PortfolioLiveShell({
         enableBookEdit
         onAfterBookSave={refresh}
       />
+
+      {sectorRows.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-[13px] font-normal uppercase tracking-[0.2em] text-zinc-700 dark:text-zinc-200">
+            Sector breakdown
+          </h2>
+          <SectorAllocationDetailed holdings={sectorRows} />
+        </section>
+      ) : null}
 
       {marketWarning ? (
         <div className="overflow-hidden rounded-2xl ring-1 ring-amber-500/20">
