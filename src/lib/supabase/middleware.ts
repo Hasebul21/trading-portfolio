@@ -43,7 +43,6 @@ export async function updateSession(request: NextRequest) {
     "/allocation",
     "/trade-plans",
     "/trade-history",
-    "/mip",
     "/settings",
   ];
 

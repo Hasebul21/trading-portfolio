@@ -19,9 +19,6 @@ const NAV_ITEMS: NavItem[] = [
   { type: "link", href: "/long-term", label: "Watchlist" },
   { type: "link", href: "/allocation", label: "Allocation" },
   { type: "divider" },
-  // ── Trading group ─────────────────────────────
-  { type: "link", href: "/mip", label: "MIP" },
-  { type: "divider" },
   // ── Records / misc ────────────────────────────
   { type: "link", href: "/trade-history", label: "History" },
   { type: "link", href: "/settings", label: "Settings" },
