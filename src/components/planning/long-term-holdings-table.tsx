@@ -2,8 +2,10 @@
 
 import { deleteLongTermHolding } from "@/app/(app)/planning-actions";
 import { formatBdt } from "@/lib/format-bdt";
-import { AutoComplete, Button } from "antd";
+import { AutoComplete, Button, Select } from "antd";
 import { useMemo, useState } from "react";
+
+const SECTOR_FILTER_ALL = "__all__";
 
 export type LongTermHoldingRow = {
     id: string;
@@ -51,15 +53,21 @@ function isSellSignal(row: LongTermHoldingRow): boolean {
 
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
     const [searchText, setSearchText] = useState("");
+    const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
 
     const filteredRows = useMemo(() => {
         const q = searchText.trim().toUpperCase();
         return rows.filter((r) => {
-            if (!q) return true;
-            const sym = String(r.symbol ?? "").trim().toUpperCase();
-            return sym.includes(q);
+            if (q) {
+                const sym = String(r.symbol ?? "").trim().toUpperCase();
+                if (!sym.includes(q)) return false;
+            }
+            if (sectorFilter !== SECTOR_FILTER_ALL && sectorLabel(r.sector) !== sectorFilter) {
+                return false;
+            }
+            return true;
         });
-    }, [rows, searchText]);
+    }, [rows, searchText, sectorFilter]);
 
     const groups: SectorGroup[] = useMemo(() => {
         const bySector = new Map<string, Row[]>();
@@ -100,6 +108,20 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
         [rows],
     );
 
+    const sectorOptions = useMemo(() => {
+        const set = new Set<string>();
+        for (const r of rows) set.add(sectorLabel(r.sector));
+        const sorted = Array.from(set).sort((a, b) => {
+            if (a === SECTOR_FALLBACK && b !== SECTOR_FALLBACK) return 1;
+            if (b === SECTOR_FALLBACK && a !== SECTOR_FALLBACK) return -1;
+            return a.localeCompare(b);
+        });
+        return [
+            { value: SECTOR_FILTER_ALL, label: `All sectors (${set.size})` },
+            ...sorted.map((s) => ({ value: s, label: s })),
+        ];
+    }, [rows]);
+
     // Top-level KPI counts.
     const totals = useMemo(() => ({ symbols: filteredRows.length }), [filteredRows]);
 
@@ -126,12 +148,26 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                     <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
                         {totals.symbols} {totals.symbols === 1 ? "symbol" : "symbols"}
                     </span>
+                    <Select<string>
+                        value={sectorFilter}
+                        onChange={(v) => setSectorFilter(v)}
+                        options={sectorOptions}
+                        size="middle"
+                        showSearch
+                        optionFilterProp="label"
+                        className="w-full sm:w-64"
+                        aria-label="Filter by sector"
+                    />
                 </div>
             </div>
 
             {groups.length === 0 ? (
                 <div className="py-10 text-center text-[14px] text-[var(--ink-muted)]">
-                    {searchText.trim() ? "No symbols match your search." : "No symbols yet."}
+                    {searchText.trim()
+                        ? "No symbols match your search."
+                        : sectorFilter !== SECTOR_FILTER_ALL
+                            ? "No symbols in this sector."
+                            : "No symbols yet."}
                 </div>
             ) : (
                 <div className="flex flex-col gap-6">

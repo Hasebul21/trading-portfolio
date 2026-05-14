@@ -14,52 +14,7 @@ import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { Alert, AutoComplete, Button, Select, Space } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type SectorSortKey =
-    | "name-asc"
-    | "invested-desc"
-    | "invested-asc"
-    | "pl-desc"
-    | "pl-asc"
-    | "share-desc"
-    | "count-desc";
-
-const SECTOR_SORT_OPTIONS: { value: SectorSortKey; label: string }[] = [
-    { value: "name-asc", label: "Sector name (A–Z)" },
-    { value: "invested-desc", label: "Invested (high → low)" },
-    { value: "invested-asc", label: "Invested (low → high)" },
-    { value: "pl-desc", label: "Unrealized P/L (high → low)" },
-    { value: "pl-asc", label: "Unrealized P/L (low → high)" },
-    { value: "share-desc", label: "Share of portfolio (high → low)" },
-    { value: "count-desc", label: "Stock count (high → low)" },
-];
-
-function sortSectorGroups(groups: SectorGroup[], key: SectorSortKey): SectorGroup[] {
-    const sorted = groups.slice();
-    const isFallback = (s: string) => s === SECTOR_FALLBACK;
-    sorted.sort((a, b) => {
-        // Always keep Unsectorised pinned to the bottom.
-        if (isFallback(a.sector) && !isFallback(b.sector)) return 1;
-        if (isFallback(b.sector) && !isFallback(a.sector)) return -1;
-        switch (key) {
-            case "invested-desc":
-                return b.invested - a.invested || a.sector.localeCompare(b.sector);
-            case "invested-asc":
-                return a.invested - b.invested || a.sector.localeCompare(b.sector);
-            case "pl-desc":
-                return b.unrealizedPl - a.unrealizedPl || a.sector.localeCompare(b.sector);
-            case "pl-asc":
-                return a.unrealizedPl - b.unrealizedPl || a.sector.localeCompare(b.sector);
-            case "share-desc":
-                return b.sharePct - a.sharePct || a.sector.localeCompare(b.sector);
-            case "count-desc":
-                return b.items.length - a.items.length || a.sector.localeCompare(b.sector);
-            case "name-asc":
-            default:
-                return a.sector.localeCompare(b.sector);
-        }
-    });
-    return sorted;
-}
+const SECTOR_FILTER_ALL = "__all__";
 
 type DataRow = PortfolioMarketRow & { key: string };
 type SectorGroup = {
@@ -188,7 +143,7 @@ export function PortfolioHoldingsTable({
     onAfterBookSave?: () => void | Promise<void>;
 }) {
     const [symbolQuery, setSymbolQuery] = useState("");
-    const [sectorSort, setSectorSort] = useState<SectorSortKey>("name-asc");
+    const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
     const [draft, setDraft] = useState<Record<string, BookDraft>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -255,12 +210,27 @@ export function PortfolioHoldingsTable({
 
     const data: SectorGroup[] = useMemo(() => {
         const q = symbolQuery.trim().toUpperCase();
-        const filtered = displayHoldings.filter(
-            (h) => !q || h.symbol.toUpperCase().includes(q),
-        );
-        const groups = groupBySector(filtered, totalInvestedDisplay);
-        return sortSectorGroups(groups, sectorSort);
-    }, [displayHoldings, symbolQuery, totalInvestedDisplay, sectorSort]);
+        const filtered = displayHoldings.filter((h) => {
+            if (q && !h.symbol.toUpperCase().includes(q)) return false;
+            if (sectorFilter !== SECTOR_FILTER_ALL && sectorLabel(h.sector) !== sectorFilter) return false;
+            return true;
+        });
+        return groupBySector(filtered, totalInvestedDisplay);
+    }, [displayHoldings, symbolQuery, sectorFilter, totalInvestedDisplay]);
+
+    const sectorOptions = useMemo(() => {
+        const set = new Set<string>();
+        for (const h of displayHoldings) set.add(sectorLabel(h.sector));
+        const sorted = Array.from(set).sort((a, b) => {
+            if (a === SECTOR_FALLBACK && b !== SECTOR_FALLBACK) return 1;
+            if (b === SECTOR_FALLBACK && a !== SECTOR_FALLBACK) return -1;
+            return a.localeCompare(b);
+        });
+        return [
+            { value: SECTOR_FILTER_ALL, label: `All sectors (${set.size})` },
+            ...sorted.map((s) => ({ value: s, label: s })),
+        ];
+    }, [displayHoldings]);
 
     const sectorCount = useMemo(
         () => new Set(displayHoldings.map((h) => sectorLabel(h.sector))).size,
@@ -365,7 +335,9 @@ export function PortfolioHoldingsTable({
 
     const emptyMessage = symbolQuery.trim()
         ? "No symbols match your search."
-        : "No positions yet.";
+        : sectorFilter !== SECTOR_FILTER_ALL
+            ? "No positions in this sector."
+            : "No positions yet.";
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-6 text-[var(--ink-strong)]">
@@ -419,13 +391,15 @@ export function PortfolioHoldingsTable({
                     <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
                         {positionCount} {positionCount === 1 ? "position" : "positions"}
                     </span>
-                    <Select<SectorSortKey>
-                        value={sectorSort}
-                        onChange={(v) => setSectorSort(v)}
-                        options={SECTOR_SORT_OPTIONS}
+                    <Select<string>
+                        value={sectorFilter}
+                        onChange={(v) => setSectorFilter(v)}
+                        options={sectorOptions}
                         size="middle"
+                        showSearch
+                        optionFilterProp="label"
                         className="w-full sm:w-64"
-                        aria-label="Sort sectors"
+                        aria-label="Filter by sector"
                     />
                 </Space>
                 {enableBookEdit ? (
