@@ -417,13 +417,28 @@ export function PortfolioHoldingsTable({
       {
         title: "Symbol",
         key: "symbol",
-        width: 88,
+        width: 104,
         align: "left",
-        render: (_: unknown, row) => (
-          <span className="font-mono text-[15px] font-normal text-zinc-50">
-            {row.symbol}
-          </span>
-        ),
+        render: (_: unknown, row) => {
+          const inProfit =
+            row.marketLtp !== null &&
+            Number.isFinite(row.marketLtp) &&
+            row.marketLtp > row.breakEvenPrice;
+          return (
+            <span className="inline-flex items-center gap-1.5">
+              {inProfit ? (
+                <span
+                  aria-label="In profit"
+                  title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
+                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+                />
+              ) : null}
+              <span className="font-mono text-[15px] font-normal text-zinc-50">
+                {row.symbol}
+              </span>
+            </span>
+          );
+        },
       },
       {
         title: "Break-even",
@@ -435,6 +450,26 @@ export function PortfolioHoldingsTable({
             {formatBdt(row.breakEvenPrice)}
           </span>
         ),
+      },
+      {
+        title: "Last price",
+        key: "marketLtp",
+        width: 110,
+        align: "right",
+        ...(!bookEditing
+          ? {
+              sorter: sortNullableNumber((r) => r.marketLtp),
+              showSorterTooltip: { title: "Sort by last trade price" },
+            }
+          : {}),
+        render: (_: unknown, row) =>
+          row.marketLtp === null || !Number.isFinite(row.marketLtp) ? (
+            <span className="text-zinc-50">—</span>
+          ) : (
+            <span className="tabular-nums text-[15px] font-normal">
+              {formatBdt(row.marketLtp)}
+            </span>
+          ),
       },
       sharesCol,
       totalCol,
@@ -626,6 +661,10 @@ function MobileHoldingCard({
 }: {
   row: DataRow;
 }) {
+  const inProfit =
+    row.marketLtp !== null &&
+    Number.isFinite(row.marketLtp) &&
+    row.marketLtp > row.breakEvenPrice;
   return (
     <li>
       <article
@@ -633,6 +672,13 @@ function MobileHoldingCard({
       >
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
+            {inProfit ? (
+              <span
+                aria-label="In profit"
+                title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+              />
+            ) : null}
             <span className="font-mono text-[15px] font-medium text-zinc-100">
               {row.symbol}
             </span>
@@ -659,6 +705,14 @@ function MobileHoldingCard({
             <dt className="text-zinc-400">Avg cost</dt>
             <dd className="font-mono tabular-nums text-zinc-300">
               {formatBdt(row.avgPrice)}
+            </dd>
+          </div>
+          <div className="text-right">
+            <dt className="text-zinc-400">Last price</dt>
+            <dd className="font-mono tabular-nums text-zinc-100">
+              {row.marketLtp === null || !Number.isFinite(row.marketLtp)
+                ? "—"
+                : formatBdt(row.marketLtp)}
             </dd>
           </div>
         </dl>
