@@ -1,4 +1,3 @@
-import { AppPageHeader } from "@/components/app-page-header";
 import { AppPageStack } from "@/components/app-page-stack";
 import {
     SectorAllocationDetailed,
@@ -23,8 +22,7 @@ export default async function AllocationPage() {
                 gapClass="gap-4 sm:gap-5"
                 className="mx-auto min-w-0 max-w-2xl text-left"
             >
-                <AppPageHeader title="Sector Allocation" />
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800 dark:bg-red-950/40 dark:text-red-200">
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800">
                     {holdingsRes.error}
                 </p>
             </AppPageStack>
@@ -60,7 +58,6 @@ export default async function AllocationPage() {
             gapClass="gap-4 sm:gap-5"
             className="mx-auto w-full min-w-0 max-w-6xl text-left"
         >
-            <AppPageHeader title="Sector Allocation" />
             <SectorAllocationDetailed holdings={allocationRows} targets={targets} />
         </AppPageStack>
     );
