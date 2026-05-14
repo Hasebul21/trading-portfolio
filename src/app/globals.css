@@ -11,13 +11,13 @@
 
 :root {
   color-scheme: light;
-  /* Soft cream body — easier on the eyes than pure white or harsh greys.
-     Cards / tables sit on top as plain white Ant surfaces. */
-  --background: #f5f3ee;
+  /* Light off-white body matching the card-banner design.
+     Cards / tables sit on top as plain white surfaces. */
+  --background: #f4f4f3;
   --foreground: rgba(0, 0, 0, 0.88);
   --foreground-muted: rgba(0, 0, 0, 0.6);
   --surface-raised: #ffffff;
-  --border-subtle: #e4e1d9;
+  --border-subtle: #e4e4e7;
 }
 
 @theme inline {

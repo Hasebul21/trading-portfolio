@@ -10,16 +10,18 @@ import {
   formatPlainNumberMax2Decimals,
 } from "@/lib/format-bdt";
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
-import { tablePagination } from "@/lib/table-pagination";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import { Alert, AutoComplete, Button, Space, Statistic, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Alert, AutoComplete, Button, Space } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type DataRow = PortfolioMarketRow & { key: string };
 type SectorGroup = {
   sector: string;
   items: DataRow[];
+  invested: number;
+  unrealizedPl: number;
+  hasQuote: boolean;
+  sharePct: number;
 };
 
 const SECTOR_FALLBACK = "Unsectorised";
@@ -30,10 +32,14 @@ function sectorLabel(s: string | null | undefined): string {
 }
 
 /**
- * Group holdings by sector, sorted with the fallback bucket pushed last and
- * symbols sorted alphabetically inside each group.
+ * Group holdings by sector. Each group carries per-sector aggregates
+ * (invested, unrealized P/L, share of portfolio) so the banner header can
+ * render without re-summing in the render path.
  */
-function groupBySector(rows: PortfolioMarketRow[]): SectorGroup[] {
+function groupBySector(
+  rows: PortfolioMarketRow[],
+  totalInvested: number,
+): SectorGroup[] {
   const bySector = new Map<string, PortfolioMarketRow[]>();
   for (const r of rows) {
     const k = sectorLabel(r.sector);
@@ -46,14 +52,30 @@ function groupBySector(rows: PortfolioMarketRow[]): SectorGroup[] {
     if (b === SECTOR_FALLBACK && a !== SECTOR_FALLBACK) return -1;
     return a.localeCompare(b);
   });
-  return sectors.map((sector) => ({
-    sector,
-    items: bySector
-      .get(sector)!
-      .slice()
-      .sort((a, b) => a.symbol.localeCompare(b.symbol))
-      .map((h) => ({ ...h, key: h.symbol })),
-  }));
+  return sectors.map((sector) => {
+    const raw = bySector.get(sector)!;
+    let invested = 0;
+    let unrealizedPl = 0;
+    let hasQuote = false;
+    for (const r of raw) {
+      invested += r.totalCost;
+      if (r.unrealizedPl !== null && Number.isFinite(r.unrealizedPl)) {
+        unrealizedPl += r.unrealizedPl;
+        hasQuote = true;
+      }
+    }
+    return {
+      sector,
+      invested,
+      unrealizedPl,
+      hasQuote,
+      sharePct: totalInvested > 0 ? (invested / totalInvested) * 100 : 0,
+      items: raw
+        .slice()
+        .sort((a, b) => b.totalCost - a.totalCost)
+        .map((h) => ({ ...h, key: h.symbol })),
+    };
+  });
 }
 
 type BookDraft = { shares: string; avg: string; total: string };
@@ -61,51 +83,24 @@ type BookDraft = { shares: string; avg: string; total: string };
 function fmtSignedBdt(n: number) {
   const s = formatBdt(Math.abs(n));
   if (n > 0) return `+${s}`;
-  if (n < 0) return `-${s}`;
+  if (n < 0) return `−${s}`;
   return s;
 }
 
-/** P/L indicator with colored dot + default Ant text color. */
-function PlIndicator({ value }: { value: number }) {
-  const dotColor = value >= 0 ? "bg-emerald-500" : "bg-red-500";
-  return (
-    <span className="inline-flex items-center gap-1.5 tabular-nums text-[15px]">
-      <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
-      {fmtSignedBdt(value)}
-    </span>
-  );
+function fmtPct(n: number) {
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  return `${sign}${Math.abs(n).toFixed(2)}%`;
 }
 
-/**
- * Single source of truth for the four summary cards: builds the
- * {@link computePortfolioSummary} structure from the rows currently visible
- * (so the preview during "Edit book" reflects the draft consistently).
- */
+/** Build the four KPI cards for the top strip from currently displayed rows. */
 function summaryFromRows(
   rows: PortfolioMarketRow[],
   totalRealizedBdt: number,
   cashAdjustmentsBdt: number,
-): {
-  totalInvested: number;
-  realizedGainLoss: number;
-  unrealizedGainLoss: number;
-  cashAdjustments: number;
-  netGainLoss: number;
-  withQuote: number;
-  positions: number;
-} {
+) {
   const ltpMap = new Map<string, number | null | undefined>();
   for (const h of rows) ltpMap.set(h.symbol, h.marketLtp);
-  const summary = computePortfolioSummary(rows, totalRealizedBdt, ltpMap, cashAdjustmentsBdt);
-  return {
-    totalInvested: summary.totalInvested,
-    realizedGainLoss: summary.realizedGainLoss,
-    unrealizedGainLoss: summary.unrealizedGainLoss,
-    cashAdjustments: summary.cashAdjustments,
-    netGainLoss: summary.netGainLoss,
-    withQuote: summary.quotedPositionCount,
-    positions: rows.length,
-  };
+  return computePortfolioSummary(rows, totalRealizedBdt, ltpMap, cashAdjustmentsBdt);
 }
 
 function parseBookNumber(raw: string): number | null {
@@ -125,22 +120,7 @@ function bookFingerprint(rows: PortfolioMarketRow[]) {
 }
 
 const bookInputClass =
-  "box-border w-full min-w-[4.5rem] rounded-md border border-[#d9d9d9] bg-white px-2 py-1 text-right text-[15px] tabular-nums text-[rgba(0,0,0,0.88)] outline-none focus:border-[#1677ff] focus:ring-1 focus:ring-[#1677ff]";
-
-function sortNullableNumber(
-  pick: (r: DataRow) => number | null | undefined,
-): (a: DataRow, b: DataRow) => number {
-  return (a, b) => {
-    const av = pick(a);
-    const bv = pick(b);
-    const an = av !== null && av !== undefined && Number.isFinite(av) ? Number(av) : null;
-    const bn = bv !== null && bv !== undefined && Number.isFinite(bv) ? Number(bv) : null;
-    if (an === null && bn === null) return 0;
-    if (an === null) return 1;
-    if (bn === null) return -1;
-    return an - bn;
-  };
-}
+  "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[13px] tabular-nums text-zinc-900 outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500";
 
 export function PortfolioHoldingsTable({
   holdings,
@@ -216,25 +196,27 @@ export function PortfolioHoldingsTable({
     () => summaryFromRows(displayHoldings, totalRealizedBdt, totalCashAdjustmentsBdt),
     [displayHoldings, totalRealizedBdt, totalCashAdjustmentsBdt],
   );
-  const {
-    totalInvested: totalInvestedComputed,
-    unrealizedGainLoss: totalUnrealized,
-    cashAdjustments: totalCashAdjustments,
-    withQuote,
-    positions,
-  } = summary;
   // Prefer the server-provided invested total when nothing is being edited so
   // we honour any rounding/aggregation done server-side; while editing, fall
   // back to the rows-derived total which reflects the draft.
-  const totalInvestedDisplay = bookEditing ? totalInvestedComputed : totalInvestedBdt;
+  const totalInvestedDisplay = bookEditing ? summary.totalInvested : totalInvestedBdt;
+  const totalUnrealized = summary.unrealizedGainLoss;
+  const totalUnrealizedPct =
+    totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
+  const positionCount = displayHoldings.length;
 
   const data: SectorGroup[] = useMemo(() => {
     const q = symbolQuery.trim().toUpperCase();
     const filtered = displayHoldings.filter(
       (h) => !q || h.symbol.toUpperCase().includes(q),
     );
-    return groupBySector(filtered);
-  }, [displayHoldings, symbolQuery]);
+    return groupBySector(filtered, totalInvestedDisplay);
+  }, [displayHoldings, symbolQuery, totalInvestedDisplay]);
+
+  const sectorCount = useMemo(
+    () => new Set(displayHoldings.map((h) => sectorLabel(h.sector))).size,
+    [displayHoldings],
+  );
 
   const symbolOptions = useMemo(
     () =>
@@ -330,173 +312,46 @@ export function PortfolioHoldingsTable({
     } finally {
       setSaving(false);
     }
-  };
-
-  const columns: ColumnsType<DataRow> = useMemo(() => {
-    const avgCol: ColumnsType<DataRow>[0] = bookEditing
-      ? {
-        title: "Average cost / share",
-        key: "avgPrice",
-        width: 132,
-        align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} average cost per share`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
-            onChange={(e) => patchDraft(row.symbol, "avg", e.target.value)}
-          />
-        ),
-      }
-      : {
-        title: "Average cost / share",
-        key: "avgPrice",
-        width: 128,
-        align: "right",
-        responsive: ["sm"],
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px]">{formatBdt(row.avgPrice)}</span>
-        ),
-      };
-
-    const sharesCol: ColumnsType<DataRow>[0] = bookEditing
-      ? {
-        title: "Shares",
-        key: "shares",
-        width: 96,
-        align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} shares`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
-            onChange={(e) => patchDraft(row.symbol, "shares", e.target.value)}
-          />
-        ),
-      }
-      : {
-        title: "Shares",
-        key: "shares",
-        width: 80,
-        align: "right",
-        responsive: ["sm"],
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px]">
-            {formatNumberMax2Decimals(row.shares)}
-          </span>
-        ),
-      };
-
-    const totalCol: ColumnsType<DataRow>[0] = bookEditing
-      ? {
-        title: "Total invested",
-        key: "totalCost",
-        width: 120,
-        align: "right",
-        render: (_: unknown, row) => (
-          <input
-            aria-label={`${row.symbol} total invested`}
-            className={bookInputClass}
-            value={draft[row.symbol]?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
-            onChange={(e) => patchDraft(row.symbol, "total", e.target.value)}
-          />
-        ),
-      }
-      : {
-        title: "Total invested",
-        key: "totalCost",
-        width: 112,
-        align: "right",
-        responsive: ["md"],
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px]">{formatBdt(row.totalCost)}</span>
-        ),
-      };
-
-    return [
-      {
-        title: "Symbol",
-        key: "symbol",
-        width: 104,
-        align: "left",
-        render: (_: unknown, row) => {
-          const inProfit =
-            row.marketLtp !== null &&
-            Number.isFinite(row.marketLtp) &&
-            row.marketLtp > row.breakEvenPrice;
-          return (
-            <span className="inline-flex items-center gap-1.5">
-              {inProfit ? (
-                <span
-                  aria-label="In profit"
-                  title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
-                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
-                />
-              ) : null}
-              <span className="font-mono text-[15px]">{row.symbol}</span>
-            </span>
-          );
-        },
-      },
-      {
-        title: "Break-even",
-        key: "breakEvenPrice",
-        width: 100,
-        align: "right",
-        render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px]">
-            {formatBdt(row.breakEvenPrice)}
-          </span>
-        ),
-      },
-      {
-        title: "Last price",
-        key: "marketLtp",
-        width: 110,
-        align: "right",
-        ...(!bookEditing
-          ? {
-              sorter: sortNullableNumber((r) => r.marketLtp),
-              showSorterTooltip: { title: "Sort by last trade price" },
-            }
-          : {}),
-        render: (_: unknown, row) =>
-          row.marketLtp === null || !Number.isFinite(row.marketLtp) ? (
-            <span>—</span>
-          ) : (
-            <span className="tabular-nums text-[15px]">
-              {formatBdt(row.marketLtp)}
-            </span>
-          ),
-      },
-      sharesCol,
-      totalCol,
-    ];
-  }, [bookEditing, draft, patchDraft]);
+  }
 
   const emptyMessage = symbolQuery.trim()
     ? "No symbols match your search."
     : "No positions yet.";
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-6">
-      {/* Summary row */}
-      <div className="flex flex-wrap items-end justify-center gap-x-10 gap-y-3">
-        <Statistic
-          title="Total invested"
-          value={formatBdt(totalInvestedDisplay)}
-          valueStyle={{ fontSize: 18, color: "rgba(0,0,0,0.88)" }}
-        />
-        <div>
-          <div className="text-[14px] text-[rgba(0,0,0,0.6)]">Realized G/L</div>
-          <div className="mt-1">
-            <PlIndicator value={totalRealizedBdt + totalCashAdjustments} />
-          </div>
-        </div>
+    <div className="flex w-full min-w-0 flex-col gap-6 text-zinc-900">
+      {/* KPI strip — 4 cells in a 1px-divided grid. */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-zinc-200 md:grid-cols-4">
+        <KpiCell label="Total invested">
+          <span className="tabular-nums">{formatBdt(totalInvestedDisplay)}</span>
+          <span className="ml-2 text-[12px] font-normal text-zinc-400">BDT</span>
+        </KpiCell>
+        <KpiCell label="Unrealized P/L">
+          <span
+            className={`tabular-nums ${
+              totalUnrealized > 0
+                ? "text-emerald-700"
+                : totalUnrealized < 0
+                  ? "text-rose-700"
+                  : ""
+            }`}
+          >
+            {fmtSignedBdt(totalUnrealized)}
+            <span className="ml-2 text-[12px] font-normal opacity-80">
+              {fmtPct(totalUnrealizedPct)}
+            </span>
+          </span>
+        </KpiCell>
+        <KpiCell label="Positions">
+          <span className="tabular-nums">{positionCount}</span>
+        </KpiCell>
+        <KpiCell label="Sectors">
+          <span className="tabular-nums">{sectorCount}</span>
+        </KpiCell>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 border-b border-zinc-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
           <AutoComplete
             allowClear
@@ -513,6 +368,9 @@ export function PortfolioHoldingsTable({
             className="w-full max-w-full sm:max-w-sm"
             size="middle"
           />
+          <span className="text-[12px] text-zinc-500 tabular-nums">
+            {positionCount} {positionCount === 1 ? "position" : "positions"}
+          </span>
         </Space>
         {enableBookEdit ? (
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -541,61 +399,25 @@ export function PortfolioHoldingsTable({
         ) : null}
       </div>
 
-      {/* Mobile (< md): list per sector. */}
-      <div className="md:hidden">
-        {data.length === 0 ? (
-          <div className="py-10 text-center text-[14px] text-[rgba(0,0,0,0.6)]">{emptyMessage}</div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {data.map((group) => (
-              <section key={group.sector}>
-                <h3 className="mb-2 text-center text-[15px] text-[rgba(0,0,0,0.88)]">
-                  {group.sector}
-                </h3>
-                <ul className="mobile-card-list">
-                  {group.items.map((row) => (
-                    <MobileHoldingCard key={row.key} row={row} />
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop (≥ md): one Ant Table per sector. */}
-      <div className="hidden md:block">
-        {data.length === 0 ? (
-          <div className="py-10 text-center text-[14px] text-[rgba(0,0,0,0.6)]">{emptyMessage}</div>
-        ) : (
-          <div className="flex flex-col gap-8">
-            {data.map((group) => (
-              <section key={group.sector}>
-                <h3 className="mb-2 text-center text-[15px] text-[rgba(0,0,0,0.88)]">
-                  {group.sector}
-                </h3>
-                <Table<DataRow>
-                  key={bookEditorOpen ? `book-edit-${group.sector}` : `book-view-${group.sector}`}
-                  columns={columns}
-                  dataSource={group.items}
-                  scroll={{ x: "max-content" }}
-                  pagination={tablePagination("positions", {
-                    hideOnSinglePage: true,
-                    pageSize: 15,
-                    pageSizeOptions: [10, 15, 20, 50],
-                  })}
-                  size="middle"
-                  tableLayout="auto"
-                />
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
+      {data.length === 0 ? (
+        <div className="py-10 text-center text-[14px] text-zinc-500">{emptyMessage}</div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {data.map((group) => (
+            <SectorCard
+              key={group.sector}
+              group={group}
+              bookEditing={bookEditing}
+              draft={draft}
+              onDraftChange={patchDraft}
+            />
+          ))}
+        </div>
+      )}
 
       {bookEditing ? (
-        <div className="space-y-3 border-t border-[#e4e1d9] pt-4">
-          <p className="text-left text-[15px] leading-relaxed text-[rgba(0,0,0,0.65)]">
+        <div className="space-y-3 border-t border-zinc-200 pt-4">
+          <p className="text-left text-[13px] leading-relaxed text-zinc-600">
             Edit shares, average cost, and total invested for any row. Changing average updates total (and the other way
             around); changing shares keeps average and updates total. You can save even if total and shares × average differ
             slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that
@@ -608,7 +430,14 @@ export function PortfolioHoldingsTable({
             <Alert type="success" showIcon title="Portfolio book values saved." className="text-left" />
           ) : null}
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="primary" size="large" className="w-full sm:w-auto" loading={saving} disabled={!dirty || saving} onClick={() => void handleSaveBook()}>
+            <Button
+              type="primary"
+              size="large"
+              className="w-full sm:w-auto"
+              loading={saving}
+              disabled={!dirty || saving}
+              onClick={() => void handleSaveBook()}
+            >
               Save portfolio book values
             </Button>
           </div>
@@ -618,65 +447,246 @@ export function PortfolioHoldingsTable({
   );
 }
 
-function MobileHoldingCard({
+/** One cell of the top KPI grid — white surface, small uppercase label, big value. */
+function KpiCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white px-4 py-3">
+      <div className="text-[11px] uppercase tracking-wider text-zinc-500">{label}</div>
+      <div className="mt-0.5 text-[18px] md:text-[20px] tracking-tight">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * One sector "card": dark navy banner header (sector name + inline stats),
+ * a thin progress bar coloured by sector P/L, then a white card body with
+ * one grid row per holding.
+ */
+function SectorCard({
+  group,
+  bookEditing,
+  draft,
+  onDraftChange,
+}: {
+  group: SectorGroup;
+  bookEditing: boolean;
+  draft: Record<string, BookDraft>;
+  onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
+}) {
+  const sectorPositive = group.unrealizedPl >= 0;
+  const sectorAccent = sectorPositive ? "bg-emerald-400" : "bg-rose-400";
+  const sectorPlClass = sectorPositive ? "text-emerald-300" : "text-rose-300";
+  const stockWord = group.items.length === 1 ? "stock" : "stocks";
+
+  return (
+    <section>
+      {/* Dark navy banner */}
+      <div className="overflow-hidden rounded-t-lg border border-b-0 border-zinc-200 bg-[#0b2a4a] text-white">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-5">
+          <div className="flex items-center gap-3">
+            <span className={`inline-block h-5 w-1 shrink-0 rounded-full ${sectorAccent}`} />
+            <h2 className="text-[15px] tracking-tight">{group.sector}</h2>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] tracking-wide text-white/85">
+              {group.items.length} {stockWord}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] tabular-nums">
+            <BannerStat label="Invested" value={formatBdt(group.invested)} />
+            <BannerStat label="Share of portfolio" value={`${group.sharePct.toFixed(1)}%`} />
+            <BannerStat
+              label="Unrealized P/L"
+              value={group.hasQuote ? fmtSignedBdt(group.unrealizedPl) : "—"}
+              valueClass={group.hasQuote ? sectorPlClass : "text-white/60"}
+            />
+          </div>
+        </div>
+        {/* Progress bar = sector share of portfolio. */}
+        <div className="h-1 w-full bg-white/10">
+          <div
+            className={`h-full ${sectorAccent}`}
+            style={{ width: `${Math.min(100, Math.max(0, group.sharePct))}%` }}
+          />
+        </div>
+      </div>
+
+      {/* White card body — one grid row per holding. */}
+      <div className="overflow-hidden rounded-b-lg border border-zinc-200 bg-white">
+        {group.items.map((row, i) => (
+          <HoldingRow
+            key={row.key}
+            row={row}
+            isLast={i === group.items.length - 1}
+            bookEditing={bookEditing}
+            draft={draft[row.symbol]}
+            onDraftChange={onDraftChange}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BannerStat({
+  label,
+  value,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="text-left sm:text-right">
+      <div className="text-[10px] uppercase tracking-[0.14em] text-white/60">{label}</div>
+      <div className={`mt-0.5 text-[14px] tabular-nums text-white ${valueClass ?? ""}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** One holding row — grid on md+, stacked card on mobile. */
+function HoldingRow({
   row,
+  isLast,
+  bookEditing,
+  draft,
+  onDraftChange,
 }: {
   row: DataRow;
+  isLast: boolean;
+  bookEditing: boolean;
+  draft: BookDraft | undefined;
+  onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
 }) {
   const inProfit =
     row.marketLtp !== null &&
     Number.isFinite(row.marketLtp) &&
     row.marketLtp > row.breakEvenPrice;
-  return (
-    <li>
-      <article className="flex flex-col gap-2 rounded-md border border-[#e4e1d9] bg-white px-3 py-3 text-left">
-        <header className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            {inProfit ? (
-              <span
-                aria-label="In profit"
-                title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
-                className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
-              />
-            ) : null}
-            <span className="font-mono text-[15px] text-[rgba(0,0,0,0.88)]">
-              {row.symbol}
-            </span>
-          </div>
-          <span className="font-mono text-[14px] tabular-nums text-[rgba(0,0,0,0.65)]">
-            {formatNumberMax2Decimals(row.shares)} sh
-          </span>
-        </header>
+  const ltpKnown = row.marketLtp !== null && Number.isFinite(row.marketLtp);
+  const mktValue = ltpKnown ? row.marketLtp! * row.shares : null;
+  const plKnown = row.unrealizedPl !== null && Number.isFinite(row.unrealizedPl);
+  const plPositive = plKnown && (row.unrealizedPl as number) >= 0;
+  const plPct = plKnown && row.totalCost > 0
+    ? ((row.unrealizedPl as number) / row.totalCost) * 100
+    : null;
+  const plClass = plKnown
+    ? plPositive
+      ? "text-emerald-700"
+      : "text-rose-700"
+    : "text-zinc-500";
+  const dotColor = !ltpKnown
+    ? "bg-zinc-300"
+    : inProfit
+      ? "bg-emerald-500"
+      : "bg-rose-500";
 
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
-          <div>
-            <dt className="text-[rgba(0,0,0,0.55)]">Invested</dt>
-            <dd className="font-mono tabular-nums text-[rgba(0,0,0,0.88)]">
-              {formatBdt(row.totalCost)}
-            </dd>
+  const rowBorder = isLast ? "" : "border-b border-zinc-200";
+
+  return (
+    <div
+      className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+    >
+      {/* Symbol + shares */}
+      <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
+        <span
+          aria-label={inProfit ? "In profit" : ltpKnown ? "In loss" : "No quote"}
+          className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
+        />
+        <div className="flex flex-col">
+          <span className="font-mono text-[14px] tracking-tight text-zinc-900">
+            {row.symbol}
+          </span>
+          <span className="text-[11px] text-zinc-500 tabular-nums">
+            {formatNumberMax2Decimals(row.shares)} shares
+          </span>
+        </div>
+      </div>
+
+      {/* Break-even */}
+      <RowCell label="Break-even">
+        <span className="tabular-nums text-[13px] text-zinc-700">
+          {formatBdt(row.breakEvenPrice)}
+        </span>
+      </RowCell>
+
+      {/* Last price */}
+      <RowCell label="Last price">
+        <span className="tabular-nums text-[14px] text-zinc-900">
+          {ltpKnown ? formatBdt(row.marketLtp!) : "—"}
+        </span>
+      </RowCell>
+
+      {/* Invested */}
+      <RowCell label="Invested">
+        {bookEditing ? (
+          <input
+            aria-label={`${row.symbol} total invested`}
+            className={bookInputClass}
+            value={draft?.total ?? formatPlainNumberMax2Decimals(row.totalCost)}
+            onChange={(e) => onDraftChange(row.symbol, "total", e.target.value)}
+          />
+        ) : (
+          <span className="tabular-nums text-[13px] text-zinc-700">
+            {formatBdt(row.totalCost)}
+          </span>
+        )}
+      </RowCell>
+
+      {/* Mkt value */}
+      <RowCell label="Mkt value">
+        <span className="tabular-nums text-[13px] text-zinc-700">
+          {mktValue !== null ? formatBdt(mktValue) : "—"}
+        </span>
+      </RowCell>
+
+      {/* Unrealized P/L */}
+      <RowCell label="Unrealized P/L">
+        <div className={`text-[14px] tabular-nums ${plClass}`}>
+          {plKnown ? fmtSignedBdt(row.unrealizedPl as number) : "—"}
+        </div>
+        {plPct !== null ? (
+          <div className={`text-[11px] tabular-nums opacity-80 ${plClass}`}>
+            {fmtPct(plPct)}
           </div>
-          <div className="text-right">
-            <dt className="text-[rgba(0,0,0,0.55)]">Break-even</dt>
-            <dd className="font-mono tabular-nums text-[rgba(0,0,0,0.88)]">
-              {formatBdt(row.breakEvenPrice)}
-            </dd>
+        ) : null}
+      </RowCell>
+
+      {/* Hidden book-edit fields (shares + avg) — surfaced only in edit mode
+          as a thin row underneath to keep the read view clean. */}
+      {bookEditing ? (
+        <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-zinc-100 pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4">
+          <div className="text-[10px] uppercase tracking-wider text-zinc-400 md:col-span-1">
+            Edit shares & avg
           </div>
-          <div>
-            <dt className="text-[rgba(0,0,0,0.55)]">Avg cost</dt>
-            <dd className="font-mono tabular-nums text-[rgba(0,0,0,0.88)]">
-              {formatBdt(row.avgPrice)}
-            </dd>
-          </div>
-          <div className="text-right">
-            <dt className="text-[rgba(0,0,0,0.55)]">Last price</dt>
-            <dd className="font-mono tabular-nums text-[rgba(0,0,0,0.88)]">
-              {row.marketLtp === null || !Number.isFinite(row.marketLtp)
-                ? "—"
-                : formatBdt(row.marketLtp)}
-            </dd>
-          </div>
-        </dl>
-      </article>
-    </li>
+          <RowCell label="Shares">
+            <input
+              aria-label={`${row.symbol} shares`}
+              className={bookInputClass}
+              value={draft?.shares ?? formatPlainNumberMax2Decimals(row.shares)}
+              onChange={(e) => onDraftChange(row.symbol, "shares", e.target.value)}
+            />
+          </RowCell>
+          <RowCell label="Avg cost">
+            <input
+              aria-label={`${row.symbol} average cost per share`}
+              className={bookInputClass}
+              value={draft?.avg ?? formatPlainNumberMax2Decimals(row.avgPrice)}
+              onChange={(e) => onDraftChange(row.symbol, "avg", e.target.value)}
+            />
+          </RowCell>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** One labelled cell inside a holding row. Stacks vertically; right-aligned on md+. */
+function RowCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="md:text-right">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-400">{label}</div>
+      <div className="mt-0.5">{children}</div>
+    </div>
   );
 }

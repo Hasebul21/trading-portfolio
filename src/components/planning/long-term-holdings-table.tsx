@@ -2,9 +2,7 @@
 
 import { deleteLongTermHolding } from "@/app/(app)/planning-actions";
 import { formatBdt } from "@/lib/format-bdt";
-import { tablePagination } from "@/lib/table-pagination";
-import { Button, Input, Space, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { AutoComplete, Button } from "antd";
 import { useMemo, useState } from "react";
 
 export type LongTermHoldingRow = {
@@ -16,9 +14,40 @@ export type LongTermHoldingRow = {
   ltp: number | null;
   /** Break-even cost from portfolio holdings (null if not held). */
   breakEvenPrice: number | null;
+  /** Optional alert targets for entry / exit signals. */
+  buy_point_bdt?: number | null;
+  sell_point_bdt?: number | null;
 };
 
 type Row = LongTermHoldingRow & { key: string };
+type SectorGroup = {
+  sector: string;
+  items: Row[];
+  quoted: number;
+  buySignals: number;
+  sellSignals: number;
+};
+
+const SECTOR_FALLBACK = "Unknown";
+
+function sectorLabel(s: string | null | undefined): string {
+  const t = (s ?? "").trim();
+  return t || SECTOR_FALLBACK;
+}
+
+/** A symbol is "in buy zone" when its live LTP is at or below the buy alert. */
+function isBuySignal(row: LongTermHoldingRow): boolean {
+  if (row.ltp === null || !Number.isFinite(row.ltp)) return false;
+  if (row.buy_point_bdt === null || row.buy_point_bdt === undefined) return false;
+  return row.ltp <= row.buy_point_bdt;
+}
+
+/** A symbol is "in sell zone" when its live LTP is at or above the sell alert. */
+function isSellSignal(row: LongTermHoldingRow): boolean {
+  if (row.ltp === null || !Number.isFinite(row.ltp)) return false;
+  if (row.sell_point_bdt === null || row.sell_point_bdt === undefined) return false;
+  return row.ltp >= row.sell_point_bdt;
+}
 
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
   const [searchText, setSearchText] = useState("");
@@ -27,141 +56,303 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     const q = searchText.trim().toUpperCase();
     return rows.filter((r) => {
       if (!q) return true;
-      const sym = String(r.symbol ?? "")
-        .trim()
-        .toUpperCase();
+      const sym = String(r.symbol ?? "").trim().toUpperCase();
       return sym.includes(q);
     });
   }, [rows, searchText]);
 
-  const groups = useMemo(() => {
+  const groups: SectorGroup[] = useMemo(() => {
     const bySector = new Map<string, Row[]>();
     for (const r of filteredRows) {
-      const key = (r.sector ?? "").trim() || "Unknown";
+      const key = sectorLabel(r.sector);
       const list = bySector.get(key) ?? [];
       list.push({ ...r, key: r.id });
       bySector.set(key, list);
     }
     return Array.from(bySector.entries())
       .sort(([a], [b]) => {
-        if (a === "Unknown") return 1;
-        if (b === "Unknown") return -1;
+        if (a === SECTOR_FALLBACK) return 1;
+        if (b === SECTOR_FALLBACK) return -1;
         return a.localeCompare(b);
       })
-      .map(([sector, items]) => ({
-        sector,
-        items: items.sort((x, y) =>
-          String(x.symbol).localeCompare(String(y.symbol)),
-        ),
-      }));
+      .map(([sector, items]) => {
+        const sorted = items
+          .slice()
+          .sort((x, y) => String(x.symbol).localeCompare(String(y.symbol)));
+        let quoted = 0;
+        let buySignals = 0;
+        let sellSignals = 0;
+        for (const r of sorted) {
+          if (r.ltp !== null && Number.isFinite(r.ltp)) quoted += 1;
+          if (isBuySignal(r)) buySignals += 1;
+          if (isSellSignal(r)) sellSignals += 1;
+        }
+        return { sector, items: sorted, quoted, buySignals, sellSignals };
+      });
   }, [filteredRows]);
 
-  const columns: ColumnsType<Row> = [
-    {
-      title: "Symbol",
-      dataIndex: "symbol",
-      width: 112,
-      align: "left",
-      render: (v: string) => (
-        <span className="font-mono text-[15px] font-normal text-zinc-50">{v}</span>
-      ),
-    },
-    {
-      title: "LTP",
-      dataIndex: "ltp",
-      width: 100,
-      align: "right",
-      render: (v: number | null) =>
-        v !== null && Number.isFinite(v) ? (
-          <span className="font-mono text-[15px] font-normal text-zinc-50">
-            {formatBdt(v)}
+  const symbolOptions = useMemo(
+    () =>
+      [...rows]
+        .map((r) => r.symbol)
+        .sort((a, b) => a.localeCompare(b))
+        .map((symbol) => ({ value: symbol, label: symbol })),
+    [rows],
+  );
+
+  // Top-level KPI counts.
+  const totals = useMemo(() => {
+    let quoted = 0;
+    let buys = 0;
+    let sells = 0;
+    for (const r of filteredRows) {
+      if (r.ltp !== null && Number.isFinite(r.ltp)) quoted += 1;
+      if (isBuySignal(r)) buys += 1;
+      if (isSellSignal(r)) sells += 1;
+    }
+    return {
+      symbols: filteredRows.length,
+      quoted,
+      sectors: groups.length,
+      buys,
+      sells,
+    };
+  }, [filteredRows, groups.length]);
+
+  return (
+    <div className="flex w-full min-w-0 flex-col gap-6 text-zinc-900">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-zinc-200 md:grid-cols-4">
+        <KpiCell label="Symbols">
+          <span className="tabular-nums">{totals.symbols}</span>
+        </KpiCell>
+        <KpiCell label="Quoted">
+          <span className="tabular-nums">{totals.quoted}</span>
+        </KpiCell>
+        <KpiCell label="Buy signals">
+          <span
+            className={`tabular-nums ${totals.buys > 0 ? "text-emerald-700" : ""}`}
+          >
+            {totals.buys}
           </span>
-        ) : (
-          <span className="text-zinc-400">—</span>
-        ),
-    },
-    {
-      title: "Break-even",
-      dataIndex: "breakEvenPrice",
-      width: 120,
-      align: "right",
-      render: (v: number | null) =>
-        v !== null && Number.isFinite(v) ? (
-          <span className="font-mono text-[15px] font-normal text-zinc-50">
-            {formatBdt(v)}
+        </KpiCell>
+        <KpiCell label="Sell signals">
+          <span
+            className={`tabular-nums ${totals.sells > 0 ? "text-rose-700" : ""}`}
+          >
+            {totals.sells}
           </span>
-        ) : (
-          <span className="text-zinc-400">—</span>
-        ),
-    },
-    {
-      title: "",
-      key: "actions",
-      align: "right",
-      width: 88,
-      render: (_: unknown, r) => (
+        </KpiCell>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col gap-2 border-b border-zinc-200 pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
+          <AutoComplete
+            allowClear
+            value={searchText}
+            onChange={(v) => setSearchText(typeof v === "string" ? v : "")}
+            onSelect={(v) => setSearchText(typeof v === "string" ? v : "")}
+            options={symbolOptions}
+            placeholder="Search symbol…"
+            filterOption={(input, option) =>
+              String(option?.value ?? "")
+                .toUpperCase()
+                .includes(input.toUpperCase())
+            }
+            className="w-full max-w-full sm:w-64"
+            size="middle"
+          />
+          <span className="text-[12px] text-zinc-500 tabular-nums">
+            {totals.symbols} {totals.symbols === 1 ? "symbol" : "symbols"}
+          </span>
+        </div>
+      </div>
+
+      {groups.length === 0 ? (
+        <div className="py-10 text-center text-[14px] text-zinc-500">
+          {searchText.trim() ? "No symbols match your search." : "No symbols yet."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {groups.map((group) => (
+            <WatchlistSectorCard key={group.sector} group={group} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One cell of the top KPI grid — white surface, small uppercase label, big value. */
+function KpiCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white px-4 py-3">
+      <div className="text-[11px] uppercase tracking-wider text-zinc-500">{label}</div>
+      <div className="mt-0.5 text-[18px] md:text-[20px] tracking-tight text-zinc-900">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Dark navy banner header + white card body — one section per sector. */
+function WatchlistSectorCard({ group }: { group: SectorGroup }) {
+  const hasBuySignals = group.buySignals > 0;
+  const hasSellSignals = group.sellSignals > 0;
+  const accent = hasBuySignals
+    ? "bg-emerald-400"
+    : hasSellSignals
+      ? "bg-rose-400"
+      : "bg-zinc-400";
+  const symbolWord = group.items.length === 1 ? "symbol" : "symbols";
+
+  return (
+    <section>
+      {/* Dark navy banner */}
+      <div className="overflow-hidden rounded-t-lg border border-b-0 border-zinc-200 bg-[#0b2a4a] text-white">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-5">
+          <div className="flex items-center gap-3">
+            <span className={`inline-block h-5 w-1 shrink-0 rounded-full ${accent}`} />
+            <h2 className="text-[15px] tracking-tight">{group.sector}</h2>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] tracking-wide text-white/85">
+              {group.items.length} {symbolWord}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] tabular-nums">
+            <BannerStat label="Quoted" value={`${group.quoted}/${group.items.length}`} />
+            <BannerStat
+              label="Buy signals"
+              value={String(group.buySignals)}
+              valueClass={hasBuySignals ? "text-emerald-300" : "text-white/60"}
+            />
+            <BannerStat
+              label="Sell signals"
+              value={String(group.sellSignals)}
+              valueClass={hasSellSignals ? "text-rose-300" : "text-white/60"}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* White card body — one grid row per symbol. */}
+      <div className="overflow-hidden rounded-b-lg border border-zinc-200 bg-white">
+        {group.items.map((row, i) => (
+          <WatchlistRow key={row.key} row={row} isLast={i === group.items.length - 1} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BannerStat({
+  label,
+  value,
+  valueClass,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="text-left sm:text-right">
+      <div className="text-[10px] uppercase tracking-[0.14em] text-white/60">{label}</div>
+      <div className={`mt-0.5 text-[14px] tabular-nums text-white ${valueClass ?? ""}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** One watchlist symbol row. */
+function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
+  const ltpKnown = row.ltp !== null && Number.isFinite(row.ltp);
+  const buySignal = isBuySignal(row);
+  const sellSignal = isSellSignal(row);
+  const dotColor = !ltpKnown
+    ? "bg-zinc-300"
+    : buySignal
+      ? "bg-emerald-500"
+      : sellSignal
+        ? "bg-rose-500"
+        : "bg-zinc-400";
+  const dotTitle = !ltpKnown
+    ? "No live quote"
+    : buySignal
+      ? `Buy zone: LTP ≤ ${formatBdt(row.buy_point_bdt!)}`
+      : sellSignal
+        ? `Sell zone: LTP ≥ ${formatBdt(row.sell_point_bdt!)}`
+        : "Between buy and sell levels";
+
+  const rowBorder = isLast ? "" : "border-b border-zinc-200";
+
+  return (
+    <div
+      className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(4,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+    >
+      <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
+        <span
+          aria-label={dotTitle}
+          title={dotTitle}
+          className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
+        />
+        <span className="font-mono text-[14px] tracking-tight text-zinc-900">
+          {row.symbol}
+        </span>
+      </div>
+
+      <RowCell label="LTP">
+        <span className="tabular-nums text-[14px] text-zinc-900">
+          {ltpKnown ? formatBdt(row.ltp!) : "—"}
+        </span>
+      </RowCell>
+
+      <RowCell label="Break-even">
+        <span className="tabular-nums text-[13px] text-zinc-700">
+          {row.breakEvenPrice !== null && Number.isFinite(row.breakEvenPrice)
+            ? formatBdt(row.breakEvenPrice)
+            : "—"}
+        </span>
+      </RowCell>
+
+      <RowCell label="Buy point">
+        <span
+          className={`tabular-nums text-[13px] ${buySignal ? "text-emerald-700" : "text-zinc-700"}`}
+        >
+          {row.buy_point_bdt !== null && row.buy_point_bdt !== undefined
+            ? formatBdt(row.buy_point_bdt)
+            : "—"}
+        </span>
+      </RowCell>
+
+      <RowCell label="Sell point">
+        <span
+          className={`tabular-nums text-[13px] ${sellSignal ? "text-rose-700" : "text-zinc-700"}`}
+        >
+          {row.sell_point_bdt !== null && row.sell_point_bdt !== undefined
+            ? formatBdt(row.sell_point_bdt)
+            : "—"}
+        </span>
+      </RowCell>
+
+      <div className="col-span-2 flex justify-end md:col-span-1">
         <form action={deleteLongTermHolding} className="inline">
-          <input type="hidden" name="id" value={r.id} />
+          <input type="hidden" name="id" value={row.id} />
           <Button type="link" danger size="small" htmlType="submit">
             Remove
           </Button>
         </form>
-      ),
-    },
-  ];
-
-  return (
-    <div className="w-full min-w-0 max-w-full">
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
-          <Input
-            allowClear
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Search by symbol"
-            aria-label="Filter watchlist by symbol"
-            className="w-full max-w-full sm:max-w-[16rem]"
-          />
-        </Space>
       </div>
-      {groups.length === 0 ? (
-        <Table<Row>
-          className="long-term-holdings-table"
-          columns={columns}
-          dataSource={[]}
-          locale={{ emptyText: "No symbols yet." }}
-          pagination={false}
-          size="middle"
-          bordered
-        />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {groups.map(({ sector, items }) => (
-            <div key={sector} className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-[15px] font-semibold text-zinc-50">
-                  {sector}
-                </h3>
-                <span className="text-[13px] font-normal text-zinc-400">
-                  {items.length} {items.length === 1 ? "symbol" : "symbols"}
-                </span>
-              </div>
-              <Table<Row>
-                className="long-term-holdings-table"
-                columns={columns}
-                dataSource={items}
-                pagination={tablePagination("symbols", {
-                  hideOnSinglePage: true,
-                  pageSize: 15,
-                  pageSizeOptions: [10, 15, 20, 50],
-                })}
-                size="middle"
-                bordered
-              />
-            </div>
-          ))}
-        </div>
-      )}
+    </div>
+  );
+}
+
+/** One labelled cell inside a watchlist row. Stacks vertically; right-aligned on md+. */
+function RowCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="md:text-right">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-400">{label}</div>
+      <div className="mt-0.5">{children}</div>
     </div>
   );
 }
