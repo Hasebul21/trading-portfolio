@@ -65,11 +65,11 @@ function fmtSignedBdt(n: number) {
   return s;
 }
 
-/** P/L indicator with colored dot and white text */
+/** P/L indicator with colored dot. Text is forced black globally for contrast. */
 function PlIndicator({ value }: { value: number }) {
-  const dotColor = value >= 0 ? "bg-emerald-400" : "bg-red-400";
+  const dotColor = value >= 0 ? "bg-emerald-500" : "bg-red-500";
   return (
-    <span className="inline-flex items-center gap-1.5 tabular-nums text-[15px] font-normal text-zinc-50">
+    <span className="inline-flex items-center gap-1.5 tabular-nums text-[15px] font-normal text-black">
       <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
       {fmtSignedBdt(value)}
     </span>
@@ -125,7 +125,7 @@ function bookFingerprint(rows: PortfolioMarketRow[]) {
 }
 
 const bookInputClass =
-  "box-border w-full min-w-[4.5rem] rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-[15px] font-normal tabular-nums text-zinc-900 outline-none ring-teal-500/25 focus:ring-2 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50";
+  "box-border w-full min-w-[4.5rem] rounded-md border border-[color:var(--border-subtle)] px-2 py-1 text-right text-[15px] font-normal tabular-nums text-black outline-none ring-black/30 focus:ring-2";
 
 function sortNullableNumber(
   pick: (r: DataRow) => number | null | undefined,
@@ -355,7 +355,7 @@ export function PortfolioHoldingsTable({
         align: "right",
         responsive: ["sm"],
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.avgPrice)}</span>
+          <span className="tabular-nums text-[15px] font-normal text-black">{formatBdt(row.avgPrice)}</span>
         ),
       };
 
@@ -381,7 +381,7 @@ export function PortfolioHoldingsTable({
         align: "right",
         responsive: ["sm"],
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">
+          <span className="tabular-nums text-[15px] font-normal text-black">
             {formatNumberMax2Decimals(row.shares)}
           </span>
         ),
@@ -409,7 +409,7 @@ export function PortfolioHoldingsTable({
         align: "right",
         responsive: ["md"],
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">{formatBdt(row.totalCost)}</span>
+          <span className="tabular-nums text-[15px] font-normal text-black">{formatBdt(row.totalCost)}</span>
         ),
       };
 
@@ -430,10 +430,10 @@ export function PortfolioHoldingsTable({
                 <span
                   aria-label="In profit"
                   title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
-                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
                 />
               ) : null}
-              <span className="font-mono text-[15px] font-normal text-zinc-50">
+              <span className="font-mono text-[15px] font-normal text-black">
                 {row.symbol}
               </span>
             </span>
@@ -446,7 +446,7 @@ export function PortfolioHoldingsTable({
         width: 100,
         align: "right",
         render: (_: unknown, row) => (
-          <span className="tabular-nums text-[15px] font-normal">
+          <span className="tabular-nums text-[15px] font-normal text-black">
             {formatBdt(row.breakEvenPrice)}
           </span>
         ),
@@ -464,9 +464,9 @@ export function PortfolioHoldingsTable({
           : {}),
         render: (_: unknown, row) =>
           row.marketLtp === null || !Number.isFinite(row.marketLtp) ? (
-            <span className="text-zinc-50">—</span>
+            <span className="text-black">—</span>
           ) : (
-            <span className="tabular-nums text-[15px] font-normal">
+            <span className="tabular-nums text-[15px] font-normal text-black">
               {formatBdt(row.marketLtp)}
             </span>
           ),
@@ -479,21 +479,21 @@ export function PortfolioHoldingsTable({
   return (
     <Card
       variant="borderless"
-      className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-zinc-700/40 bg-[#1d2127] shadow-lg shadow-black/30"
+      className="w-full min-w-0 overflow-x-auto overflow-y-hidden rounded-2xl border border-[color:var(--border-subtle)]"
       styles={{ body: { padding: 0 } }}
     >
-      <div className="grid grid-cols-2 gap-2 border-b border-zinc-700/40 px-3 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4">
-        <div className="min-w-0 rounded-xl border border-zinc-700/50 bg-[#262c34] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
-          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-zinc-400">
+      <div className="grid grid-cols-2 gap-2 border-b border-[color:var(--border-subtle)] px-3 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:px-4">
+        <div className="min-w-0 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
+          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-black/70">
             Total invested
           </div>
-          <div className="mt-1 text-[15px] font-medium tabular-nums text-zinc-200">
+          <div className="mt-1 text-[15px] font-medium tabular-nums text-black">
             {formatBdt(totalInvestedDisplay)}
           </div>
         </div>
 
-        <div className="w-full min-w-0 rounded-xl border border-zinc-700/50 bg-[#262c34] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
-          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-zinc-400">
+        <div className="w-full min-w-0 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-center sm:min-w-[10.5rem] sm:max-w-[13rem] sm:flex-1">
+          <div className="text-[12px] font-normal uppercase tracking-[0.16em] text-black/70">
             Realized G/L
           </div>
           <div className="mt-1 min-h-[1.25rem]">
@@ -503,7 +503,7 @@ export function PortfolioHoldingsTable({
 
       </div>
 
-      <div className="flex flex-col gap-2 border-b border-zinc-700/40 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
+      <div className="flex flex-col gap-2 border-b border-[color:var(--border-subtle)] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
         <Space wrap className="w-full min-w-0 [&_.ant-space-item]:w-full sm:w-auto sm:[&_.ant-space-item]:w-auto">
           <AutoComplete
             allowClear
@@ -551,7 +551,7 @@ export function PortfolioHoldingsTable({
       {/* Mobile (< md): one section per sector with a compact card list. */}
       <div className="md:hidden">
         {data.length === 0 ? (
-          <div className="px-4 py-10 text-center text-[14px] text-zinc-400">
+          <div className="px-4 py-10 text-center text-[14px] text-black/60">
             {symbolQuery.trim()
               ? "No symbols match your search."
               : "No positions yet."}
@@ -574,7 +574,7 @@ export function PortfolioHoldingsTable({
       {/* Desktop (≥ md): one full table per sector. */}
       <div className="hidden md:block">
         {data.length === 0 ? (
-          <div className="px-4 py-10 text-center text-[14px] text-zinc-400">
+          <div className="px-4 py-10 text-center text-[14px] text-black/60">
             {symbolQuery.trim()
               ? "No symbols match your search."
               : "No positions yet."}
@@ -639,15 +639,12 @@ function SectorSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-zinc-700/40 bg-[#262c34]">
-      <header
-        className="flex items-baseline justify-between gap-2 border-b border-zinc-700/40 px-3 py-2"
-        style={{ backgroundColor: "#7A7371" }}
-      >
-        <h3 className="text-[14px] font-semibold uppercase tracking-[0.12em] text-zinc-50">
+    <section className="overflow-hidden rounded-xl border border-[color:var(--border-subtle)]">
+      <header className="flex items-baseline justify-between gap-2 border-b border-[color:var(--border-subtle)] px-3 py-2">
+        <h3 className="text-[13px] font-normal uppercase tracking-[0.14em] text-black">
           {sector}
         </h3>
-        <span className="text-[12px] font-normal tabular-nums text-zinc-100">
+        <span className="text-[12px] font-normal tabular-nums text-black/70">
           {count} {count === 1 ? "position" : "positions"}
         </span>
       </header>
@@ -667,49 +664,47 @@ function MobileHoldingCard({
     row.marketLtp > row.breakEvenPrice;
   return (
     <li>
-      <article
-        className="flex flex-col gap-2 rounded-lg border border-zinc-700/40 bg-[#1d2127] px-3 py-3 text-left"
-      >
+      <article className="flex flex-col gap-2 rounded-lg border border-[color:var(--border-subtle)] px-3 py-3 text-left">
         <header className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {inProfit ? (
               <span
                 aria-label="In profit"
                 title={`LTP ${formatBdt(row.marketLtp!)} > break-even ${formatBdt(row.breakEvenPrice)}`}
-                className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]"
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
               />
             ) : null}
-            <span className="font-mono text-[15px] font-medium text-zinc-100">
+            <span className="font-mono text-[15px] font-normal text-black">
               {row.symbol}
             </span>
           </div>
-          <span className="font-mono text-[14px] tabular-nums text-zinc-300">
+          <span className="font-mono text-[14px] tabular-nums text-black/80">
             {formatNumberMax2Decimals(row.shares)} sh
           </span>
         </header>
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[12px]">
           <div>
-            <dt className="text-zinc-400">Invested</dt>
-            <dd className="font-mono tabular-nums text-zinc-100">
+            <dt className="text-black/60">Invested</dt>
+            <dd className="font-mono tabular-nums text-black">
               {formatBdt(row.totalCost)}
             </dd>
           </div>
           <div className="text-right">
-            <dt className="text-zinc-400">Break-even</dt>
-            <dd className="font-mono tabular-nums text-zinc-100">
+            <dt className="text-black/60">Break-even</dt>
+            <dd className="font-mono tabular-nums text-black">
               {formatBdt(row.breakEvenPrice)}
             </dd>
           </div>
           <div>
-            <dt className="text-zinc-400">Avg cost</dt>
-            <dd className="font-mono tabular-nums text-zinc-300">
+            <dt className="text-black/60">Avg cost</dt>
+            <dd className="font-mono tabular-nums text-black">
               {formatBdt(row.avgPrice)}
             </dd>
           </div>
           <div className="text-right">
-            <dt className="text-zinc-400">Last price</dt>
-            <dd className="font-mono tabular-nums text-zinc-100">
+            <dt className="text-black/60">Last price</dt>
+            <dd className="font-mono tabular-nums text-black">
               {row.marketLtp === null || !Number.isFinite(row.marketLtp)
                 ? "—"
                 : formatBdt(row.marketLtp)}

@@ -11,19 +11,19 @@
 
 :root {
   color-scheme: light;
-  /* Warm taupe ("mocha") palette built around #A3897F. */
-  --background: #a3897f;
-  --background-edge: #8c7268;
-  /* Body / heading text: pure black for maximum contrast on the warm bg. */
+  /* Flat warm-olive site palette — single color rgb(128, 118, 96) everywhere. */
+  --background: #807660;
+  --background-edge: #807660;
+  /* All text: pure black. */
   --foreground: #000000;
   --foreground-strong: #000000;
-  --accent: #4a342b;
-  --accent-muted: rgba(74, 52, 43, 0.08);
-  --glow-violet: rgba(255, 255, 255, 0.06);
-  /* Card surfaces: soft ash instead of bright white — easier on the eyes. */
-  --surface-raised: #d8d8d4;
-  --surface-popover: #d8d8d4;
-  --border-subtle: rgba(74, 52, 43, 0.28);
+  --accent: #000000;
+  --accent-muted: rgba(0, 0, 0, 0.08);
+  --glow-violet: rgba(0, 0, 0, 0);
+  /* All raised surfaces (cards, popovers, dropdowns) match the body bg — flat. */
+  --surface-raised: #807660;
+  --surface-popover: #807660;
+  --border-subtle: rgba(0, 0, 0, 0.28);
 }
 
 @theme inline {
@@ -51,39 +51,14 @@ body {
 }
 
 body {
-  background-color: var(--background-edge);
-  background-image:
-    radial-gradient(
-      ellipse 105% 95% at 50% 48%,
-      color-mix(in srgb, var(--background) 96%, transparent) 40%,
-      var(--background-edge) 100%
-    ),
-    radial-gradient(ellipse 100% 80% at 50% -30%, var(--accent-muted), transparent 58%),
-    radial-gradient(ellipse 60% 42% at 100% 0%, var(--glow-violet), transparent 52%),
-    radial-gradient(ellipse 50% 36% at 0% 22%, var(--glow-violet), transparent 48%);
-  background-attachment: fixed;
+  background-color: var(--background);
+  background-image: none;
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.55;
   letter-spacing: -0.01em;
   font-weight: 400;
-}
-
-/* Large displays: deepen the outer gradient so periphery fades — less glare off-screen,
-   slightly less readable from a steep side glance. */
-@media (min-width: 1280px) {
-  body {
-    background-image:
-      radial-gradient(
-        ellipse 110% 102% at 50% 50%,
-        color-mix(in srgb, var(--background) 92%, transparent) 34%,
-        color-mix(in srgb, var(--background-edge) 88%, transparent) 100%
-      ),
-      radial-gradient(ellipse 100% 78% at 50% -32%, var(--accent-muted), transparent 60%),
-      radial-gradient(ellipse 62% 44% at 100% 0%, var(--glow-violet), transparent 54%),
-      radial-gradient(ellipse 52% 38% at 0% 22%, var(--glow-violet), transparent 50%);
-  }
 }
 
 html,
@@ -127,30 +102,29 @@ b {
 
 .portfolio-holdings-table .ant-table-thead>tr>th,
 .long-term-holdings-table .ant-table-thead>tr>th {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-transform: none;
-  color: var(--foreground-strong);
-  background: linear-gradient(to bottom,
-      rgba(74, 52, 43, 0.16),
-      rgba(74, 52, 43, 0.10)) !important;
-  border-bottom: 1px solid rgba(74, 52, 43, 0.22) !important;
+  color: #000000;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.28) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr>td,
 .long-term-holdings-table .ant-table-tbody>tr>td {
-  border-color: rgba(74, 52, 43, 0.10) !important;
+  background: transparent !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:nth-child(even)>td,
 .long-term-holdings-table .ant-table-tbody>tr:nth-child(even)>td {
-  background: rgba(255, 248, 244, 0.45);
+  background: transparent !important;
 }
 
 .portfolio-holdings-table .ant-table-tbody>tr:hover>td,
 .long-term-holdings-table .ant-table-tbody>tr:hover>td {
-  background: rgba(74, 52, 43, 0.10) !important;
+  background: rgba(0, 0, 0, 0.06) !important;
 }
 
 /* Force Ant Design components to use the warm palette text colour. */
@@ -264,22 +238,17 @@ b {
 .ant-input::placeholder,
 .ant-input-number-input::placeholder,
 .ant-picker-input>input::placeholder {
-  color: rgba(74, 52, 43, 0.55) !important;
+  color: rgba(0, 0, 0, 0.55) !important;
 }
 
-/* Card backgrounds */
+/* Card backgrounds — flat site color, thin border for separation. */
 .ant-card {
-  background-color: color-mix(in srgb, var(--surface-raised) 92%, transparent) !important;
+  background-color: var(--surface-raised) !important;
   border-color: var(--border-subtle) !important;
 }
 
 .ant-table-thead>tr>th {
   color: var(--foreground-strong) !important;
-}
-
-.portfolio-holdings-table .ant-table-tbody>tr:hover>td,
-.long-term-holdings-table .ant-table-tbody>tr:hover>td {
-  background: rgba(74, 52, 43, 0.10) !important;
 }
 
 @media (max-width: 640px) {
@@ -379,26 +348,68 @@ b {
   }
 }
 
-/* ── Eye-comfort overrides ────────────────────────────────────────────────
- * Soften every "white" card surface to a low-glare ash, and force body /
- * card text to pure black for maximum contrast on the warm mocha bg.
- * Targets the Tailwind utilities that are sprinkled across the app
- * (bg-white, bg-white/70..95) without touching every component file.
+/* ── Flat single-color site ───────────────────────────────────────────────
+ * Map every Tailwind surface utility that components sprinkle in (light
+ * white tints, dark slates, light zinc tints) to the single site color
+ * #807660 so the whole UI reads as one continuous warm-olive surface.
+ * Component files keep using bg-white / bg-zinc-* / bg-[#1d2127] etc. —
+ * the cascade collapses them here.
  * ───────────────────────────────────────────────────────────────────────── */
 .bg-white,
 .bg-white\/95,
+.bg-white\/92,
 .bg-white\/90,
 .bg-white\/85,
 .bg-white\/80,
 .bg-white\/75,
 .bg-white\/70,
 .bg-white\/65,
-.bg-white\/60 {
-  background-color: #d8d8d4 !important;
+.bg-white\/60,
+.bg-white\/40,
+.bg-zinc-50,
+.bg-zinc-50\/80,
+.bg-zinc-50\/90,
+.bg-zinc-100,
+.bg-zinc-100\/80,
+.bg-zinc-100\/90,
+.bg-zinc-200,
+.bg-zinc-300,
+.bg-zinc-700,
+.bg-zinc-800,
+.bg-zinc-800\/60,
+.bg-zinc-900,
+.bg-zinc-900\/55,
+.bg-zinc-900\/60,
+.bg-zinc-900\/65,
+.bg-zinc-900\/70,
+.bg-zinc-900\/75,
+.bg-zinc-900\/80,
+.bg-zinc-900\/85,
+.bg-zinc-950,
+.bg-zinc-950\/60,
+.bg-zinc-950\/90,
+.bg-teal-50,
+.bg-teal-50\/80,
+.bg-teal-950\/40,
+.bg-teal-950\/50,
+.bg-slate-50,
+.bg-slate-100,
+.bg-neutral-50,
+.bg-neutral-100,
+.bg-gray-50,
+.bg-gray-100,
+.bg-\[\#1d2127\],
+.bg-\[\#262c34\],
+.bg-\[\#252b36\]\/92,
+.bg-\[\#252b36\]\/95,
+.bg-\[\#d8d8d4\] {
+  background-color: #807660 !important;
 }
 
-/* Text utilities → black for body/heading copy. Mono/tabular numbers and
-   muted labels both become #000 so cards read as crisp black-on-ash. */
+/* All text → pure black. Catches every greyscale and tinted text utility
+   we use, so labels, body copy, mono numbers, links, and helper text all
+   render as crisp black on the warm-olive bg. */
+.text-white,
 .text-zinc-50,
 .text-zinc-100,
 .text-zinc-200,
@@ -409,14 +420,34 @@ b {
 .text-zinc-700,
 .text-zinc-800,
 .text-zinc-900,
+.text-neutral-400,
+.text-neutral-500,
+.text-neutral-600,
 .text-neutral-700,
 .text-neutral-800,
 .text-neutral-900,
+.text-slate-400,
+.text-slate-500,
+.text-slate-600,
 .text-slate-700,
 .text-slate-800,
 .text-slate-900,
+.text-gray-400,
+.text-gray-500,
+.text-gray-600,
 .text-gray-700,
 .text-gray-800,
-.text-gray-900 {
+.text-gray-900,
+.text-teal-100,
+.text-teal-200,
+.text-teal-700,
+.text-teal-800,
+.text-teal-900,
+.text-emerald-700,
+.text-emerald-800,
+.text-emerald-900,
+.text-red-700,
+.text-red-800,
+.text-red-900 {
   color: #000000 !important;
 }
