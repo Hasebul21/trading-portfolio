@@ -66,7 +66,7 @@ body {
   .ant-input-number-input,
   .ant-select-selection-item,
   .ant-select-selection-search-input,
-  .ant-picker-input > input {
+  .ant-picker-input>input {
     font-size: 16px !important;
   }
 
@@ -109,19 +109,23 @@ body {
   padding: 4px;
   border-radius: 12px;
 }
+
 .record-side-toggle .ant-segmented-item {
   color: var(--ink-muted);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
+
 .record-side-toggle .ant-segmented-item-selected {
   color: #fff;
 }
+
 .record-side-buy .ant-segmented-item-selected,
 .record-side-buy .ant-segmented-thumb {
   background: var(--gain-600) !important;
   color: #fff !important;
 }
+
 .record-side-sell .ant-segmented-item-selected,
 .record-side-sell .ant-segmented-thumb {
   background: var(--loss-600) !important;
