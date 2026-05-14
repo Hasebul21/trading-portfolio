@@ -350,10 +350,10 @@ export function PortfolioHoldingsTable({
                 <KpiCell label="Unrealized P/L">
                     <span
                         className={`tabular-nums ${totalUnrealized > 0
-                                ? "text-[var(--gain-700)]"
-                                : totalUnrealized < 0
-                                    ? "text-[var(--loss-700)]"
-                                    : ""
+                            ? "text-[var(--gain-700)]"
+                            : totalUnrealized < 0
+                                ? "text-[var(--loss-700)]"
+                                : ""
                             }`}
                     >
                         {fmtSignedBdt(totalUnrealized)}
@@ -387,6 +387,11 @@ export function PortfolioHoldingsTable({
                         }
                         className="w-full max-w-full sm:max-w-sm"
                         size="middle"
+                        getPopupContainer={(trigger) =>
+                            (trigger.parentElement as HTMLElement) ?? document.body
+                        }
+                        popupMatchSelectWidth={false}
+                        dropdownStyle={{ minWidth: 220, maxHeight: 320, overflow: "auto" }}
                     />
                     <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
                         {positionCount} {positionCount === 1 ? "position" : "positions"}

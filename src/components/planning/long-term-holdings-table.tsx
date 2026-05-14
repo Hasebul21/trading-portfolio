@@ -144,6 +144,11 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                         }
                         className="w-full max-w-full sm:w-64"
                         size="middle"
+                        getPopupContainer={(trigger) =>
+                            (trigger.parentElement as HTMLElement) ?? document.body
+                        }
+                        popupMatchSelectWidth={false}
+                        dropdownStyle={{ minWidth: 220, maxHeight: 320, overflow: "auto" }}
                     />
                     <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
                         {totals.symbols} {totals.symbols === 1 ? "symbol" : "symbols"}
