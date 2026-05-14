@@ -127,43 +127,41 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-6 text-[var(--ink-strong)]">
-            {/* Toolbar */}
-            <div className="flex flex-col gap-2 border-b border-[var(--line)] pb-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-                    <AutoComplete
-                        allowClear
-                        value={searchText}
-                        onChange={(v) => setSearchText(typeof v === "string" ? v : "")}
-                        onSelect={(v) => setSearchText(typeof v === "string" ? v : "")}
-                        options={symbolOptions}
-                        placeholder="Search symbol…"
-                        filterOption={(input, option) =>
-                            String(option?.value ?? "")
-                                .toUpperCase()
-                                .includes(input.toUpperCase())
-                        }
-                        className="w-full max-w-full sm:w-64"
-                        size="middle"
-                        getPopupContainer={(trigger) =>
-                            (trigger.parentElement as HTMLElement) ?? document.body
-                        }
-                        popupMatchSelectWidth={false}
-                        dropdownStyle={{ minWidth: 220, maxHeight: 320, overflow: "auto" }}
-                    />
-                    <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
-                        {totals.symbols} {totals.symbols === 1 ? "symbol" : "symbols"}
-                    </span>
-                    <Select<string>
-                        value={sectorFilter}
-                        onChange={(v) => setSectorFilter(v)}
-                        options={sectorOptions}
-                        size="middle"
-                        showSearch
-                        optionFilterProp="label"
-                        className="w-full sm:w-64"
-                        aria-label="Filter by sector"
-                    />
-                </div>
+            {/* Toolbar — always a single row */}
+            <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
+                <AutoComplete
+                    allowClear
+                    value={searchText}
+                    onChange={(v) => setSearchText(typeof v === "string" ? v : "")}
+                    onSelect={(v) => setSearchText(typeof v === "string" ? v : "")}
+                    options={symbolOptions}
+                    placeholder="Search symbol…"
+                    filterOption={(input, option) =>
+                        String(option?.value ?? "")
+                            .toUpperCase()
+                            .includes(input.toUpperCase())
+                    }
+                    className="min-w-0 flex-1"
+                    size="middle"
+                    getPopupContainer={(trigger) =>
+                        (trigger.parentElement as HTMLElement) ?? document.body
+                    }
+                    popupMatchSelectWidth={false}
+                    dropdownStyle={{ minWidth: 220, maxHeight: 320, overflow: "auto" }}
+                />
+                <span className="hidden shrink-0 rounded-full border border-[var(--line)] bg-[var(--bg-surface-soft)] px-2.5 py-1 text-[11px] tabular-nums text-[var(--ink-muted)] sm:block">
+                    {totals.symbols} {totals.symbols === 1 ? "symbol" : "symbols"}
+                </span>
+                <Select<string>
+                    value={sectorFilter}
+                    onChange={(v) => setSectorFilter(v)}
+                    options={sectorOptions}
+                    size="middle"
+                    showSearch
+                    optionFilterProp="label"
+                    className="w-32 shrink-0 sm:w-44"
+                    aria-label="Filter by sector"
+                />
             </div>
 
             {groups.length === 0 ? (
