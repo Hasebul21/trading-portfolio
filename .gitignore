@@ -26,6 +26,9 @@
 tmp-*.txt
 tmp-*.html
 
+# Claude Code local state (settings.local.json, scheduled-task locks, etc.)
+.claude/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
