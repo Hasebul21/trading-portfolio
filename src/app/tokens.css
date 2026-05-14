@@ -1,0 +1,161 @@
+/*
+ * Eye-safe design tokens — derived verbatim from
+ * design_handoff_eye_safe_redesign/TOKENS.md.
+ *
+ * Default theme is dark ("Coffee"); light overrides apply when the <html>
+ * (or any ancestor) lacks .dark. We use the .dark class to drive both this
+ * file's variables and Tailwind's dark: variant via the project's
+ * @custom-variant in globals.css.
+ *
+ * Components should use these CSS variables exclusively (via inline
+ * `bg-[var(--bg-surface)]` etc.) — never raw hex or Tailwind grey ramps.
+ */
+
+:root {
+  /* ── Surfaces — light (default) ────────────────────────────────────── */
+  --bg-canvas: #efece5;
+  --bg-surface: #f7f4ec;
+  --bg-surface-soft: #f1ede3;
+  --bg-inset: #ebe6d8;
+
+  /* ── Ink ───────────────────────────────────────────────────────────── */
+  --ink-strong: #2a2620;
+  --ink-default: #3d362c;
+  --ink-muted: #6e6557;
+  --ink-faint: #97907f;
+
+  /* ── Hairlines ─────────────────────────────────────────────────────── */
+  --line-soft: #e2dccc;
+  --line: #d4cdb9;
+  --line-strong: #b8b09a;
+
+  /* ── Status — gain (forest sage) ───────────────────────────────────── */
+  --gain-700: #3a6b46;
+  --gain-600: #4f8159;
+  --gain-200: #cfe0c8;
+  --gain-50: #ecf2e6;
+
+  /* ── Status — loss (terracotta) ────────────────────────────────────── */
+  --loss-700: #964234;
+  --loss-600: #b25444;
+  --loss-200: #ebccc1;
+  --loss-50: #f3e1d8;
+
+  /* ── Status — warn (mustard) ───────────────────────────────────────── */
+  --warn-700: #8b6a2e;
+  --warn-600: #a98438;
+  --warn-200: #e6d5a6;
+  --warn-50: #f1e7c8;
+
+  /* ── Accent — muted navy ───────────────────────────────────────────── */
+  --accent-900: #1f2c44;
+  --accent-700: #2d3b5b;
+  --accent-500: #46557a;
+  --accent-200: #c0c6d4;
+  --accent-50: #e3e6ee;
+
+  /* ── Neutrals (indicator dots etc.) ────────────────────────────────── */
+  --neutral-300: #c5beae;
+  --neutral-500: #8e8775;
+
+  /* ── Typography ────────────────────────────────────────────────────── */
+  --font-sans: var(--font-lato, "Lato"), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains, "JetBrains Mono"), ui-monospace,
+    SFMono-Regular, monospace;
+
+  --fs-h1: 28px;
+  --fs-h2: 16px;
+  --fs-h3: 14px;
+  --fs-body: 14px;
+  --fs-body-sm: 13px;
+  --fs-meta: 12px;
+  --fs-micro: 11px;
+  --fs-dot: 10px;
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-normal: 1.55;
+
+  --ls-cap: 0.12em;
+  --ls-wide: 0.14em;
+  --ls-tight: -0.01em;
+
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 700;
+  --fw-black: 900;
+
+  /* ── Spacing ───────────────────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+
+  /* ── Radius ────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* ── Shadow (rare; dark mode relies on contrast instead) ───────────── */
+  --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.04);
+  --shadow-2: 0 4px 12px rgba(20, 18, 15, 0.08);
+  --shadow-3: 0 12px 32px rgba(20, 18, 15, 0.18);
+
+  /* ── Motion ────────────────────────────────────────────────────────── */
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Dark mode ("Coffee") ─────────────────────────────────────────────── */
+.dark {
+  --bg-canvas: #1f1e1a;
+  --bg-surface: #26241f;
+  --bg-surface-soft: #23211d;
+  --bg-inset: #2e2c26;
+
+  --ink-strong: #e8e2d4;
+  --ink-default: #c9c2b0;
+  --ink-muted: #97907f;
+  --ink-faint: #7b7464;
+
+  --line-soft: #2a2823;
+  --line: #332f28;
+  --line-strong: #3f3a30;
+
+  --gain-700: #7eaa7c;
+  --gain-600: #6f9c6d;
+  --gain-200: #3c5a3d;
+  --gain-50: #2a3729;
+
+  --loss-700: #c77a6a;
+  --loss-600: #b36856;
+  --loss-200: #5a372e;
+  --loss-50: #3a2823;
+
+  --warn-700: #bfa268;
+  --warn-600: #a98a4d;
+  --warn-200: #5b4a2a;
+  --warn-50: #3a3122;
+
+  --accent-900: #0f1828;
+  --accent-700: #3f4f73;
+  --accent-500: #6d7ca0;
+  --accent-200: #8896b5;
+  --accent-50: #1b2333;
+
+  --neutral-300: #3f3a30;
+  --neutral-500: #7b7464;
+
+  color-scheme: dark;
+}

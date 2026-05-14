@@ -34,7 +34,22 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
   ) as Record<string, number>;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl text-left">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 text-left">
+      <header className="flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            History
+          </div>
+          <h1 className="mt-1 text-[28px] leading-tight tracking-tight text-[var(--ink-strong)]">
+            {dayParam ? `Trades on ${dayParam}` : "Recent trades"}
+          </h1>
+        </div>
+        <div className="text-right text-[12px] text-[var(--ink-muted)]">
+          <div>{dayParam ? "Single-day view" : "Last 7 days"}</div>
+          <div className="mt-0.5">{historyRows.length} entries</div>
+        </div>
+      </header>
+
       <TradeHistorySection
         key={dayParam ?? "last-7-days"}
         rows={historyRows}

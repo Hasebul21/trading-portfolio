@@ -45,7 +45,7 @@ export function MobileBottomNav() {
     return (
         <nav
             aria-label="Mobile primary"
-            className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200/80 bg-white/95 backdrop-blur-lg shadow-[0_-6px_24px_rgba(0,0,0,0.08)] md:hidden dark:border-zinc-700/50 dark:bg-[#252b36]/95 dark:shadow-[0_-6px_24px_rgba(0,0,0,0.35)]"
+            className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--line)] bg-[var(--bg-surface)] md:hidden"
             style={{
                 paddingBottom: "max(env(safe-area-inset-bottom, 0px), 6px)",
             }}
@@ -60,10 +60,10 @@ export function MobileBottomNav() {
                                 href={tab.href}
                                 aria-label={tab.label}
                                 aria-current={active ? "page" : undefined}
-                                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 transition-colors no-underline hover:no-underline ${
+                                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 transition-colors no-underline hover:no-underline ${
                                     active
-                                        ? "text-teal-600 dark:text-teal-300"
-                                        : "text-zinc-500 dark:text-zinc-400"
+                                        ? "text-[var(--accent-700)]"
+                                        : "text-[var(--ink-muted)]"
                                 }`}
                             >
                                 <span
@@ -74,11 +74,7 @@ export function MobileBottomNav() {
                                 >
                                     {tab.icon}
                                 </span>
-                                <span
-                                    className={`text-[11px] leading-tight tracking-tight ${
-                                        active ? "font-medium" : "font-normal"
-                                    }`}
-                                >
+                                <span className="text-[11px] leading-tight tracking-tight">
                                     {tab.label}
                                 </span>
                             </Link>
