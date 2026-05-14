@@ -153,12 +153,12 @@ export function SettingsForm({
             children: (
               <Card
                 variant="outlined"
-                className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                styles={{ body: { padding: "16px 24px" } }}
+                className="rounded-xl"
+                styles={{ body: { padding: "20px 24px" } }}
               >
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       Full Name
                     </label>
                     <Input
@@ -175,10 +175,10 @@ export function SettingsForm({
                   </div>
 
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       Trade Commission Rate (optional)
                     </label>
-                    <p className="text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                    <p className="text-[12px] text-zinc-500">
                       Enter as decimal (e.g., 0.004 for 0.4%)
                     </p>
                     <InputNumber
@@ -198,7 +198,7 @@ export function SettingsForm({
                   </div>
 
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       Currency
                     </label>
                     <Input
@@ -248,15 +248,15 @@ export function SettingsForm({
               <div className="space-y-5">
                 <Card
                   variant="outlined"
-                  className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                  styles={{ body: { padding: "16px 24px" } }}
+                  className="rounded-xl"
+                  styles={{ body: { padding: "20px 24px" } }}
                 >
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                      <label className="block text-[14px] text-zinc-700">
                         Portfolio Report Email
                       </label>
-                      <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                      <p className="mt-1 text-[12px] text-zinc-500">
                         Where monthly portfolio reports will be sent
                       </p>
                     </div>
@@ -304,16 +304,18 @@ export function SettingsForm({
 
                 <Card
                   variant="outlined"
-                  className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                  styles={{ body: { padding: "16px 24px" } }}
+                  className="rounded-xl"
+                  styles={{ body: { padding: "20px 24px" } }}
                 >
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">Delivery</h3>
-                      <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
-                        Reports are sent automatically on the <strong>last day of every month at 9:00 PM Bangladesh time</strong> (Asia/Dhaka, UTC+6).
+                      <h3 className="text-[14px] text-zinc-700">Delivery</h3>
+                      <p className="mt-1 text-[12px] text-zinc-500">
+                        Reports are sent automatically on the{" "}
+                        <span className="text-zinc-700">last day of every month at 9:00 PM Bangladesh time</span>{" "}
+                        (Asia/Dhaka, UTC+6).
                       </p>
-                      <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                      <p className="mt-1 text-[12px] text-zinc-500">
                         Example: April 30, May 31, June 30.
                       </p>
                     </div>
@@ -340,21 +342,21 @@ export function SettingsForm({
                   </div>
                 </Card>
 
-                <div className="rounded-lg border border-sky-200/60 bg-sky-50/90 px-4 py-3 dark:border-sky-900/40 dark:bg-sky-950/40">
-                  <p className="text-[13px] font-medium text-sky-900 dark:text-sky-200">
-                    Vercel-friendly email setup
-                  </p>
-                  <p className="mt-1 text-[13px] font-normal text-sky-800 dark:text-sky-300">
-                    This app now uses Resend instead of SMTP. Set only <strong>RESEND_API_KEY</strong> in Vercel Project Settings to enable sending. <strong>RESEND_FROM</strong> is optional.
+                <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+                  <p className="text-[13px] text-sky-900">Vercel-friendly email setup</p>
+                  <p className="mt-1 text-[12px] text-sky-800">
+                    This app now uses Resend instead of SMTP. Set only{" "}
+                    <span className="text-sky-900">RESEND_API_KEY</span> in Vercel Project
+                    Settings to enable sending. <span className="text-sky-900">RESEND_FROM</span>{" "}
+                    is optional.
                   </p>
                 </div>
 
-                <div className="rounded-lg border border-amber-200/60 bg-amber-50/90 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/40">
-                  <p className="text-[13px] font-medium text-amber-900 dark:text-amber-200">
-                    Automatic Monthly Reports
-                  </p>
-                  <p className="mt-1 text-[13px] font-normal text-amber-800 dark:text-amber-300">
-                    Cron runs daily at 15:00 UTC; report is sent only when it is month-end in Bangladesh (9:00 PM BD time).
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-[13px] text-amber-900">Automatic monthly reports</p>
+                  <p className="mt-1 text-[12px] text-amber-800">
+                    Cron runs daily at 15:00 UTC; report is sent only when it is month-end in
+                    Bangladesh (9:00 PM BD time).
                   </p>
                 </div>
               </div>
@@ -391,12 +393,12 @@ export function SettingsForm({
             children: (
               <Card
                 variant="outlined"
-                className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                styles={{ body: { padding: "16px 24px" } }}
+                className="rounded-xl"
+                styles={{ body: { padding: "20px 24px" } }}
               >
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       Current Password
                     </label>
                     <Input.Password
@@ -413,7 +415,7 @@ export function SettingsForm({
                   </div>
 
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       New Password
                     </label>
                     <Input.Password
@@ -430,7 +432,7 @@ export function SettingsForm({
                   </div>
 
                   <div>
-                    <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                    <label className="block text-[14px] text-zinc-700">
                       Confirm New Password
                     </label>
                     <Input.Password

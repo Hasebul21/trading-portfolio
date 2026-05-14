@@ -15,13 +15,18 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-2xl text-left">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Settings</h1>
-        <p className="mt-1 text-[15px] font-normal text-zinc-600 dark:text-zinc-400">
-          Manage your portfolio preferences and sector targets
+    <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-2xl text-left text-zinc-900">
+      <header>
+        <p className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">
+          Settings
         </p>
-      </div>
+        <h1 className="mt-1 text-[26px] leading-tight tracking-tight text-zinc-900">
+          Account & preferences
+        </h1>
+        <p className="mt-1 text-[13px] text-zinc-500">
+          Manage your profile, sector targets, cash adjustments, and reports.
+        </p>
+      </header>
 
       {settingsRes.ok ? (
         <SettingsForm
@@ -33,8 +38,8 @@ export default async function SettingsPage() {
           cashAdjustmentsError={adjustmentsRes.ok ? null : adjustmentsRes.error}
         />
       ) : (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-red-800 dark:bg-red-950/40 dark:text-red-200">
-          <p className="text-[15px] font-normal">{settingsRes.error}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+          <p className="text-[14px]">{settingsRes.error}</p>
         </div>
       )}
     </AppPageStack>

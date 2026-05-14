@@ -107,7 +107,7 @@ export function CashAdjustmentsForm({
             dataIndex: "occurred_on",
             width: 120,
             render: (v: string) => (
-                <span className="text-[15px] font-normal tabular-nums">{v}</span>
+                <span className="text-[14px] tabular-nums text-zinc-700">{v}</span>
             ),
         },
         {
@@ -119,10 +119,9 @@ export function CashAdjustmentsForm({
                 const positive = v >= 0;
                 return (
                     <span
-                        className={`text-[15px] font-medium tabular-nums ${positive
-                                ? "text-emerald-700 dark:text-emerald-300"
-                                : "text-red-700 dark:text-red-300"
-                            }`}
+                        className={`text-[14px] tabular-nums ${
+                            positive ? "text-emerald-700" : "text-red-700"
+                        }`}
                     >
                         {fmtSigned(v)}
                     </span>
@@ -133,9 +132,7 @@ export function CashAdjustmentsForm({
             title: "Note",
             dataIndex: "note",
             render: (v: string | null) => (
-                <span className="text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
-                    {v ?? "—"}
-                </span>
+                <span className="text-[14px] text-zinc-700">{v ?? "—"}</span>
             ),
         },
         {
@@ -164,22 +161,20 @@ export function CashAdjustmentsForm({
         <div className="space-y-5">
             <Card
                 variant="outlined"
-                className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                styles={{ body: { padding: "16px 24px" } }}
+                className="rounded-xl"
+                styles={{ body: { padding: "20px 24px" } }}
             >
                 <div className="space-y-4">
                     <div>
-                        <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
-                            Add or deduct money
-                        </h3>
-                        <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                        <h3 className="text-[14px] text-zinc-700">Add or deduct money</h3>
+                        <p className="mt-1 text-[12px] text-zinc-500">
                             Positive entries add to Net Gain/Loss (e.g. dividends, refunds).
                             Negative entries deduct (e.g. withdrawals, external losses).
                         </p>
                     </div>
 
                     <div>
-                        <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                        <label className="block text-[14px] text-zinc-700">
                             Type
                         </label>
                         <Radio.Group
@@ -197,7 +192,7 @@ export function CashAdjustmentsForm({
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                            <label className="block text-[14px] text-zinc-700">
                                 Amount (BDT)
                             </label>
                             <InputNumber
@@ -216,7 +211,7 @@ export function CashAdjustmentsForm({
                         </div>
 
                         <div>
-                            <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                            <label className="block text-[14px] text-zinc-700">
                                 Date
                             </label>
                             <DatePicker
@@ -230,7 +225,7 @@ export function CashAdjustmentsForm({
                     </div>
 
                     <div>
-                        <label className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                        <label className="block text-[14px] text-zinc-700">
                             Note (optional)
                         </label>
                         <Input
@@ -262,21 +257,18 @@ export function CashAdjustmentsForm({
 
             <Card
                 variant="outlined"
-                className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-                styles={{ body: { padding: "16px 24px" } }}
+                className="rounded-xl"
+                styles={{ body: { padding: "20px 24px" } }}
             >
                 <div className="space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
-                            History
-                        </h3>
-                        <span className="text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
+                        <h3 className="text-[14px] text-zinc-700">History</h3>
+                        <span className="text-[13px] text-zinc-500">
                             Net adjustments:{" "}
                             <span
-                                className={`font-medium tabular-nums ${total >= 0
-                                        ? "text-emerald-700 dark:text-emerald-300"
-                                        : "text-red-700 dark:text-red-300"
-                                    }`}
+                                className={`tabular-nums ${
+                                    total >= 0 ? "text-emerald-700" : "text-red-700"
+                                }`}
                             >
                                 {fmtSigned(total)}
                             </span>

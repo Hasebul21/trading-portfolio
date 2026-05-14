@@ -15,23 +15,21 @@ export default async function RecordPage() {
   const recentRows = filterTransactionsLastNDays(txRes.rows, 30);
 
   return (
-    <AppPageStack>
-      <div className="mx-auto min-w-0 max-w-xl text-left">
-        <RecordForm instruments={instruments} instrumentsError={error} />
-      </div>
+    <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-xl text-left">
+      <RecordForm instruments={instruments} instrumentsError={error} />
 
       {/*
         Recent transactions — visible on mobile so the bottom-nav
         "Transactions" tab serves as both Add and History. On desktop the
         dedicated /trade-history page already covers this so we hide it.
       */}
-      <section className="mx-auto w-full min-w-0 max-w-xl text-left md:hidden">
-        <h2 className="mb-2 text-[15px] font-medium text-zinc-50">
-          Recent transactions
-          <span className="ml-2 text-[12px] font-normal text-zinc-400">
-            last 30 days
-          </span>
-        </h2>
+      <section className="md:hidden">
+        <header className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">
+            Recent transactions
+          </h2>
+          <span className="text-[12px] text-zinc-500">last 30 days</span>
+        </header>
         <TradeHistorySection rows={recentRows} loadError={txRes.error} />
       </section>
     </AppPageStack>

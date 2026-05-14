@@ -5,7 +5,7 @@ import { useActionState, useEffect, useLayoutEffect, useRef, useState } from "re
 import { useRouter } from "next/navigation";
 import { recordTransaction, type RecordState } from "../actions";
 import { CommissionField } from "./commission-field";
-import { Alert } from "antd";
+import { Alert, Button, InputNumber, Radio } from "antd";
 
 const initial: RecordState = {};
 
@@ -50,14 +50,28 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
   }, [state.error, state.ok, pending]);
 
   return (
-    <div className="min-w-0 max-w-lg">
+    <div className="flex w-full min-w-0 flex-col gap-6 text-zinc-900">
+      {/* Page header */}
+      <header>
+        <p className="text-[12px] uppercase tracking-[0.14em] text-zinc-500">
+          Transaction
+        </p>
+        <h1 className="mt-1 text-[26px] leading-tight tracking-tight text-zinc-900">
+          Record a trade
+        </h1>
+        <p className="mt-1 text-[13px] text-zinc-500">
+          Log a buy or sell against your portfolio. Commissions default to your
+          configured rate.
+        </p>
+      </header>
+
       <form
         ref={formRef}
         action={formAction}
-        className="flex flex-col gap-5 rounded-2xl border border-teal-200/50 bg-white/90 p-6 shadow-lg shadow-teal-950/5 ring-1 ring-black/[0.03] backdrop-blur-sm dark:border-teal-900/40 dark:bg-zinc-900/75 dark:shadow-black/30 dark:ring-white/[0.05]"
+        className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-white p-5 sm:p-6"
       >
-        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
-          Symbol (DSE trading code)
+        {/* Symbol */}
+        <FieldLabel label="Symbol" hint="DSE trading code">
           <SymbolField
             instruments={instruments}
             loadError={instrumentsError}
@@ -66,73 +80,88 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             value={symbolInput}
             onValueChange={setSymbolInput}
           />
-        </label>
-        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
-          Side
-          <select
-            name="side"
-            required
+        </FieldLabel>
+
+        {/* Side */}
+        <FieldLabel label="Side">
+          <Radio.Group
             value={side}
-            onChange={(e) =>
-              setSide(e.target.value === "sell" ? "sell" : "buy")
+            onChange={(e) => setSide(e.target.value === "sell" ? "sell" : "buy")}
+            optionType="button"
+            buttonStyle="solid"
+            options={[
+              { label: "Buy", value: "buy" },
+              { label: "Sell", value: "sell" },
+            ]}
+            className="mt-1"
+          />
+          <input type="hidden" name="side" value={side} />
+        </FieldLabel>
+
+        {/* Quantity */}
+        <FieldLabel label="Quantity" hint="Number of shares">
+          <InputNumber
+            value={quantity === "" ? null : Number(quantity)}
+            onChange={(v) =>
+              setQuantity(v === null || v === undefined ? "" : String(v))
             }
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-          >
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-          </select>
-        </label>
-        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
-          Quantity (shares)
+            placeholder="0"
+            min={0}
+            step={1}
+            size="large"
+            controls={false}
+            className="mt-1 w-full"
+          />
           <input
+            type="hidden"
             name="quantity"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            required
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
-        </label>
-        <label className="block text-[15px] font-normal text-zinc-700 dark:text-zinc-300">
-          Price per share
+        </FieldLabel>
+
+        {/* Price per share */}
+        <FieldLabel label="Price per share" hint="BDT">
+          <InputNumber
+            value={pricePerShare === "" ? null : Number(pricePerShare)}
+            onChange={(v) =>
+              setPricePerShare(v === null || v === undefined ? "" : String(v))
+            }
+            placeholder="0.00"
+            min={0}
+            step={0.1}
+            size="large"
+            controls={false}
+            className="mt-1 w-full"
+          />
           <input
+            type="hidden"
             name="price_per_share"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            required
             value={pricePerShare}
-            onChange={(e) => setPricePerShare(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-[15px] font-normal text-zinc-900 outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
-        </label>
+        </FieldLabel>
 
-        <CommissionField key={commissionKey} quantity={quantity} pricePerShare={pricePerShare} />
+        <CommissionField
+          key={commissionKey}
+          quantity={quantity}
+          pricePerShare={pricePerShare}
+        />
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 px-4 py-3 text-[15px] font-normal text-white shadow-md shadow-teal-600/30 transition hover:brightness-110 disabled:opacity-60 dark:from-teal-500 dark:to-emerald-500"
+        <Button
+          type="primary"
+          size="large"
+          htmlType="submit"
+          loading={pending}
+          className="mt-2 w-full"
         >
-          {pending ? (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-          ) : null}
           {pending ? "Saving…" : "Save transaction"}
-        </button>
+        </Button>
 
         <div ref={feedbackRef} className="min-h-0 scroll-mt-24">
           {state.error ? (
             <Alert
               type="error"
               showIcon
-              title="Could not save"
+              message="Could not save"
               description={state.error}
               className="text-left"
               role="alert"
@@ -142,7 +171,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
             <Alert
               type="success"
               showIcon
-              title="Saved"
+              message="Saved"
               description={state.summary ?? "Transaction was recorded."}
               className="text-left"
             />
@@ -150,5 +179,26 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
         </div>
       </form>
     </div>
+  );
+}
+
+/** Consistent field wrapper — small zinc label + optional hint, then control. */
+function FieldLabel({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[13px] text-zinc-700">{label}</span>
+        {hint ? <span className="text-[12px] text-zinc-500">{hint}</span> : null}
+      </div>
+      {children}
+    </label>
   );
 }

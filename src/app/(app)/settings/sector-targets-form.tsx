@@ -159,26 +159,23 @@ export function SectorTargetsForm({
     return (
         <Card
             variant="outlined"
-            className="rounded-xl border-teal-200/50 bg-white/75 shadow-sm dark:border-teal-900/35 dark:bg-zinc-900/65"
-            styles={{ body: { padding: "16px 24px" } }}
+            className="rounded-xl"
+            styles={{ body: { padding: "20px 24px" } }}
         >
             <div className="space-y-4">
                 <div>
-                    <h3 className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
-                        Sector target allocation
-                    </h3>
-                    <p className="mt-1 text-[13px] font-normal text-zinc-600 dark:text-zinc-400">
-                        Set the % of your portfolio you want in each sector. The
-                        Allocation page will show these targets next to your current
-                        weights so you can see drift at a glance. Leave the target
-                        blank to remove it.
+                    <h3 className="text-[14px] text-zinc-700">Sector target allocation</h3>
+                    <p className="mt-1 text-[12px] text-zinc-500">
+                        Set the % of your portfolio you want in each sector. The Allocation
+                        page will show these targets next to your current weights so you can
+                        see drift at a glance. Leave the target blank to remove it.
                     </p>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[28rem] text-left text-[13px]">
                         <thead>
-                            <tr className="text-[11px] uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                            <tr className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">
                                 <th className="py-2 font-normal">Sector</th>
                                 <th className="py-2 text-right font-normal">Current</th>
                                 <th className="py-2 text-right font-normal">
@@ -192,7 +189,7 @@ export function SectorTargetsForm({
                                 <tr>
                                     <td
                                         colSpan={4}
-                                        className="py-4 text-center text-[13px] text-zinc-500 dark:text-zinc-400"
+                                        className="py-4 text-center text-[13px] text-zinc-500"
                                     >
                                         No sectors yet. Add one below to set a target.
                                     </td>
@@ -201,11 +198,11 @@ export function SectorTargetsForm({
                             {draft.map((row) => (
                                 <tr
                                     key={row.key}
-                                    className="border-t border-zinc-200/60 dark:border-zinc-800/70"
+                                    className="border-t border-zinc-200"
                                 >
                                     <td className="py-1.5 pr-2 align-middle">
                                         {row.has_position ? (
-                                            <span className="text-[14px] font-normal text-zinc-900 dark:text-zinc-50">
+                                            <span className="text-[14px] text-zinc-900">
                                                 {row.sector}
                                             </span>
                                         ) : (
@@ -221,7 +218,7 @@ export function SectorTargetsForm({
                                             />
                                         )}
                                     </td>
-                                    <td className="py-1.5 pr-2 text-right align-middle tabular-nums text-zinc-700 dark:text-zinc-200">
+                                    <td className="py-1.5 pr-2 text-right align-middle tabular-nums text-zinc-700">
                                         {row.current_percent === null
                                             ? "—"
                                             : fmtPct(row.current_percent)}
@@ -277,12 +274,12 @@ export function SectorTargetsForm({
                         + Add sector
                     </Button>
                     <div
-                        className={`text-[13px] font-medium tabular-nums ${
+                        className={`text-[13px] tabular-nums ${
                             sumStatus === "ok"
-                                ? "text-emerald-700 dark:text-emerald-300"
+                                ? "text-emerald-700"
                                 : sumStatus === "over"
-                                  ? "text-red-700 dark:text-red-300"
-                                  : "text-amber-700 dark:text-amber-300"
+                                  ? "text-red-700"
+                                  : "text-amber-700"
                         }`}
                     >
                         Total target:&nbsp;{fmtPct(sumPercent)}
