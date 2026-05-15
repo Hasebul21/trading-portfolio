@@ -256,17 +256,17 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                 </span>
             </div>
 
-            <RowCell label="LTP">
-                <span className="tabular-nums text-[14px] text-[var(--ink-strong)]">
-                    {ltpKnown ? formatBdt(row.ltp!) : "—"}
-                </span>
-            </RowCell>
-
             <RowCell label="Break-even">
                 <span className="tabular-nums text-[13px] text-[var(--ink-strong)]">
                     {row.breakEvenPrice !== null && Number.isFinite(row.breakEvenPrice)
                         ? formatBdt(row.breakEvenPrice)
                         : "—"}
+                </span>
+            </RowCell>
+
+            <RowCell label="LTP">
+                <span className="tabular-nums text-[14px] text-[var(--ink-strong)]">
+                    {ltpKnown ? formatBdt(row.ltp!) : "—"}
                 </span>
             </RowCell>
 
