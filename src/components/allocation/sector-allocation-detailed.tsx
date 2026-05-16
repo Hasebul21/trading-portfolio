@@ -22,6 +22,7 @@ export type SectorTarget = {
 
 type SectorSlice = {
  sector: string;
+ holdings: AllocationHolding[];
  investedBdt: number;
  percentOfPortfolio: number;
  targetPercent: number | null;
@@ -55,7 +56,10 @@ function buildSlices(
  holdings: AllocationHolding[],
  targets: SectorTarget[],
 ): { slices: SectorSlice[]; total: number } {
- const bySector = new Map<string, { label: string; invested: number }>();
+ const bySector = new Map<
+ string,
+ { label: string; invested: number; holdings: AllocationHolding[] }
+ >();
  let total = 0;
 
  for (const h of holdings) {
@@ -63,8 +67,10 @@ function buildSlices(
  if (!Number.isFinite(cost) || cost <= 0) continue;
  const sectorLabel = h.sector?.trim() || "Unknown";
  const key = sectorMatchKey(sectorLabel);
- const entry = bySector.get(key) ?? { label: sectorLabel, invested: 0 };
+ const entry =
+ bySector.get(key) ?? { label: sectorLabel, invested: 0, holdings: [] };
  entry.invested += cost;
+ entry.holdings.push(h);
  bySector.set(key, entry);
  total += cost;
  }
@@ -78,22 +84,25 @@ function buildSlices(
  }
  for (const [key, target] of targetByKey) {
  if (!bySector.has(key)) {
- bySector.set(key, { label: target.sector, invested: 0 });
+ bySector.set(key, { label: target.sector, invested: 0, holdings: [] });
  }
  }
 
- const baseSlices = [...bySector.entries()].map(([key, { label, invested }]) => {
+ const baseSlices = [...bySector.entries()].map(
+ ([key, { label, invested, holdings: hs }]) => {
  const target = targetByKey.get(key);
  const percentOfPortfolio = total > 0 ? (invested / total) * 100 : 0;
  const targetPercent = target ? target.target_percent : null;
  return {
  key,
  sector: target?.sector ?? label,
+ holdings: [...hs].sort((a, b) => b.totalCost - a.totalCost),
  investedBdt: invested,
  percentOfPortfolio,
  targetPercent,
  };
- });
+ },
+ );
 
  // Held positions first (largest invested first), then targeted-but-empty
  // sectors (largest target first).
@@ -106,6 +115,7 @@ function buildSlices(
 
  const slices: SectorSlice[] = baseSlices.map((s, i) => ({
  sector: s.sector,
+ holdings: s.holdings,
  investedBdt: s.investedBdt,
  percentOfPortfolio: s.percentOfPortfolio,
  targetPercent: s.targetPercent,
@@ -186,6 +196,8 @@ export function SectorAllocationDetailed({
  </header>
 
  <DonutCard slices={visibleSlices} />
+
+ <SectorBreakdown slices={visibleSlices} total={total} />
  </div>
  );
 }
@@ -280,5 +292,122 @@ function DonutCard({ slices }: { slices: SectorSlice[] }) {
  ))}
  </ul>
  </section>
+ );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function SectorBreakdown({
+ slices,
+ total,
+}: {
+ slices: SectorSlice[];
+ total: number;
+}) {
+ const heldSlices = slices.filter((s) => s.holdings.length > 0);
+ if (heldSlices.length === 0) return null;
+
+ return (
+ <section className="flex flex-col gap-3">
+ <header>
+ <h2 className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+ Breakdown by sector
+ </h2>
+ <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
+ Each position&apos;s share of total invested capital.
+ </p>
+ </header>
+
+ <div className="grid gap-3 lg:grid-cols-2">
+ {heldSlices.map((slice) => (
+ <SectorCard key={slice.sector} slice={slice} portfolioTotal={total} />
+ ))}
+ </div>
+ </section>
+ );
+}
+
+function SectorCard({
+ slice,
+ portfolioTotal,
+}: {
+ slice: SectorSlice;
+ portfolioTotal: number;
+}) {
+ return (
+ <article className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--bg-surface)]">
+ <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
+ <div className="flex min-w-0 items-center gap-2">
+ <span
+ className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+ style={{ background: slice.color }}
+ aria-hidden
+ />
+ <h3 className="truncate text-[14px] text-[var(--ink-strong)]">
+ {slice.sector}
+ </h3>
+ </div>
+ <div className="flex items-baseline gap-2 whitespace-nowrap text-[12px] tabular-nums">
+ <span className="text-[var(--ink-strong)]">
+ {fmtPct(slice.percentOfPortfolio)}
+ </span>
+ <span className="text-[var(--ink-muted)]">
+ of {formatBdt(slice.investedBdt)}
+ </span>
+ </div>
+ </header>
+
+ <table className="w-full text-left text-[13px]">
+ <thead>
+ <tr className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+ <th className="px-4 py-2 font-normal">Symbol</th>
+ <th className="px-2 py-2 text-right font-normal">Shares</th>
+ <th className="hidden px-2 py-2 text-right font-normal sm:table-cell">
+ Avg cost
+ </th>
+ <th className="px-2 py-2 text-right font-normal">Invested</th>
+ <th className="hidden px-2 py-2 text-right font-normal sm:table-cell">
+ % sector
+ </th>
+ <th className="px-4 py-2 text-right font-normal">% portfolio</th>
+ </tr>
+ </thead>
+ <tbody>
+ {slice.holdings.map((h) => {
+ const sectorShare =
+ slice.investedBdt > 0
+ ? (h.totalCost / slice.investedBdt) * 100
+ : 0;
+ const portfolioShare =
+ portfolioTotal > 0 ? (h.totalCost / portfolioTotal) * 100 : 0;
+ return (
+ <tr
+ key={h.symbol}
+ className="border-t border-[var(--line)] tabular-nums"
+ >
+ <td className="px-4 py-2 text-[var(--ink-strong)]">{h.symbol}</td>
+ <td className="px-2 py-2 text-right text-[var(--ink-strong)]">
+ {h.shares.toLocaleString(undefined, {
+ maximumFractionDigits: 2,
+ })}
+ </td>
+ <td className="hidden px-2 py-2 text-right text-[var(--ink-muted)] sm:table-cell">
+ {formatBdt(h.avgPrice)}
+ </td>
+ <td className="px-2 py-2 text-right text-[var(--ink-strong)]">
+ {formatBdt(h.totalCost)}
+ </td>
+ <td className="hidden px-2 py-2 text-right text-[var(--ink-muted)] sm:table-cell">
+ {fmtPct(sectorShare)}
+ </td>
+ <td className="px-4 py-2 text-right text-[var(--ink-strong)]">
+ {fmtPct(portfolioShare)}
+ </td>
+ </tr>
+ );
+ })}
+ </tbody>
+ </table>
+ </article>
  );
 }
