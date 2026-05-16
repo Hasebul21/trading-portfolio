@@ -2,7 +2,8 @@
 
 import { formatBdt } from "@/lib/format-bdt";
 import { sectorMatchKey } from "@/lib/sector-targets";
-import { useMemo } from "react";
+import { Select } from "antd";
+import { useMemo, useState } from "react";
 
 export type AllocationHolding = {
  symbol: string;
@@ -13,7 +14,11 @@ export type AllocationHolding = {
  shares: number;
  /** Weighted-average buy cost per share. */
  avgPrice: number;
+ /** Sell price at which round-trip P/L is zero (incl. buy + sell commission). */
+ breakEvenPrice: number;
 };
+
+const SECTOR_FILTER_ALL = "__all__";
 
 export type SectorTarget = {
  sector: string;
@@ -304,22 +309,48 @@ function SectorBreakdown({
  slices: SectorSlice[];
  total: number;
 }) {
- const heldSlices = slices.filter((s) => s.holdings.length > 0);
+ const heldSlices = useMemo(
+ () => slices.filter((s) => s.holdings.length > 0),
+ [slices],
+ );
+
+ const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
+
+ const sectorOptions = useMemo(
+ () => [
+ { value: SECTOR_FILTER_ALL, label: `All sectors (${heldSlices.length})` },
+ ...heldSlices.map((s) => ({ value: s.sector, label: s.sector })),
+ ],
+ [heldSlices],
+ );
+
+ const visible = useMemo(
+ () =>
+ sectorFilter === SECTOR_FILTER_ALL
+ ? heldSlices
+ : heldSlices.filter((s) => s.sector === sectorFilter),
+ [heldSlices, sectorFilter],
+ );
+
  if (heldSlices.length === 0) return null;
 
  return (
  <section className="flex flex-col gap-3">
- <header>
- <h2 className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
- Breakdown by sector
- </h2>
- <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
- Each position&apos;s share of total invested capital.
- </p>
- </header>
+ <div className="flex flex-wrap items-center justify-end">
+ <Select<string>
+ value={sectorFilter}
+ onChange={(v) => setSectorFilter(v)}
+ options={sectorOptions}
+ size="middle"
+ showSearch
+ optionFilterProp="label"
+ className="w-full sm:w-64"
+ aria-label="Filter by sector"
+ />
+ </div>
 
  <div className="grid gap-3 lg:grid-cols-2">
- {heldSlices.map((slice) => (
+ {visible.map((slice) => (
  <SectorCard key={slice.sector} slice={slice} portfolioTotal={total} />
  ))}
  </div>
@@ -363,7 +394,7 @@ function SectorCard({
  <th className="px-4 py-2 font-normal">Symbol</th>
  <th className="px-2 py-2 text-right font-normal">Shares</th>
  <th className="hidden px-2 py-2 text-right font-normal sm:table-cell">
- Avg cost
+ Break-even
  </th>
  <th className="px-2 py-2 text-right font-normal">Invested</th>
  <th className="hidden px-2 py-2 text-right font-normal sm:table-cell">
@@ -392,7 +423,7 @@ function SectorCard({
  })}
  </td>
  <td className="hidden px-2 py-2 text-right text-[var(--ink-muted)] sm:table-cell">
- {formatBdt(h.avgPrice)}
+ {formatBdt(h.breakEvenPrice)}
  </td>
  <td className="px-2 py-2 text-right text-[var(--ink-strong)]">
  {formatBdt(h.totalCost)}

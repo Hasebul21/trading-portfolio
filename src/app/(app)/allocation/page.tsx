@@ -41,6 +41,7 @@ export default async function AllocationPage() {
  totalCost: h.totalCost,
  shares: h.shares,
  avgPrice: h.avgPrice,
+ breakEvenPrice: h.breakEvenPrice,
  };
  });
 
