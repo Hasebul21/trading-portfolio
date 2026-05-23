@@ -1,9 +1,10 @@
 import { computeFloorPivot, type FloorPivot } from "@/lib/pivot-floor";
 import { fetchUserHoldings } from "@/lib/holdings";
 import type { HoldingRow } from "@/lib/portfolio";
-import { fetchDseCompanyExtrasMap } from "./dse-company-52w";
+import { fetchDseCompanyExtrasMap, type DseCompanyExtras } from "./dse-company-52w";
 import type { DseLspQuote } from "./dse-lsp-quotes";
 import { fetchDseLspQuoteMap } from "./dse-lsp-quotes";
+import { computeHoldingAnalysis, type HoldingSignal } from "./oracle-scoring";
 
 export type PortfolioMarketRow = HoldingRow & {
   sector: string | null;
@@ -15,16 +16,17 @@ export type PortfolioMarketRow = HoldingRow & {
   week52Low: number | null;
   /** 52-week high from the DSE company page; null when not available. */
   week52High: number | null;
+  /** Oracle holding-analysis signal (Strong Add / Add / Hold / Trim / Exit). */
+  signal: HoldingSignal;
+  /** One-line rationale for the signal; empty string when no signal context. */
+  signalReason: string;
 };
 
 /** Merge ledger/override holdings with DSE market and company metadata. */
 export function holdingsToMarketRows(
   holdings: HoldingRow[],
   bySymbol: Map<string, DseLspQuote>,
-  companyExtrasBySymbol: Map<
-    string,
-    { sector: string | null; week52Low?: number | null; week52High?: number | null }
-  >,
+  companyExtrasBySymbol: Map<string, DseCompanyExtras>,
 ): PortfolioMarketRow[] {
   return holdings.map((h) => {
     const q = bySymbol.get(h.symbol);
@@ -37,6 +39,32 @@ export function holdingsToMarketRows(
     const pivot = q ? computeFloorPivot(q.dayHigh, q.dayLow, q.closep) : null;
     const extras = companyExtrasBySymbol.get(h.symbol);
     const sector = extras?.sector ?? h.category ?? null;
+
+    // Oracle signal — only meaningful when we have BOTH a live quote and
+    // fundamental extras. Otherwise default to a neutral "Hold" with a
+    // contextual reason so the UI never lights up a misleading action.
+    let signal: HoldingSignal = "Hold";
+    let signalReason = "";
+    if (q && extras) {
+      const analysis = computeHoldingAnalysis(
+        {
+          symbol: h.symbol,
+          shares: h.shares,
+          avgPrice: h.avgPrice,
+          breakEvenPrice: h.breakEvenPrice,
+          totalCost: h.totalCost,
+        },
+        extras,
+        q,
+      );
+      signal = analysis.signal;
+      signalReason = analysis.signalReason;
+    } else if (!q) {
+      signalReason = "Awaiting live quote";
+    } else {
+      signalReason = "Missing fundamentals";
+    }
+
     return {
       ...h,
       sector,
@@ -45,6 +73,8 @@ export function holdingsToMarketRows(
       unrealizedPl,
       week52Low: extras?.week52Low ?? null,
       week52High: extras?.week52High ?? null,
+      signal,
+      signalReason,
     };
   });
 }
