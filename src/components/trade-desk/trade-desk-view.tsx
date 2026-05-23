@@ -13,6 +13,7 @@ import type {
 export type TradeDeskData = OracleResult & {
   totalSymbols: number;
   gatedOut: number;
+  topSectors: string[];
 };
 
 // ─── Sentiment badge ──────────────────────────────────────────────────────────
@@ -208,8 +209,18 @@ function AllocationTable({ picks }: { picks: OraclePickResult[] }) {
 }
 
 // ─── Watchlist section ────────────────────────────────────────────────────────
-function WatchlistSection({ items }: { items: OracleWatchlistItem[] }) {
+function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[]; topSectors: string[] }) {
   if (items.length === 0) return null;
+
+  const topKeys = new Set(topSectors.map((s) => s.trim().toLowerCase()));
+  const isTop = (sector: string | null) =>
+    sector ? topKeys.has(sector.trim().toLowerCase()) : false;
+
+  const sorted = topKeys.size === 0 ? items : [
+    ...items.filter((i) => isTop(i.sector)),
+    ...items.filter((i) => !isTop(i.sector)),
+  ];
+
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
       <h3 className="mb-3 text-[14px] font-semibold text-[var(--ink-strong)]">
@@ -227,10 +238,16 @@ function WatchlistSection({ items }: { items: OracleWatchlistItem[] }) {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {sorted.map((item) => (
               <tr key={item.symbol} className="border-b border-[var(--line)]/40">
                 <td className="py-1.5 pr-4 font-semibold text-[var(--ink-strong)]">{item.symbol}</td>
-                <td className="py-1.5 pr-4 text-[var(--ink-muted)]">{item.sector ?? "—"}</td>
+                <td className="py-1.5 pr-4 text-[var(--ink-muted)]">
+                  {item.sector ? (
+                    <span className={isTop(item.sector) ? "font-medium text-[var(--accent-700)]" : ""}>
+                      {item.sector}
+                    </span>
+                  ) : "—"}
+                </td>
                 <td className="py-1.5 pr-4 tabular-nums text-[var(--ink-muted)]">{item.score}/100</td>
                 <td className="py-1.5 pr-4 tabular-nums">{fmtPrice(item.currentPrice)}</td>
                 <td className="py-1.5 text-[var(--ink-muted)]">{item.trigger}</td>
@@ -339,7 +356,7 @@ export function TradeDeskView({
         </>
       )}
 
-      <WatchlistSection items={data.watchlist} />
+      <WatchlistSection items={data.watchlist} topSectors={data.topSectors} />
       <AvoidedSection items={data.avoided} />
 
       <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">

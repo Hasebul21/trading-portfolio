@@ -392,7 +392,7 @@ export function computeSentiment(
   if (avgScore >= 60) {
     return { sentiment: "Neutral", reason: `${picksCount} picks with moderate conviction (avg ${Math.round(avgScore)}/100)` };
   }
-  return { sentiment: "Cautious", reason: "Low-conviction environment — consider waiting for better entry points" };
+  return { sentiment: "Neutral", reason: `${picksCount} picks with low-to-moderate conviction (avg ${Math.round(avgScore)}/100)` };
 }
 
 export const ORACLE_DISCLAIMER =

@@ -15,13 +15,19 @@ export const revalidate = 0;
 
 export default async function TradeDeskPage() {
   const supabase = await createClient();
-  const [lspRes, ltRes] = await Promise.all([
+  const [lspRes, ltRes, settingsRes] = await Promise.all([
     fetchDseLspQuoteMap(),
     supabase
       .from("long_term_holdings")
       .select("symbol")
       .order("symbol", { ascending: true }),
+    supabase.from("user_settings").select("top_sectors").maybeSingle(),
   ]);
+
+  const rawTopSectors = (settingsRes.data as { top_sectors?: unknown } | null)?.top_sectors;
+  const topSectors: string[] = Array.isArray(rawTopSectors)
+    ? rawTopSectors.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    : [];
 
   if (lspRes.error && lspRes.bySymbol.size === 0) {
     return (
@@ -90,6 +96,7 @@ export default async function TradeDeskPage() {
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: symbols.length,
     gatedOut: gateRejects.length,
+    topSectors,
   };
 
   return (

@@ -22,13 +22,19 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [lspRes, ltRes] = await Promise.all([
+  const [lspRes, ltRes, settingsRes] = await Promise.all([
     fetchDseLspQuoteMapFresh(),
     supabase
       .from("long_term_holdings")
       .select("symbol")
       .order("symbol", { ascending: true }),
+    supabase.from("user_settings").select("top_sectors").maybeSingle(),
   ]);
+
+  const rawTopSectors = (settingsRes.data as { top_sectors?: unknown } | null)?.top_sectors;
+  const topSectors: string[] = Array.isArray(rawTopSectors)
+    ? rawTopSectors.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    : [];
 
   const symbols = [
     ...new Set(
@@ -47,6 +53,7 @@ export async function GET() {
       disclaimer: ORACLE_DISCLAIMER,
       totalSymbols: symbols.length,
       gatedOut: 0,
+      topSectors,
     } satisfies TradeDeskData);
   }
 
@@ -88,5 +95,6 @@ export async function GET() {
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: symbols.length,
     gatedOut: gateRejects.length,
+    topSectors,
   } satisfies TradeDeskData);
 }
