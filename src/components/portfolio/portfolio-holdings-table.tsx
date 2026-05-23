@@ -659,7 +659,6 @@ function HoldingRow({
         Number.isFinite(row.marketLtp) &&
         row.marketLtp > row.breakEvenPrice;
     const ltpKnown = row.marketLtp !== null && Number.isFinite(row.marketLtp);
-    const mktValue = ltpKnown ? row.marketLtp! * row.shares : null;
     const plKnown = row.unrealizedPl !== null && Number.isFinite(row.unrealizedPl);
     const plPositive = plKnown && (row.unrealizedPl as number) >= 0;
     const plPct = plKnown && row.totalCost > 0
@@ -680,7 +679,7 @@ function HoldingRow({
 
     return (
         <div
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             {/* Symbol + shares */}
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
@@ -736,13 +735,6 @@ function HoldingRow({
                 )}
             </RowCell>
 
-            {/* Mkt value */}
-            <RowCell label="Mkt value">
-                <span className="tabular-nums text-[13px] text-[var(--ink-strong)]">
-                    {mktValue !== null ? formatBdt(mktValue) : "—"}
-                </span>
-            </RowCell>
-
             {/* Unrealized P/L */}
             <RowCell label="Unrealized P/L">
                 <div className={`text-[14px] tabular-nums ${plClass}`}>
@@ -764,7 +756,7 @@ function HoldingRow({
             {/* Hidden book-edit fields (shares + avg) — surfaced only in edit mode
  as a thin row underneath to keep the read view clean. */}
             {bookEditing ? (
-                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-7 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4">
+                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4">
                     <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] md:col-span-1">
                         Edit shares & avg
                     </div>
