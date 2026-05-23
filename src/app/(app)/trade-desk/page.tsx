@@ -2,6 +2,7 @@ import { AppPageStack } from "@/components/app-page-stack";
 import { TradeDeskView, type TradeDeskData } from "@/components/trade-desk/trade-desk-view";
 import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
+import { computeDiscoveryPicks } from "@/lib/market/discovery";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
@@ -102,6 +103,14 @@ export default async function TradeDeskPage() {
       );
     });
 
+  // Wider DSE scan — surface high-conviction names outside the user's
+  // watchlist/portfolio. Per-symbol fundamentals are cached 24h, so repeated
+  // refreshes mostly hit cache.
+  const { picks: discovery } = await computeDiscoveryPicks({
+    bySymbol: lspRes.bySymbol,
+    excludeSymbols: allSymbols,
+  });
+
   const payload: TradeDeskData = {
     generatedAt: new Date().toISOString(),
     sentiment,
@@ -110,6 +119,7 @@ export default async function TradeDeskPage() {
     watchlist,
     avoided: gateRejects,
     holdings: holdingAnalyses,
+    discovery,
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: watchlistSymbols.length,
     gatedOut: gateRejects.length,

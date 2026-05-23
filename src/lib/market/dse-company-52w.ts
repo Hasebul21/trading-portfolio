@@ -339,10 +339,31 @@ export async function fetchDseCompanyExtras(
 
 export async function fetchDseCompanyExtrasMap(
   symbols: string[],
+  options: { concurrency?: number } = {},
 ): Promise<Map<string, DseCompanyExtras>> {
   const uniqueSymbols = [...new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))];
-  const entries = await Promise.all(
-    uniqueSymbols.map(async (sym) => [sym, await fetchDseCompanyExtras(sym)] as const),
+  if (uniqueSymbols.length === 0) return new Map();
+
+  const out = new Map<string, DseCompanyExtras>();
+  // Default: no concurrency cap (preserves existing callers' behaviour). When
+  // scanning the full DSE universe pass e.g. `{ concurrency: 10 }` to avoid
+  // hammering the source with 400+ parallel HTTP requests.
+  const limit = Math.max(
+    1,
+    Math.min(options.concurrency ?? uniqueSymbols.length, uniqueSymbols.length),
   );
-  return new Map(entries);
+
+  let idx = 0;
+  await Promise.all(
+    Array.from({ length: limit }, async () => {
+      while (true) {
+        const my = idx++;
+        if (my >= uniqueSymbols.length) return;
+        const sym = uniqueSymbols[my]!;
+        const extras = await fetchDseCompanyExtras(sym);
+        out.set(sym, extras);
+      }
+    }),
+  );
+  return out;
 }

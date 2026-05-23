@@ -182,6 +182,7 @@ export type OracleResult = {
   watchlist: OracleWatchlistItem[];
   avoided: OracleGateReject[];
   holdings: OracleHoldingAnalysis[];
+  discovery: OraclePickResult[];
   disclaimer: string;
 };
 
@@ -691,3 +692,35 @@ export function computeSentiment(
 
 export const ORACLE_DISCLAIMER =
   "Algorithmic analysis only — not licensed investment advice. Graham Number and ROE are estimates from DSE-published data. DSE carries circuit-breaker, liquidity, political, and currency risk. Verify with your broker before acting.";
+
+// ─── Discovery selection ─────────────────────────────────────────────────────
+// Surface high-conviction names from outside the user's watchlist/portfolio.
+// One pick per sector keeps the slate diverse; we do NOT assign allocations
+// because these aren't owned/tracked yet — the user must opt-in by adding to
+// the Watchlist first.
+export const ORACLE_DISCOVERY_MIN_SCORE = 60;
+export const ORACLE_DISCOVERY_MAX = 6;
+export const ORACLE_DISCOVERY_SECTOR_CAP = 1;
+
+export function selectDiscoveryPicks(
+  scored: { symbol: string; score: number; sector: string | null; result: Omit<OraclePickResult, "allocationPct"> }[],
+  opts: { maxPicks?: number; sectorCap?: number; minScore?: number } = {},
+): OraclePickResult[] {
+  const maxPicks = opts.maxPicks ?? ORACLE_DISCOVERY_MAX;
+  const sectorCap = opts.sectorCap ?? ORACLE_DISCOVERY_SECTOR_CAP;
+  const minScore = opts.minScore ?? ORACLE_DISCOVERY_MIN_SCORE;
+
+  const sorted = [...scored].sort((a, b) => b.score - a.score);
+  const out: OraclePickResult[] = [];
+  const sectorCount: Record<string, number> = {};
+
+  for (const item of sorted) {
+    if (item.score < minScore) break;
+    const sk = item.sector?.toLowerCase() ?? "__unknown__";
+    if ((sectorCount[sk] ?? 0) >= sectorCap) continue;
+    sectorCount[sk] = (sectorCount[sk] ?? 0) + 1;
+    out.push({ ...item.result, allocationPct: 0 });
+    if (out.length >= maxPicks) break;
+  }
+  return out;
+}
