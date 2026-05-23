@@ -275,6 +275,32 @@ function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
   );
 }
 
+// ─── Watchlist entry prediction ──────────────────────────────────────────────
+/**
+ * BUY  — fundamentals support entering now even though the overall score
+ *         is below the picks threshold.
+ * WAIT — price or quality conditions aren't favourable yet; keep watching.
+ *
+ * Scoring (+points):
+ *   MoS ≥ 15%   +2  (significantly below Graham intrinsic value)
+ *   MoS > 0%    +1  (below Graham, any amount)
+ *   EY ≥ 9.5%   +1  (earnings yield beats Bangladesh risk-free)
+ *   ROE ≥ 15%   +1  (quality equity returns)
+ *   Score ≥ 50  +1  (close to the picks threshold)
+ *
+ *  ≥ 2 pts → BUY   |   < 2 pts → WAIT
+ */
+function watchlistPrediction(item: OracleWatchlistItem): "BUY" | "WAIT" {
+  const { marginOfSafety, earningsYield, roe } = item.advanced;
+  let pts = 0;
+  if (marginOfSafety !== null && marginOfSafety >= 15) pts += 2;
+  else if (marginOfSafety !== null && marginOfSafety > 0) pts += 1;
+  if (earningsYield !== null && earningsYield / 100 >= 0.095) pts += 1;
+  if (roe !== null && roe >= 15) pts += 1;
+  if (item.score >= 50) pts += 1;
+  return pts >= 2 ? "BUY" : "WAIT";
+}
+
 // ─── Sort icon ────────────────────────────────────────────────────────────────
 function SortIcon({ dir }: { dir: "desc" | "asc" }) {
   return dir === "desc"
@@ -316,7 +342,8 @@ function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[];
               <th className="pb-1.5 pr-3">Graham #</th>
               <th className="pb-1.5 pr-3">MoS%</th>
               <th className="pb-1.5 pr-3">EY%</th>
-              <th className="pb-1.5">ROE%</th>
+              <th className="pb-1.5 pr-3">ROE%</th>
+              <th className="pb-1.5">Predict</th>
             </tr>
           </thead>
           <tbody>
@@ -324,6 +351,7 @@ function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[];
               const adv = item.advanced;
               const mosPositive = adv.marginOfSafety !== null && adv.marginOfSafety > 0;
               const eyGood = adv.earningsYield !== null && adv.earningsYield / 100 >= 0.095;
+              const pred = watchlistPrediction(item);
               return (
                 <tr key={item.symbol} className="border-b border-[var(--line)]/40">
                   <td className="py-1.5 pr-3">
@@ -343,7 +371,16 @@ function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[];
                   <td className={`py-1.5 pr-3 tabular-nums font-medium ${eyGood ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>
                     {fmt(adv.earningsYield, "%")}
                   </td>
-                  <td className="py-1.5 tabular-nums text-[var(--ink-muted)]">{fmt(adv.roe, "%")}</td>
+                  <td className="py-1.5 pr-3 tabular-nums text-[var(--ink-muted)]">{fmt(adv.roe, "%")}</td>
+                  <td className="py-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      pred === "BUY"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {pred}
+                    </span>
+                  </td>
                 </tr>
               );
             })}
