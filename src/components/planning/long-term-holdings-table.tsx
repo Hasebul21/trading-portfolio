@@ -20,12 +20,24 @@ export type LongTermHoldingRow = {
     week52High?: number | null;
     /** Break-even cost from portfolio holdings (null if not held). */
     breakEvenPrice: number | null;
+    /** Manual invested override entered on the watchlist. */
+    manual_total_invested_bdt?: number | null;
+    /** Invested from the actual portfolio book (null if not held). */
+    portfolio_total_invested_bdt?: number | null;
     /** Optional alert targets for entry / exit signals. */
     buy_point_bdt?: number | null;
     sell_point_bdt?: number | null;
 };
 
-type Row = LongTermHoldingRow & { key: string };
+type Row = LongTermHoldingRow & {
+    key: string;
+    /** Effective invested for this row: manual override → portfolio book → 0. */
+    investedBdt: number;
+    /** This row's invested as a % of its sector's invested. */
+    pctOfSector: number;
+    /** This row's invested as a % of total watchlist invested. */
+    pctOfPortfolio: number;
+};
 type SectorGroup = {
     sector: string;
     items: Row[];
@@ -33,6 +45,14 @@ type SectorGroup = {
     buySignals: number;
     sellSignals: number;
 };
+
+function rowInvestedBdt(row: LongTermHoldingRow): number {
+    const m = row.manual_total_invested_bdt;
+    if (typeof m === "number" && Number.isFinite(m)) return m;
+    const p = row.portfolio_total_invested_bdt;
+    if (typeof p === "number" && Number.isFinite(p)) return p;
+    return 0;
+}
 
 const SECTOR_FALLBACK = "Unknown";
 
@@ -55,7 +75,16 @@ function isSellSignal(row: LongTermHoldingRow): boolean {
     return row.ltp >= row.sell_point_bdt;
 }
 
-type WatchlistSortKey = "default" | "ltp-asc" | "ltp-desc" | "fromlow-asc" | "fromlow-desc";
+type WatchlistSortKey =
+    | "default"
+    | "ltp-asc"
+    | "ltp-desc"
+    | "fromlow-asc"
+    | "fromlow-desc"
+    | "pct-sector-desc"
+    | "pct-sector-asc"
+    | "pct-portfolio-desc"
+    | "pct-portfolio-asc";
 
 const WATCHLIST_SORT_OPTIONS: Array<{ value: WatchlistSortKey; label: string }> = [
     { value: "default", label: "Default (symbol)" },
@@ -63,6 +92,10 @@ const WATCHLIST_SORT_OPTIONS: Array<{ value: WatchlistSortKey; label: string }> 
     { value: "ltp-asc", label: "LTP — low to high" },
     { value: "fromlow-desc", label: "From 52w low — high to low" },
     { value: "fromlow-asc", label: "From 52w low — low to high" },
+    { value: "pct-sector-desc", label: "% of sector — high to low" },
+    { value: "pct-sector-asc", label: "% of sector — low to high" },
+    { value: "pct-portfolio-desc", label: "% of portfolio — high to low" },
+    { value: "pct-portfolio-asc", label: "% of portfolio — low to high" },
 ];
 
 function fromLowPctValue(row: LongTermHoldingRow): number | null {
@@ -77,7 +110,11 @@ function applyWatchlistSort(items: Row[], key: WatchlistSortKey): Row[] {
     const dir = key.endsWith("-asc") ? 1 : -1;
     const pick: (r: Row) => number | null = key.startsWith("ltp")
         ? (r) => (r.ltp !== null && Number.isFinite(r.ltp) ? r.ltp : null)
-        : (r) => fromLowPctValue(r);
+        : key.startsWith("fromlow")
+            ? (r) => fromLowPctValue(r)
+            : key.startsWith("pct-sector")
+                ? (r) => (r.investedBdt > 0 ? r.pctOfSector : null)
+                : (r) => (r.investedBdt > 0 ? r.pctOfPortfolio : null);
     return items.slice().sort((a, b) => {
         const va = pick(a);
         const vb = pick(b);
@@ -109,12 +146,35 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
     }, [rows, searchText, sectorFilter]);
 
     const groups: SectorGroup[] = useMemo(() => {
+        // Pre-compute per-sector and total invested so each row carries its
+        // share percentages — used both for the symbol subline and the % sort.
+        const sectorInvested = new Map<string, number>();
+        let portfolioInvested = 0;
+        for (const r of filteredRows) {
+            const invested = rowInvestedBdt(r);
+            if (invested > 0) {
+                const skey = sectorLabel(r.sector);
+                sectorInvested.set(skey, (sectorInvested.get(skey) ?? 0) + invested);
+                portfolioInvested += invested;
+            }
+        }
+
         const bySector = new Map<string, Row[]>();
         for (const r of filteredRows) {
-            const key = sectorLabel(r.sector);
-            const list = bySector.get(key) ?? [];
-            list.push({ ...r, key: r.id });
-            bySector.set(key, list);
+            const skey = sectorLabel(r.sector);
+            const invested = rowInvestedBdt(r);
+            const sectorTotal = sectorInvested.get(skey) ?? 0;
+            const pctOfSector = sectorTotal > 0 ? (invested / sectorTotal) * 100 : 0;
+            const pctOfPortfolio = portfolioInvested > 0 ? (invested / portfolioInvested) * 100 : 0;
+            const list = bySector.get(skey) ?? [];
+            list.push({
+                ...r,
+                key: r.id,
+                investedBdt: invested,
+                pctOfSector,
+                pctOfPortfolio,
+            });
+            bySector.set(skey, list);
         }
         return Array.from(bySector.entries())
             .sort(([a], [b]) => {
@@ -319,9 +379,19 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                     title={dotTitle}
                     className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
                 />
-                <span className="font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
-                    {row.symbol}
-                </span>
+                <div className="flex min-w-0 flex-col">
+                    <span className="font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
+                        {row.symbol}
+                    </span>
+                    {row.investedBdt > 0 ? (
+                        <span
+                            className="text-[11px] tabular-nums text-[var(--ink-muted)]"
+                            title={`Invested ${formatBdt(row.investedBdt)} · ${row.pctOfPortfolio.toFixed(2)}% of watchlist · ${row.pctOfSector.toFixed(2)}% of sector`}
+                        >
+                            {row.pctOfPortfolio.toFixed(1)}% port · {row.pctOfSector.toFixed(1)}% sec
+                        </span>
+                    ) : null}
+                </div>
             </div>
 
             <RowCell label="Break-even">

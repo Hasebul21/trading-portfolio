@@ -114,7 +114,10 @@ export default async function LongTermPage() {
             buy_point_bdt: row.buy_point_bdt,
             sell_point_bdt: row.sell_point_bdt,
             manual_avg_cost_bdt: row.manual_avg_cost_bdt,
-            manual_total_invested_bdt: row.manual_total_invested_bdt,
+            manual_total_invested_bdt:
+                typeof row.manual_total_invested_bdt === "number"
+                    ? row.manual_total_invested_bdt
+                    : null,
             portfolio_avg_cost_bdt: h ? h.avgPrice : null,
             portfolio_total_invested_bdt: h ? h.totalCost : null,
             liveZones,
