@@ -266,7 +266,7 @@ function computeAdvancedMetrics(extras: DseCompanyExtras, ltp: number): Advanced
 // ─── Gate check ───────────────────────────────────────────────────────────────
 function checkGates(extras: DseCompanyExtras, ltp: number): GateReason | null {
   const cat = extras.category?.trim().toUpperCase() ?? null;
-  if (cat === "B" || cat === "Z") return "Non-A category";
+  if (cat === null || !(cat === "A" || cat.startsWith("A"))) return "Non-A category";
   if (extras.eps !== null && extras.eps <= 0) return "Loss-making (EPS ≤ 0)";
   if (extras.pe !== null && extras.pe > 50) return "Overvalued (P/E > 50)";
   if (extras.nav !== null && extras.nav < 0) return "Negative Book Value";

@@ -51,9 +51,9 @@ function ValuationBadge({ signal }: { signal: ValuationSignal | null }) {
 // Identifies where each card came from in the unified opportunity grid.
 type CardSource = "pick" | "holding" | "watch" | "discovery";
 const SOURCE_CFG: Record<CardSource, { label: string; cls: string }> = {
-  pick:      { label: "Top Pick",  cls: "bg-violet-100 text-violet-800 border-violet-300" },
-  holding:   { label: "Holding",   cls: "bg-blue-100 text-blue-800 border-blue-300" },
-  watch:     { label: "Watchlist", cls: "bg-slate-100 text-slate-700 border-slate-300" },
+  pick: { label: "Top Pick", cls: "bg-violet-100 text-violet-800 border-violet-300" },
+  holding: { label: "Holding", cls: "bg-blue-100 text-blue-800 border-blue-300" },
+  watch: { label: "Watchlist", cls: "bg-slate-100 text-slate-700 border-slate-300" },
   discovery: { label: "Discovery", cls: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300" },
 };
 function SourceBadge({ source }: { source: CardSource }) {
@@ -343,10 +343,10 @@ function watchlistPrediction(item: OracleWatchlistItem): "BUY" | "WAIT" {
 // ─── Holding signal config ────────────────────────────────────────────────────
 const SIGNAL_CFG: Record<HoldingSignal, { dot: string; label: string; text: string; cls: string }> = {
   "Strong Add": { dot: "bg-emerald-500", label: "Strong Add", text: "text-emerald-700", cls: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  "Add":        { dot: "bg-teal-500",    label: "Add",        text: "text-teal-700",    cls: "bg-teal-100 text-teal-800 border-teal-300" },
-  "Hold":       { dot: "bg-amber-500",   label: "Hold",       text: "text-amber-700",   cls: "bg-amber-100 text-amber-800 border-amber-300" },
-  "Trim":       { dot: "bg-orange-500",  label: "Trim",       text: "text-orange-700",  cls: "bg-orange-100 text-orange-800 border-orange-300" },
-  "Exit":       { dot: "bg-red-500",     label: "Exit",       text: "text-red-700",     cls: "bg-red-100 text-red-800 border-red-300" },
+  "Add": { dot: "bg-teal-500", label: "Add", text: "text-teal-700", cls: "bg-teal-100 text-teal-800 border-teal-300" },
+  "Hold": { dot: "bg-amber-500", label: "Hold", text: "text-amber-700", cls: "bg-amber-100 text-amber-800 border-amber-300" },
+  "Trim": { dot: "bg-orange-500", label: "Trim", text: "text-orange-700", cls: "bg-orange-100 text-orange-800 border-orange-300" },
+  "Exit": { dot: "bg-red-500", label: "Exit", text: "text-red-700", cls: "bg-red-100 text-red-800 border-red-300" },
 };
 
 // ─── Holding card ─────────────────────────────────────────────────────────────
@@ -532,14 +532,14 @@ function buildUnifiedItems(data: TradeDeskData): UnifiedItem[] {
       bySymbol.set(next.symbol, next);
     }
   };
-  for (const p of data.picks)     consider({ kind: "pick",      symbol: p.symbol, score: p.score, data: p });
-  for (const h of data.holdings)  consider({ kind: "holding",   symbol: h.symbol, score: h.score, data: h });
+  for (const p of data.picks) consider({ kind: "pick", symbol: p.symbol, score: p.score, data: p });
+  for (const h of data.holdings) consider({ kind: "holding", symbol: h.symbol, score: h.score, data: h });
   for (const d of data.discovery) consider({ kind: "discovery", symbol: d.symbol, score: d.score, data: d });
-  for (const w of data.watchlist) consider({ kind: "watch",     symbol: w.symbol, score: w.score, data: w });
+  for (const w of data.watchlist) consider({ kind: "watch", symbol: w.symbol, score: w.score, data: w });
   return [...bySymbol.values()].sort((a, b) => b.score - a.score);
 }
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 9;
 
 export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
   const [data, setData] = useState<TradeDeskData>(initialData);
