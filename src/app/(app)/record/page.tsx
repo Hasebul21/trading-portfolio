@@ -15,7 +15,7 @@ export default async function RecordPage() {
  const recentRows = filterTransactionsLastNDays(txRes.rows, 30);
 
  return (
- <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-xl text-left">
+ <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-3xl text-left">
  <RecordForm instruments={instruments} instrumentsError={error} />
 
  {/*

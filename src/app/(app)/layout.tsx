@@ -1,6 +1,7 @@
 import { AppShellNav } from "@/components/app-shell-nav";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TopSectorsStrip } from "@/components/top-sectors-strip";
 import { AntdAppProvider } from "./antd-app-provider";
 import { signOut } from "./actions";
 
@@ -47,6 +48,8 @@ export default function AppLayout({
             </div>
           </div>
         </header>
+
+        <TopSectorsStrip />
 
         <main className="app-main relative mx-auto w-full min-w-0 max-w-[min(100%,1400px)] flex-1 px-4 py-6 pb-10 text-left text-[14px] leading-relaxed text-[var(--ink-default)] sm:px-6 sm:py-8 lg:px-8">
           {children}

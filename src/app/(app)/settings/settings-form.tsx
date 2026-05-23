@@ -7,10 +7,11 @@ import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
+import { TopSectorsForm } from "./top-sectors-form";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
 
-type TabKey = "profile" | "email" | "password" | "targets" | "cash";
+type TabKey = "profile" | "email" | "password" | "targets" | "top-sectors" | "cash";
 
 export function SettingsForm({
  initialSettings,
@@ -374,6 +375,16 @@ export function SettingsForm({
  />
  ) : (
  <SectorTargetsForm initialRows={initialSectorTargets} />
+ ),
+ },
+ {
+ key: "top-sectors",
+ label: "Top sectors",
+ children: (
+ <TopSectorsForm
+ initialSectors={initialSettings.top_sectors}
+ suggestions={initialSectorTargets.map((r) => r.sector)}
+ />
  ),
  },
  {

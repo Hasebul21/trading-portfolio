@@ -18,8 +18,29 @@ export type UserSettings = {
   full_name: string | null;
   trade_commission_rate: number | null;
   currency: string;
+  top_sectors: string[];
   updated_at: string;
 };
+
+const TOP_SECTORS_MAX = 8;
+const TOP_SECTOR_LABEL_MAX = 60;
+
+function sanitizeTopSectors(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const label = item.trim().replace(/\s+/g, " ").slice(0, TOP_SECTOR_LABEL_MAX);
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+    if (out.length >= TOP_SECTORS_MAX) break;
+  }
+  return out;
+}
 
 export async function getUserSettings(): Promise<{
   ok: true;
@@ -36,7 +57,7 @@ export async function getUserSettings(): Promise<{
 
   const { data, error } = await supabase
     .from("user_settings")
-    .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, updated_at")
+    .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, updated_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -51,14 +72,49 @@ export async function getUserSettings(): Promise<{
         portfolio_report_email: "hasebulhassan21@gmail.com",
         currency: "BDT",
       })
-      .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, updated_at")
+      .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, updated_at")
       .single();
 
     if (createError) return { ok: false, error: createError.message };
-    return { ok: true, settings: created as UserSettings };
+    const c = created as Record<string, unknown>;
+    return {
+      ok: true,
+      settings: { ...(created as UserSettings), top_sectors: sanitizeTopSectors(c.top_sectors) },
+    };
   }
 
-  return { ok: true, settings: data as UserSettings };
+  const d = data as Record<string, unknown>;
+  return {
+    ok: true,
+    settings: { ...(data as UserSettings), top_sectors: sanitizeTopSectors(d.top_sectors) },
+  };
+}
+
+export async function updateTopSectors(
+  sectors: ReadonlyArray<string>,
+): Promise<{ ok: true; top_sectors: string[] } | { ok: false; error: string }> {
+  const clean = sanitizeTopSectors(sectors);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("user_settings")
+    .update({ top_sectors: clean, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/portfolio");
+  revalidatePath("/record");
+  revalidatePath("/long-term");
+  revalidatePath("/allocation");
+  revalidatePath("/trade-history");
+  revalidatePath("/settings");
+  return { ok: true, top_sectors: clean };
 }
 
 export async function updatePortfolioReportEmail(

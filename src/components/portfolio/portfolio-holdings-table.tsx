@@ -203,7 +203,12 @@ export function PortfolioHoldingsTable({
     // we honour any rounding/aggregation done server-side; while editing, fall
     // back to the rows-derived total which reflects the draft.
     const totalInvestedDisplay = bookEditing ? summary.totalInvested : totalInvestedBdt;
-    const totalUnrealized = summary.unrealizedGainLoss;
+    // Cash adjustments (Settings → Cash adjustments) flow directly into the
+    // Unrealized P/L card so deposits/dividends/withdrawals visibly nudge the
+    // headline number on the portfolio page. Per-position rows and the sector
+    // banner keep using mark-to-market only.
+    const positionsUnrealized = summary.unrealizedGainLoss;
+    const totalUnrealized = positionsUnrealized + summary.cashAdjustments;
     const totalUnrealizedPct =
         totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
     const positionCount = displayHoldings.length;
@@ -361,6 +366,11 @@ export function PortfolioHoldingsTable({
                             {fmtPct(totalUnrealizedPct)}
                         </span>
                     </span>
+                    {summary.cashAdjustments !== 0 ? (
+                        <div className="mt-0.5 text-[11px] font-normal text-[var(--ink-muted)] tabular-nums">
+                            incl. cash adj. {fmtSignedBdt(summary.cashAdjustments)}
+                        </div>
+                    ) : null}
                 </KpiCell>
                 <KpiCell label="Positions">
                     <span className="tabular-nums">{positionCount}</span>

@@ -22,6 +22,11 @@ const TABS: MobileTab[] = [
         icon: <TransactionsIcon />,
     },
     {
+        href: "/long-term",
+        label: "Watchlist",
+        icon: <WatchlistIcon />,
+    },
+    {
         href: "/allocation",
         label: "Allocation",
         icon: <AllocationIcon />,
@@ -121,6 +126,23 @@ function TransactionsIcon() {
             <path d="m13 4 3 3-3 3" />
             <path d="M20 17H7" />
             <path d="m11 14-3 3 3 3" />
+        </svg>
+    );
+}
+
+function WatchlistIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-full w-full"
+        >
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+            <circle cx="12" cy="12" r="3" />
         </svg>
     );
 }

@@ -143,7 +143,7 @@ export function CashAdjustmentsForm({
  render: (_, row) => (
  <Popconfirm
  title="Delete this entry?"
- description="It will be removed from your Net Gain/Loss."
+ description="It will be removed from the Unrealized P/L on the Portfolio page (and from Net Gain/Loss)."
  okText="Delete"
  okButtonProps={{ danger: true }}
  cancelText="Cancel"
@@ -168,8 +168,10 @@ export function CashAdjustmentsForm({
  <div>
  <h3 className="text-[14px] text-[var(--ink-strong)]">Add or deduct money</h3>
  <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
- Positive entries add to Net Gain/Loss (e.g. dividends, refunds).
- Negative entries deduct (e.g. withdrawals, external losses).
+ Positive entries add to the Unrealized P/L shown on the
+ Portfolio page (e.g. dividends, refunds). Negative entries
+ deduct (e.g. withdrawals, external losses). Each entry also
+ flows into your overall Net Gain/Loss.
  </p>
  </div>
 
@@ -245,7 +247,7 @@ export function CashAdjustmentsForm({
  disabled={saving || amount === null || !(amount > 0)}
  onClick={() => void handleSave()}
  >
- {kind === "add" ? "Add to Net G/L" : "Deduct from Net G/L"}
+ {kind === "add" ? "Add to Unrealized P/L" : "Deduct from Unrealized P/L"}
  </Button>
 
  {saveError && <Alert type="error" showIcon message="Error" description={saveError} />}

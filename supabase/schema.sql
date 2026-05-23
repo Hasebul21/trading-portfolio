@@ -534,6 +534,9 @@ create table if not exists public.user_settings (
   updated_at timestamptz not null default now()
 );
 
+alter table public.user_settings
+  add column if not exists top_sectors text[] not null default '{}'::text[];
+
 create index if not exists user_settings_user_id_idx on public.user_settings (user_id);
 
 alter table public.user_settings enable row level security;
