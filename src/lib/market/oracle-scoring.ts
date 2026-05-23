@@ -20,8 +20,8 @@ const W_BETA = 7;
 const W_CATEGORY = 5;
 // W_PE + W_PNAV + W_DIVYIELD + W_52W + W_DIVCONSISTENCY + W_LISTAGE + W_BETA + W_CATEGORY = 100
 
-export const ORACLE_THRESHOLD = 65;
-export const ORACLE_WATCHLIST_MIN = 45;
+export const ORACLE_THRESHOLD = 35;
+export const ORACLE_WATCHLIST_MIN = 25;
 const MAX_PICKS = 8;
 const SECTOR_CAP = 2;
 

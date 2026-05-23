@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
-import { fetchUserHoldings } from "@/lib/holdings";
 import {
   computeOracleScore,
   rankAndSelect,
@@ -14,6 +13,8 @@ import type { TradeDeskData } from "@/components/trade-desk/trade-desk-view";
 
 export const dynamic = "force-dynamic";
 
+const MAX_UNIVERSE = 250;
+
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -23,39 +24,23 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [holdingsRes, lspRes, ltRes] = await Promise.all([
-    fetchUserHoldings(),
-    fetchDseLspQuoteMapFresh(),
-    supabase
-      .from("long_term_holdings")
-      .select("symbol")
-      .order("symbol", { ascending: true }),
-  ]);
+  const lspRes = await fetchDseLspQuoteMapFresh();
 
-  const symbolSet = new Set<string>();
-  for (const h of holdingsRes.holdings) {
-    symbolSet.add(h.symbol.trim().toUpperCase());
-  }
-  for (const row of ltRes.data ?? []) {
-    symbolSet.add(String(row.symbol).trim().toUpperCase());
-  }
-
-  const symbols = [...symbolSet];
-  if (symbols.length === 0) {
-    const empty: TradeDeskData = {
+  if (lspRes.bySymbol.size === 0) {
+    return NextResponse.json({
       generatedAt: new Date().toISOString(),
       sentiment: "Neutral",
-      sentimentReason: "No symbols found",
+      sentimentReason: lspRes.error ?? "No DSE price data available",
       picks: [],
       watchlist: [],
       avoided: [],
       disclaimer: ORACLE_DISCLAIMER,
       totalSymbols: 0,
       gatedOut: 0,
-    };
-    return NextResponse.json(empty);
+    } satisfies TradeDeskData);
   }
 
+  const symbols = [...lspRes.bySymbol.keys()].sort().slice(0, MAX_UNIVERSE);
   const extrasMap = await fetchDseCompanyExtrasMap(symbols);
 
   const scored: Parameters<typeof rankAndSelect>[0] = [];
@@ -64,7 +49,7 @@ export async function GET() {
   for (const sym of symbols) {
     const extras = extrasMap.get(sym);
     const quote = lspRes.bySymbol.get(sym) ?? null;
-    if (!extras) continue;
+    if (!extras || !quote) continue;
 
     const result = computeOracleScore(sym, extras, quote);
     if (result.type === "gate") {
@@ -81,9 +66,7 @@ export async function GET() {
 
   const { picks, watchlist } = rankAndSelect(scored);
   const avgScore =
-    picks.length > 0
-      ? picks.reduce((s, p) => s + p.score, 0) / picks.length
-      : 0;
+    picks.length > 0 ? picks.reduce((s, p) => s + p.score, 0) / picks.length : 0;
   const { sentiment, reason: sentimentReason } = computeSentiment(picks.length, avgScore);
 
   const payload: TradeDeskData = {
