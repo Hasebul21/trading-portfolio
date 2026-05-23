@@ -354,6 +354,17 @@ function SectorBreakdown({
  );
 }
 
+type SortKey = "sector" | "portfolio";
+type SortDir = "desc" | "asc";
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+ return (
+ <span className={`ml-0.5 inline-block leading-none ${active ? "text-[var(--accent-700)]" : "opacity-40"}`}>
+ {dir === "desc" ? "↓" : "↑"}
+ </span>
+ );
+}
+
 function SectorCard({
  slice,
  portfolioTotal,
@@ -361,6 +372,27 @@ function SectorCard({
  slice: SectorSlice;
  portfolioTotal: number;
 }) {
+ const [sortKey, setSortKey] = useState<SortKey>("portfolio");
+ const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+ function handleSort(key: SortKey) {
+ if (sortKey === key) {
+ setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+ } else {
+ setSortKey(key);
+ setSortDir("desc");
+ }
+ }
+
+ const sortedHoldings = useMemo(() => {
+ return [...slice.holdings].sort((a, b) => {
+ // Both % sector and % portfolio are proportional to totalCost within a
+ // card, so the ranking is the same — but we still honour asc/desc.
+ const diff = b.totalCost - a.totalCost;
+ return sortDir === "desc" ? diff : -diff;
+ });
+ }, [slice.holdings, sortDir]);
+
  return (
  <article className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--bg-surface)]">
  <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3">
@@ -394,13 +426,29 @@ function SectorCard({
  </th>
  <th className="px-2 py-2 text-right font-normal">Invested</th>
  <th className="hidden px-2 py-2 text-right font-normal sm:table-cell">
+ <button
+ type="button"
+ onClick={() => handleSort("sector")}
+ className="cursor-pointer select-none hover:text-[var(--ink-strong)]"
+ >
  % sector
+ <SortIcon active={sortKey === "sector"} dir={sortDir} />
+ </button>
  </th>
- <th className="px-4 py-2 text-right font-normal">% portfolio</th>
+ <th className="px-4 py-2 text-right font-normal">
+ <button
+ type="button"
+ onClick={() => handleSort("portfolio")}
+ className="cursor-pointer select-none hover:text-[var(--ink-strong)]"
+ >
+ % portfolio
+ <SortIcon active={sortKey === "portfolio"} dir={sortDir} />
+ </button>
+ </th>
  </tr>
  </thead>
  <tbody>
- {slice.holdings.map((h) => {
+ {sortedHoldings.map((h) => {
  const sectorShare =
  slice.investedBdt > 0
  ? (h.totalCost / slice.investedBdt) * 100
