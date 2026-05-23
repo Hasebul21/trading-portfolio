@@ -230,8 +230,12 @@ function PickCard({ pick, source }: { pick: OraclePickResult; source: "pick" | "
       {/* Price snapshot */}
       <div className="mt-3 grid grid-cols-3 gap-2 text-[11.5px]">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP</p>
-          <p className="font-semibold text-[var(--ink-strong)]">{fmtPrice(pick.currentPrice)}</p>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Dividend</p>
+          <p className="font-semibold text-[var(--ink-strong)]">
+            {pick.divYieldPct !== null && pick.divYieldPct > 0
+              ? `${fmtPrice((pick.divYieldPct / 100) * pick.currentPrice)}/sh`
+              : "—"}
+          </p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Buy zone</p>
@@ -388,10 +392,14 @@ function HoldingCard({ holding }: { holding: OracleHoldingAnalysis }) {
       {/* Position snapshot */}
       <div className="mt-3 grid grid-cols-3 gap-2 text-[11.5px]">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP / Avg</p>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Avg / Div</p>
           <p className="font-semibold text-[var(--ink-strong)]">
-            {fmtPrice(holding.currentPrice)}
-            <span className="ml-1 text-[var(--ink-muted)]">/ {fmtPrice(holding.avgCost)}</span>
+            {fmtPrice(holding.avgCost)}
+            <span className="ml-1 text-[var(--ink-muted)]">
+              / {holding.divYieldPct !== null && holding.divYieldPct > 0 && holding.currentPrice !== null
+                ? fmtPrice((holding.divYieldPct / 100) * holding.currentPrice)
+                : "—"}
+            </span>
           </p>
         </div>
         <div>
@@ -464,8 +472,12 @@ function WatchCard({ item }: { item: OracleWatchlistItem }) {
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-[11.5px]">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP</p>
-          <p className="font-semibold text-[var(--ink-strong)]">{fmtPrice(item.currentPrice)}</p>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Dividend</p>
+          <p className="font-semibold text-[var(--ink-strong)]">
+            {item.divYieldPct !== null && item.divYieldPct > 0
+              ? `${fmtPrice((item.divYieldPct / 100) * item.currentPrice)}/sh`
+              : "—"}
+          </p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Graham #</p>

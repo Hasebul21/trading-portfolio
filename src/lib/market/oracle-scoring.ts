@@ -145,6 +145,7 @@ export type OracleWatchlistItem = {
   sector: string | null;
   score: number;
   currentPrice: number;
+  divYieldPct: number | null;
   trigger: string;
   advanced: Pick<AdvancedMetrics, "grahamNumber" | "marginOfSafety" | "earningsYield" | "roe">;
 };
@@ -169,6 +170,7 @@ export type OracleHoldingAnalysis = {
   unrealizedPL: number | null;
   unrealizedPLPct: number | null;
   distanceFromBreakEven: number | null;
+  divYieldPct: number | null;
   signal: HoldingSignal;
   signalReason: string;
   advanced: Partial<AdvancedMetrics>;
@@ -590,6 +592,7 @@ export function computeHoldingAnalysis(
     unrealizedPL,
     unrealizedPLPct,
     distanceFromBreakEven: distanceFromBE,
+    divYieldPct: extras.dividendYieldPct,
     signal,
     signalReason,
     advanced: adv,
@@ -666,6 +669,7 @@ export function rankAndSelect(
       sector: item.sector,
       score: item.score,
       currentPrice: item.result.currentPrice,
+      divYieldPct: item.result.divYieldPct,
       trigger,
       advanced: {
         grahamNumber: adv.grahamNumber,
