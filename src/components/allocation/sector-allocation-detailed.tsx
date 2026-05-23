@@ -229,10 +229,6 @@ function DonutCard({ slices }: { slices: SectorSlice[] }) {
  <h2 className="text-[12px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
  Current vs target
  </h2>
- <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
- Inner ring is actual share of invested capital. Outer ring is the
- target from Settings.
- </p>
  </header>
 
  <div className="my-6 flex items-center justify-center">

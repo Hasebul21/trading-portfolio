@@ -23,9 +23,6 @@ export default async function SettingsPage() {
  <h1 className="mt-1 text-[26px] leading-tight tracking-tight text-[var(--ink-strong)]">
  Account & preferences
  </h1>
- <p className="mt-1 text-[13px] text-[var(--ink-muted)]">
- Manage your profile, sector targets, cash adjustments, and reports.
- </p>
  </header>
 
  {settingsRes.ok ? (
