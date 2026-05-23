@@ -100,6 +100,7 @@ export default async function TradeDeskPage() {
           sector: item.sector,
           score: item.score,
           currentPrice: item.result.currentPrice,
+          divYieldPct: item.result.divYieldPct,
           trigger: `Score ${item.score}/100 · top ${TOP_RANKED_LIMIT} DSE-wide`,
           advanced: {
             grahamNumber: item.result.advanced.grahamNumber,
@@ -131,6 +132,7 @@ export default async function TradeDeskPage() {
           avgCost: h.avgPrice, breakEven: h.breakEvenPrice, shares: h.shares,
           currentValue: quote ? Math.round(quote.ltp * h.shares * 100) / 100 : null,
           unrealizedPL: null, unrealizedPLPct: null, distanceFromBreakEven: null,
+          divYieldPct: null,
           signal: "Hold" as const, signalReason: "No fundamental data available",
           advanced: {},
         };
