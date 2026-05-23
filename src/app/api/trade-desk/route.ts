@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
-import { computeDiscoveryPicks } from "@/lib/market/discovery";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
   computeOracleScore,
@@ -48,7 +47,6 @@ export async function GET() {
       watchlist: [],
       avoided: [],
       holdings: [],
-      discovery: [],
       disclaimer: ORACLE_DISCLAIMER,
       totalSymbols: watchlistSymbols.length,
       gatedOut: 0,
@@ -63,7 +61,7 @@ export async function GET() {
 
   for (const sym of watchlistSymbols) {
     const extras = extrasMap.get(sym);
-    const quote  = lspRes.bySymbol.get(sym) ?? null;
+    const quote = lspRes.bySymbol.get(sym) ?? null;
     if (!extras || !quote) continue;
 
     const result = computeOracleScore(sym, extras, quote);
@@ -81,9 +79,9 @@ export async function GET() {
   const holdingAnalyses: OracleHoldingAnalysis[] = holdingsRes.holdings
     .filter((h) => h.shares > 0)
     .map((h) => {
-      const sym    = h.symbol.trim().toUpperCase();
+      const sym = h.symbol.trim().toUpperCase();
       const extras = extrasMap.get(sym);
-      const quote  = lspRes.bySymbol.get(sym) ?? null;
+      const quote = lspRes.bySymbol.get(sym) ?? null;
       if (!extras) {
         return {
           symbol: sym, sector: null, score: 0, currentPrice: quote?.ltp ?? null,
@@ -101,11 +99,6 @@ export async function GET() {
       );
     });
 
-  const { picks: discovery } = await computeDiscoveryPicks({
-    bySymbol: lspRes.bySymbol,
-    excludeSymbols: allSymbols,
-  });
-
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     sentiment,
@@ -114,7 +107,6 @@ export async function GET() {
     watchlist,
     avoided: gateRejects,
     holdings: holdingAnalyses,
-    discovery,
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: watchlistSymbols.length,
     gatedOut: gateRejects.length,

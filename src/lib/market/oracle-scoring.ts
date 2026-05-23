@@ -182,7 +182,6 @@ export type OracleResult = {
   watchlist: OracleWatchlistItem[];
   avoided: OracleGateReject[];
   holdings: OracleHoldingAnalysis[];
-  discovery: OraclePickResult[];
   disclaimer: string;
 };
 

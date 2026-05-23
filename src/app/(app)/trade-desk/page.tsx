@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { AppPageStack } from "@/components/app-page-stack";
 import { TradeDeskView, type TradeDeskData } from "@/components/trade-desk/trade-desk-view";
+import { DiscoveryAsync } from "@/components/trade-desk/discovery-async";
+import { DiscoverySkeleton } from "@/components/trade-desk/discovery-section";
 import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
-import { computeDiscoveryPicks } from "@/lib/market/discovery";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
@@ -64,7 +66,7 @@ export default async function TradeDeskPage() {
 
   for (const sym of watchlistSymbols) {
     const extras = extrasMap.get(sym);
-    const quote  = lspRes.bySymbol.get(sym) ?? null;
+    const quote = lspRes.bySymbol.get(sym) ?? null;
     if (!extras || !quote) continue;
 
     const result = computeOracleScore(sym, extras, quote);
@@ -83,9 +85,9 @@ export default async function TradeDeskPage() {
   const holdingAnalyses: OracleHoldingAnalysis[] = holdingsRes.holdings
     .filter((h) => h.shares > 0)
     .map((h) => {
-      const sym    = h.symbol.trim().toUpperCase();
+      const sym = h.symbol.trim().toUpperCase();
       const extras = extrasMap.get(sym);
-      const quote  = lspRes.bySymbol.get(sym) ?? null;
+      const quote = lspRes.bySymbol.get(sym) ?? null;
       if (!extras) {
         return {
           symbol: sym, sector: null, score: 0, currentPrice: quote?.ltp ?? null,
@@ -103,14 +105,6 @@ export default async function TradeDeskPage() {
       );
     });
 
-  // Wider DSE scan — surface high-conviction names outside the user's
-  // watchlist/portfolio. Per-symbol fundamentals are cached 24h, so repeated
-  // refreshes mostly hit cache.
-  const { picks: discovery } = await computeDiscoveryPicks({
-    bySymbol: lspRes.bySymbol,
-    excludeSymbols: allSymbols,
-  });
-
   const payload: TradeDeskData = {
     generatedAt: new Date().toISOString(),
     sentiment,
@@ -119,7 +113,6 @@ export default async function TradeDeskPage() {
     watchlist,
     avoided: gateRejects,
     holdings: holdingAnalyses,
-    discovery,
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: watchlistSymbols.length,
     gatedOut: gateRejects.length,
@@ -131,6 +124,15 @@ export default async function TradeDeskPage() {
   return (
     <AppPageStack gapClass="gap-3 sm:gap-4" className="mx-auto w-full min-w-0 max-w-7xl text-left">
       <TradeDeskView initialData={payload} />
+      {/* Wider DSE scan streams in independently so it never blocks the main
+          view. Per-symbol fundamentals are cached 24h via "use cache". */}
+      <Suspense fallback={<DiscoverySkeleton />}>
+        <DiscoveryAsync
+          bySymbol={lspRes.bySymbol}
+          excludeSymbols={allSymbols}
+          topSectors={topSectors}
+        />
+      </Suspense>
     </AppPageStack>
   );
 }
