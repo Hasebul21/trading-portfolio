@@ -29,16 +29,20 @@ function parseTextCell(raw: string): string | null {
   return text;
 }
 
+/**
+ * Find the first numeric <td> value immediately after a <th> or <td> whose
+ * text contains the label. Uses [\s\S]*? so labels with <br> tags still match.
+ */
 function parseNumericField(html: string, ...labelPatterns: string[]): number | null {
   for (const label of labelPatterns) {
     const re = new RegExp(
-      label + `[^<]*<\\/(?:th|td)>\\s*<td[^>]*>\\s*([^<]+?)<\\/td>`,
+      `${label}[\\s\\S]*?<\\/(?:th|td)>\\s*<td[^>]*>\\s*([^<]+?)\\s*<\\/td>`,
       "i",
     );
     const m = html.match(re);
     if (!m) continue;
     const raw = m[1].replace(/,/g, "").replace(/%/g, "").trim();
-    if (!raw || /^(n\/a|--|—)$/i.test(raw)) continue;
+    if (!raw || /^(n\/a|--|—|\*+)$/i.test(raw)) continue;
     const n = Number(raw);
     if (Number.isFinite(n)) return n;
   }
@@ -48,7 +52,7 @@ function parseNumericField(html: string, ...labelPatterns: string[]): number | n
 function parseTextField(html: string, ...labelPatterns: string[]): string | null {
   for (const label of labelPatterns) {
     const re = new RegExp(
-      label + `[^<]*<\\/(?:th|td)>\\s*<td[^>]*>\\s*([\\s\\S]*?)<\\/td>`,
+      `${label}[\\s\\S]*?<\\/(?:th|td)>\\s*<td[^>]*>\\s*([\\s\\S]*?)<\\/td>`,
       "i",
     );
     const m = html.match(re);
@@ -119,29 +123,92 @@ export type DseCompanyExtras = {
 };
 
 function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week52Low" | "week52High" | "sector"> {
-  const pe = parseNumericField(html, "P\\/E Ratio", "P\\/E", "PE Ratio");
-  const eps = parseNumericField(html, "EPS", "Earnings Per Share");
-  const nav = parseNumericField(html, "NAV Per Share", "NAV\\/Share", "NAV");
-  const category = parseTextField(html, "Category");
-  const freeFloat = parseNumericField(html, "Free Float", "Float");
-  const betaFloat = parseNumericField(html, "Beta");
-  const dividendYieldPct = parseNumericField(html, "Dividend Yield", "Div\\. Yield", "Yield");
+  // P/E — label on DSE contains a <br> tag, so [\s\S]*? in parseNumericField handles it
+  const pe = parseNumericField(
+    html,
+    "Current P\\/E Ratio using Basic EPS",
+    "P\\/E Ratio",
+    "P\\/E",
+  );
 
-  // Market cap: listed as crore or full BDT; normalise to crore
-  const rawMcap = parseNumericField(html, "Market Capitalization", "Market Cap");
-  const marketCapCr = rawMcap !== null
-    ? rawMcap > 1e7 ? rawMcap / 1e7 : rawMcap  // if looks like full BDT, convert to crore
-    : null;
+  // EPS — from Financial Performance table; first td = most recent year
+  const eps = parseNumericField(
+    html,
+    "Earnings per share\\(EPS\\)",
+    "EPS - Continuing Operations",
+    "Earnings Per Share",
+    "EPS",
+  );
 
-  // Listed date
-  const listedDateStr = parseTextField(html, "Listed Since", "Listing Date", "Date of Listing");
-  const listedYears = listedDateStr ? yearsAgo(listedDateStr) : null;
+  // NAV Per Share — from Financial Performance table
+  const nav = parseNumericField(html, "NAV Per Share", "NAV\\/Share");
 
-  // Last AGM
-  const agmDateStr = parseTextField(html, "Last AGM", "AGM Date");
-  const lastAgmMonthsAgo = agmDateStr ? monthsAgo(agmDateStr) : null;
+  // Market Category: "Market Category" label in a table row
+  const category = parseTextField(html, "Market Category", "Category");
 
-  return { pe, eps, nav, category, freeFloat, betaFloat, dividendYieldPct, marketCapCr, listedYears, lastAgmMonthsAgo };
+  // Dividend Yield in % — from Financial Performance table, most recent year
+  const dividendYieldPct = parseNumericField(
+    html,
+    "Dividend Yield in %",
+    "Dividend Yield",
+  );
+
+  // Market Capitalization (mn) — convert mn BDT → crore BDT (1 crore = 10 mn)
+  const mcapMn = parseNumericField(
+    html,
+    "Market Capitalization \\(mn\\)",
+    "Market Capitalization",
+  );
+  const marketCapCr = mcapMn !== null ? mcapMn / 10 : null;
+
+  // Free Float as % = Free Float Market Cap (mn) / Market Cap (mn) × 100
+  const freeFloatMcapMn = parseNumericField(
+    html,
+    "Free Float Market Cap\\. \\(mn\\)",
+    "Free Float Market Cap",
+  );
+  const freeFloat =
+    freeFloatMcapMn !== null && mcapMn !== null && mcapMn > 0
+      ? (freeFloatMcapMn / mcapMn) * 100
+      : null;
+
+  // Listing Year — DSE shows just the year (e.g. "1995")
+  const listingYearStr = parseTextField(html, "Listing Year", "Listed Since", "Date of Listing");
+  let listedYears: number | null = null;
+  if (listingYearStr) {
+    const yr = Number(listingYearStr.replace(/\D/g, ""));
+    if (yr > 1970 && yr <= new Date().getFullYear()) {
+      listedYears = new Date().getFullYear() - yr;
+    } else {
+      listedYears = yearsAgo(listingYearStr);
+    }
+  }
+
+  // Last AGM: "Last AGM held on: <i>DD-MM-YYYY</i>"
+  let lastAgmMonthsAgo: number | null = null;
+  const agmMatch = html.match(/Last\s+AGM\s+held\s+on\s*:\s*<[^>]+>\s*([^<]+?)\s*<\/[^>]+>/i);
+  if (agmMatch) {
+    const raw = agmMatch[1].trim();
+    // DSE date format: DD-MM-YYYY
+    const parts = raw.split(/[-\/]/);
+    if (parts.length === 3) {
+      const [d, mo, yr] = parts;
+      const dt = new Date(`${yr}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`);
+      if (Number.isFinite(dt.getTime())) {
+        lastAgmMonthsAgo = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+      }
+    }
+    if (lastAgmMonthsAgo === null) {
+      // Fallback: generic date parse
+      lastAgmMonthsAgo = monthsAgo(raw);
+    }
+  }
+
+  // Beta not published by DSE; always null
+  return {
+    pe, eps, nav, category, freeFloat, betaFloat: null,
+    dividendYieldPct, marketCapCr, listedYears, lastAgmMonthsAgo,
+  };
 }
 
 export const fetchDseCompanyExtras = cache(async (

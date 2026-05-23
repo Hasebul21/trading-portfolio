@@ -180,34 +180,6 @@ function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
 }
 
 // ─── Allocation summary ───────────────────────────────────────────────────────
-function AllocationTable({ picks }: { picks: OraclePickResult[] }) {
-  if (picks.length === 0) return null;
-  const base = 100_000;
-  return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
-      <h3 className="mb-3 text-[14px] font-semibold text-[var(--ink-strong)]">
-        Portfolio Construction (৳1,00,000)
-      </h3>
-      <div className="space-y-1">
-        {picks.map((p) => (
-          <div key={p.symbol} className="flex items-center justify-between gap-4 text-[13px]">
-            <span className="font-medium text-[var(--ink-strong)]">{p.symbol}</span>
-            <div className="flex items-center gap-3">
-              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-[var(--line)]">
-                <div className="h-full rounded-full bg-[var(--accent-700)]" style={{ width: `${p.allocationPct}%` }} />
-              </div>
-              <span className="w-7 text-right tabular-nums text-[var(--ink-muted)]">{p.allocationPct}%</span>
-              <span className="w-20 text-right tabular-nums text-[var(--ink-strong)]">
-                ৳{Math.round((p.allocationPct / 100) * base).toLocaleString("en-IN")}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Watchlist section ────────────────────────────────────────────────────────
 function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[]; topSectors: string[] }) {
   if (items.length === 0) return null;
@@ -352,7 +324,6 @@ export function TradeDeskView({
               <PickCard key={pick.symbol} pick={pick} rank={i + 1} />
             ))}
           </div>
-          <AllocationTable picks={data.picks} />
         </>
       )}
 
