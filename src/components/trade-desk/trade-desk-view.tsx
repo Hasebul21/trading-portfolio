@@ -234,7 +234,7 @@ function PickCard({ pick, source }: { pick: OraclePickResult; source: "pick" | "
           <p className="font-semibold text-[var(--ink-strong)]">
             {pick.divYieldPct !== null && pick.divYieldPct > 0
               ? `${fmtPrice((pick.divYieldPct / 100) * pick.currentPrice)}/sh`
-              : "—"}
+              : "No dividend"}
           </p>
         </div>
         <div>
@@ -398,7 +398,7 @@ function HoldingCard({ holding }: { holding: OracleHoldingAnalysis }) {
             <span className="ml-1 text-[var(--ink-muted)]">
               / {holding.divYieldPct !== null && holding.divYieldPct > 0 && holding.currentPrice !== null
                 ? fmtPrice((holding.divYieldPct / 100) * holding.currentPrice)
-                : "—"}
+                : "No div"}
             </span>
           </p>
         </div>
@@ -476,7 +476,7 @@ function WatchCard({ item }: { item: OracleWatchlistItem }) {
           <p className="font-semibold text-[var(--ink-strong)]">
             {item.divYieldPct !== null && item.divYieldPct > 0
               ? `${fmtPrice((item.divYieldPct / 100) * item.currentPrice)}/sh`
-              : "—"}
+              : "No dividend"}
           </p>
         </div>
         <div>
