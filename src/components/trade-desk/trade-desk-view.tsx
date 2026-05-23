@@ -275,17 +275,25 @@ function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
   );
 }
 
+// ─── Sort icon ────────────────────────────────────────────────────────────────
+function SortIcon({ dir }: { dir: "desc" | "asc" }) {
+  return dir === "desc"
+    ? <span className="ml-0.5 text-[9px]">▼</span>
+    : <span className="ml-0.5 text-[9px]">▲</span>;
+}
+
 // ─── Watchlist section ────────────────────────────────────────────────────────
 function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[]; topSectors: string[] }) {
+  const [scoreDir, setScoreDir] = useState<"desc" | "asc">("desc");
+
   if (items.length === 0) return null;
 
   const topKeys = new Set(topSectors.map((s) => s.trim().toLowerCase()));
   const isTop = (sector: string | null) => sector ? topKeys.has(sector.trim().toLowerCase()) : false;
 
-  const sorted = topKeys.size === 0 ? items : [
-    ...items.filter((i) => isTop(i.sector)),
-    ...items.filter((i) => !isTop(i.sector)),
-  ];
+  const sorted = [...items].sort((a, b) =>
+    scoreDir === "desc" ? b.score - a.score : a.score - b.score,
+  );
 
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
@@ -295,7 +303,15 @@ function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[];
           <thead>
             <tr className="border-b border-[var(--line)] text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
               <th className="pb-1.5 pr-3">Symbol</th>
-              <th className="pb-1.5 pr-3">Score</th>
+              <th className="pb-1.5 pr-3">
+                <button
+                  type="button"
+                  onClick={() => setScoreDir((d) => d === "desc" ? "asc" : "desc")}
+                  className="flex items-center text-[var(--accent-700)] hover:opacity-80"
+                >
+                  Score<SortIcon dir={scoreDir} />
+                </button>
+              </th>
               <th className="pb-1.5 pr-3">LTP</th>
               <th className="pb-1.5 pr-3">Graham #</th>
               <th className="pb-1.5 pr-3">MoS%</th>
@@ -348,7 +364,14 @@ const SIGNAL_CFG: Record<HoldingSignal, { dot: string; label: string; text: stri
 };
 
 function HoldingsSection({ holdings }: { holdings: OracleHoldingAnalysis[] }) {
+  const [scoreDir, setScoreDir] = useState<"desc" | "asc">("desc");
+
   if (holdings.length === 0) return null;
+
+  const sorted = [...holdings].sort((a, b) =>
+    scoreDir === "desc" ? b.score - a.score : a.score - b.score,
+  );
+
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
       <h3 className="mb-3 text-[14px] font-semibold text-[var(--ink-strong)]">Portfolio Analysis</h3>
@@ -357,7 +380,15 @@ function HoldingsSection({ holdings }: { holdings: OracleHoldingAnalysis[] }) {
           <thead>
             <tr className="border-b border-[var(--line)] text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
               <th className="pb-1.5 pr-3">Symbol</th>
-              <th className="pb-1.5 pr-3">Score</th>
+              <th className="pb-1.5 pr-3">
+                <button
+                  type="button"
+                  onClick={() => setScoreDir((d) => d === "desc" ? "asc" : "desc")}
+                  className="flex items-center text-[var(--accent-700)] hover:opacity-80"
+                >
+                  Score<SortIcon dir={scoreDir} />
+                </button>
+              </th>
               <th className="pb-1.5 pr-3">Signal</th>
               <th className="pb-1.5 pr-3">LTP</th>
               <th className="pb-1.5 pr-3">P/L%</th>
@@ -368,7 +399,7 @@ function HoldingsSection({ holdings }: { holdings: OracleHoldingAnalysis[] }) {
             </tr>
           </thead>
           <tbody>
-            {holdings.map((h) => {
+            {sorted.map((h) => {
               const cfg = SIGNAL_CFG[h.signal];
               const adv = h.advanced as { grahamNumber?: number | null; marginOfSafety?: number | null; earningsYield?: number | null; roe?: number | null };
               const plPositive = (h.unrealizedPLPct ?? 0) >= 0;
@@ -406,7 +437,7 @@ function HoldingsSection({ holdings }: { holdings: OracleHoldingAnalysis[] }) {
       </div>
       {/* Signal explanation for the first holding with a non-Hold signal */}
       {(() => {
-        const notable = holdings.find((h) => h.signal !== "Hold" && h.signalReason);
+        const notable = sorted.find((h) => h.signal !== "Hold" && h.signalReason);
         return notable ? (
           <p className="mt-2 text-[11px] text-[var(--ink-muted)]">
             <span className={`font-medium ${SIGNAL_CFG[notable.signal].text}`}>{notable.symbol} — {notable.signal}:</span>{" "}
