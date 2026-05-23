@@ -2,18 +2,22 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
-import { computeDiscoveryPicks } from "@/lib/market/discovery";
+import { scoreDseUniverse } from "@/lib/market/discovery";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
   computeOracleScore,
   computeHoldingAnalysis,
-  rankAndSelect,
   computeSentiment,
   ORACLE_DISCLAIMER,
+  ORACLE_THRESHOLD,
   type OracleGateReject,
   type OracleHoldingAnalysis,
+  type OraclePickResult,
+  type OracleWatchlistItem,
 } from "@/lib/market/oracle-scoring";
 import type { TradeDeskData } from "@/components/trade-desk/trade-desk-view";
+
+const TOP_RANKED_LIMIT = 40;
 
 export async function GET() {
   const supabase = await createClient();
@@ -32,57 +36,89 @@ export async function GET() {
     ? rawTopSectors.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
     : [];
 
-  const watchlistSymbols = [
-    ...new Set((ltRes.data ?? []).map((r) => String(r.symbol).trim().toUpperCase())),
-  ].filter(Boolean);
+  const watchlistSet = new Set(
+    (ltRes.data ?? []).map((r) => String(r.symbol).trim().toUpperCase()).filter(Boolean),
+  );
+  const portfolioSet = new Set(
+    holdingsRes.holdings.map((h) => h.symbol.trim().toUpperCase()).filter(Boolean),
+  );
 
-  const portfolioSymbols = holdingsRes.holdings.map((h) => h.symbol.trim().toUpperCase());
-  const allSymbols = [...new Set([...watchlistSymbols, ...portfolioSymbols])].filter(Boolean);
-
-  if (watchlistSymbols.length === 0 || lspRes.bySymbol.size === 0) {
+  if (lspRes.bySymbol.size === 0) {
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       sentiment: "Neutral",
-      sentimentReason: watchlistSymbols.length === 0 ? "No symbols in Watchlist" : (lspRes.error ?? "No DSE price data"),
+      sentimentReason: lspRes.error ?? "No DSE price data",
       picks: [],
       watchlist: [],
       avoided: [],
       holdings: [],
       discovery: [],
       disclaimer: ORACLE_DISCLAIMER,
-      totalSymbols: watchlistSymbols.length,
+      totalSymbols: 0,
       gatedOut: 0,
       topSectors,
     } satisfies TradeDeskData);
   }
 
-  const extrasMap = await fetchDseCompanyExtrasMap(allSymbols);
+  // Score full DSE universe and take the true top-N.
+  const { scored: universeScored } = await scoreDseUniverse({
+    bySymbol: lspRes.bySymbol,
+  });
 
-  const scored: Parameters<typeof rankAndSelect>[0] = [];
+  // Gate rejects across the user's own lists only — keeps the "Filtered
+  // Out" strip readable instead of dumping every gated DSE name.
+  const curatedSymbols = [...new Set([...watchlistSet, ...portfolioSet])];
+  const curatedExtras = await fetchDseCompanyExtrasMap(curatedSymbols);
   const gateRejects: OracleGateReject[] = [];
-
-  for (const sym of watchlistSymbols) {
-    const extras = extrasMap.get(sym);
+  for (const sym of curatedSymbols) {
+    const extras = curatedExtras.get(sym);
     const quote = lspRes.bySymbol.get(sym) ?? null;
     if (!extras || !quote) continue;
+    const r = computeOracleScore(sym, extras, quote);
+    if (r.type === "gate") gateRejects.push({ symbol: sym, reason: r.reason });
+  }
 
-    const result = computeOracleScore(sym, extras, quote);
-    if (result.type === "gate") {
-      gateRejects.push({ symbol: sym, reason: result.reason });
-    } else if (result.type === "pick") {
-      scored.push({ symbol: sym, score: result.result.score, sector: result.result.sector, result: result.result });
+  const topRanked = universeScored.slice(0, TOP_RANKED_LIMIT);
+
+  // Partition top-N → picks / watchlist / discovery; track which holdings
+  // fell in top-N for the holding-analysis pass below.
+  const picks: OraclePickResult[] = [];
+  const watchlist: OracleWatchlistItem[] = [];
+  const discovery: OraclePickResult[] = [];
+  const topRankedHoldingSymbols = new Set<string>();
+
+  for (const item of topRanked) {
+    if (portfolioSet.has(item.symbol)) {
+      topRankedHoldingSymbols.add(item.symbol);
+    } else if (watchlistSet.has(item.symbol)) {
+      if (item.score >= ORACLE_THRESHOLD) {
+        picks.push({ ...item.result, allocationPct: 0 });
+      } else {
+        watchlist.push({
+          symbol: item.symbol,
+          sector: item.sector,
+          score: item.score,
+          currentPrice: item.result.currentPrice,
+          trigger: `Score ${item.score}/100 · top ${TOP_RANKED_LIMIT} DSE-wide`,
+          advanced: {
+            grahamNumber: item.result.advanced.grahamNumber,
+            marginOfSafety: item.result.advanced.marginOfSafety,
+            earningsYield: item.result.advanced.earningsYield,
+            roe: item.result.advanced.roe,
+          },
+        });
+      }
+    } else {
+      discovery.push({ ...item.result, allocationPct: 0 });
     }
   }
 
-  const { picks, watchlist } = rankAndSelect(scored);
-  const avgScore = picks.length > 0 ? picks.reduce((s, p) => s + p.score, 0) / picks.length : 0;
-  const { sentiment, reason: sentimentReason } = computeSentiment(picks.length, avgScore);
-
   const holdingAnalyses: OracleHoldingAnalysis[] = holdingsRes.holdings
     .filter((h) => h.shares > 0)
-    .map((h) => {
-      const sym = h.symbol.trim().toUpperCase();
-      const extras = extrasMap.get(sym);
+    .map((h) => ({ h, sym: h.symbol.trim().toUpperCase() }))
+    .filter(({ sym }) => topRankedHoldingSymbols.has(sym))
+    .map(({ h, sym }) => {
+      const extras = curatedExtras.get(sym);
       const quote = lspRes.bySymbol.get(sym) ?? null;
       if (!extras) {
         return {
@@ -101,10 +137,14 @@ export async function GET() {
       );
     });
 
-  const { picks: discovery } = await computeDiscoveryPicks({
-    bySymbol: lspRes.bySymbol,
-    excludeSymbols: allSymbols,
-  });
+  const highConvictionInTop = topRanked.filter((s) => s.score >= ORACLE_THRESHOLD);
+  const avgScore = highConvictionInTop.length > 0
+    ? highConvictionInTop.reduce((s, p) => s + p.score, 0) / highConvictionInTop.length
+    : 0;
+  const { sentiment, reason: sentimentReason } = computeSentiment(
+    highConvictionInTop.length,
+    avgScore,
+  );
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
@@ -116,7 +156,7 @@ export async function GET() {
     holdings: holdingAnalyses,
     discovery,
     disclaimer: ORACLE_DISCLAIMER,
-    totalSymbols: watchlistSymbols.length,
+    totalSymbols: universeScored.length,
     gatedOut: gateRejects.length,
     topSectors,
   } satisfies TradeDeskData);
