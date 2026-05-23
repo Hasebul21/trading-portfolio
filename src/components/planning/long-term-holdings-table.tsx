@@ -14,6 +14,10 @@ export type LongTermHoldingRow = {
     sector: string | null;
     /** Last trade price from DSE (null if not quoted today). */
     ltp: number | null;
+    /** 52-week low from the DSE company page (null if not available). */
+    week52Low?: number | null;
+    /** 52-week high from the DSE company page (null if not available). */
+    week52High?: number | null;
     /** Break-even cost from portfolio holdings (null if not held). */
     breakEvenPrice: number | null;
     /** Optional alert targets for entry / exit signals. */
@@ -268,6 +272,14 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                 <span className="tabular-nums text-[14px] text-[var(--ink-strong)]">
                     {ltpKnown ? formatBdt(row.ltp!) : "—"}
                 </span>
+                <div
+                    className="mt-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]"
+                    title="52-week low – high"
+                >
+                    52w {row.week52Low !== null && row.week52Low !== undefined ? formatBdt(row.week52Low) : "—"}
+                    {" – "}
+                    {row.week52High !== null && row.week52High !== undefined ? formatBdt(row.week52High) : "—"}
+                </div>
             </RowCell>
 
             <RowCell label="Buy point">

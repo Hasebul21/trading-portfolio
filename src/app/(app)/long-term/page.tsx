@@ -108,6 +108,8 @@ export default async function LongTermPage() {
             symbol: row.symbol,
             sector,
             ltp: quote?.ltp ?? null,
+            week52Low: extras?.week52Low ?? null,
+            week52High: extras?.week52High ?? null,
             breakEvenPrice: h ? h.breakEvenPrice : null,
             buy_point_bdt: row.buy_point_bdt,
             sell_point_bdt: row.sell_point_bdt,
