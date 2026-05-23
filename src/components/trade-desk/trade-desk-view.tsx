@@ -539,7 +539,7 @@ function buildUnifiedItems(data: TradeDeskData): UnifiedItem[] {
   return [...bySymbol.values()].sort((a, b) => b.score - a.score);
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 40;
 
 export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
   const [data, setData] = useState<TradeDeskData>(initialData);
