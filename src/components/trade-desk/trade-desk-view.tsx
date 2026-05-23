@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type {
   OracleResult,
   OraclePickResult,
@@ -43,6 +43,24 @@ function ValuationBadge({ signal }: { signal: ValuationSignal | null }) {
   return (
     <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cfg[signal].cls}`}>
       {signal}
+    </span>
+  );
+}
+
+// ─── Source badge ─────────────────────────────────────────────────────────────
+// Identifies where each card came from in the unified opportunity grid.
+type CardSource = "pick" | "holding" | "watch" | "discovery";
+const SOURCE_CFG: Record<CardSource, { label: string; cls: string }> = {
+  pick:      { label: "Top Pick",  cls: "bg-violet-100 text-violet-800 border-violet-300" },
+  holding:   { label: "Holding",   cls: "bg-blue-100 text-blue-800 border-blue-300" },
+  watch:     { label: "Watchlist", cls: "bg-slate-100 text-slate-700 border-slate-300" },
+  discovery: { label: "Discovery", cls: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300" },
+};
+function SourceBadge({ source }: { source: CardSource }) {
+  const cfg = SOURCE_CFG[source];
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${cfg.cls}`}>
+      {cfg.label}
     </span>
   );
 }
@@ -157,7 +175,7 @@ function ScoreBreakdown({ pick }: { pick: OraclePickResult }) {
 }
 
 // ─── Pick card ────────────────────────────────────────────────────────────────
-function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
+function PickCard({ pick, source }: { pick: OraclePickResult; source: "pick" | "discovery" }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const convColor =
     pick.conviction === "High Conviction"
@@ -189,8 +207,8 @@ function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
         <ScoreBadge score={pick.score} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium text-[var(--ink-muted)]">#{rank}</span>
             <span className="text-[17px] font-bold text-[var(--ink-strong)]">{pick.symbol}</span>
+            <SourceBadge source={source} />
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${convColor}`}>
               {pick.conviction}
             </span>
@@ -206,6 +224,27 @@ function PickCard({ pick, rank }: { pick: OraclePickResult; rank: number }) {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Price snapshot */}
+      <div className="mt-3 grid grid-cols-3 gap-2 text-[11.5px]">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP</p>
+          <p className="font-semibold text-[var(--ink-strong)]">{fmtPrice(pick.currentPrice)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Buy zone</p>
+          <p className="font-semibold text-[var(--ink-strong)]">
+            {fmtPrice(pick.buyZoneLow)}–{fmtPrice(pick.buyZoneHigh)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Target / Stop</p>
+          <p className="font-semibold text-[var(--ink-strong)]">
+            {pick.targetPrice !== null ? fmtPrice(pick.targetPrice) : "—"}
+            <span className="ml-1 text-red-600">/ {fmtPrice(pick.stopLoss)}</span>
+          </p>
         </div>
       </div>
 
@@ -301,190 +340,155 @@ function watchlistPrediction(item: OracleWatchlistItem): "BUY" | "WAIT" {
   return pts >= 2 ? "BUY" : "WAIT";
 }
 
-// ─── Sort icon ────────────────────────────────────────────────────────────────
-function SortIcon({ dir }: { dir: "desc" | "asc" }) {
-  return dir === "desc"
-    ? <span className="ml-0.5 text-[9px]">▼</span>
-    : <span className="ml-0.5 text-[9px]">▲</span>;
-}
-
-// ─── Watchlist section ────────────────────────────────────────────────────────
-function WatchlistSection({ items, topSectors }: { items: OracleWatchlistItem[]; topSectors: string[] }) {
-  const [scoreDir, setScoreDir] = useState<"desc" | "asc">("desc");
-
-  if (items.length === 0) return null;
-
-  const topKeys = new Set(topSectors.map((s) => s.trim().toLowerCase()));
-  const isTop = (sector: string | null) => sector ? topKeys.has(sector.trim().toLowerCase()) : false;
-
-  const sorted = [...items].sort((a, b) =>
-    scoreDir === "desc" ? b.score - a.score : a.score - b.score,
-  );
-
-  return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
-      <h3 className="mb-3 text-[14px] font-semibold text-[var(--ink-strong)]">Watching — Not Buying Yet</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-              <th className="pb-1.5 pr-3">Symbol</th>
-              <th className="pb-1.5 pr-3">
-                <button
-                  type="button"
-                  onClick={() => setScoreDir((d) => d === "desc" ? "asc" : "desc")}
-                  className="flex items-center text-[var(--accent-700)] hover:opacity-80"
-                >
-                  Score<SortIcon dir={scoreDir} />
-                </button>
-              </th>
-              <th className="pb-1.5 pr-3">LTP</th>
-              <th className="pb-1.5 pr-3">Graham #</th>
-              <th className="pb-1.5 pr-3">MoS%</th>
-              <th className="pb-1.5 pr-3">EY%</th>
-              <th className="pb-1.5 pr-3">ROE%</th>
-              <th className="pb-1.5">Predict</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((item) => {
-              const adv = item.advanced;
-              const mosPositive = adv.marginOfSafety !== null && adv.marginOfSafety > 0;
-              const eyGood = adv.earningsYield !== null && adv.earningsYield / 100 >= 0.095;
-              const pred = watchlistPrediction(item);
-              return (
-                <tr key={item.symbol} className="border-b border-[var(--line)]/40">
-                  <td className="py-1.5 pr-3">
-                    <span className={`font-semibold ${isTop(item.sector) ? "text-[var(--accent-700)]" : "text-[var(--ink-strong)]"}`}>
-                      {item.symbol}
-                    </span>
-                    {item.sector && (
-                      <span className="ml-1.5 text-[10px] text-[var(--ink-muted)]">{item.sector}</span>
-                    )}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums text-[var(--ink-muted)]">{item.score}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">{fmtPrice(item.currentPrice)}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">{fmtPrice(adv.grahamNumber ?? null)}</td>
-                  <td className={`py-1.5 pr-3 tabular-nums font-medium ${mosPositive ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>
-                    {adv.marginOfSafety !== null ? `${adv.marginOfSafety > 0 ? "+" : ""}${fmt(adv.marginOfSafety, "%")}` : "—"}
-                  </td>
-                  <td className={`py-1.5 pr-3 tabular-nums font-medium ${eyGood ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>
-                    {fmt(adv.earningsYield, "%")}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums text-[var(--ink-muted)]">{fmt(adv.roe, "%")}</td>
-                  <td className="py-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${pred === "BUY"
-                        ? "bg-emerald-100 text-emerald-800"
-                        : "bg-amber-100 text-amber-700"
-                      }`}>
-                      {pred}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ─── Holdings analysis section ────────────────────────────────────────────────
-const SIGNAL_CFG: Record<HoldingSignal, { dot: string; label: string; text: string }> = {
-  "Strong Add": { dot: "bg-emerald-500", label: "Strong Add", text: "text-emerald-700" },
-  "Add": { dot: "bg-teal-500", label: "Add", text: "text-teal-700" },
-  "Hold": { dot: "bg-amber-500", label: "Hold", text: "text-amber-700" },
-  "Trim": { dot: "bg-orange-500", label: "Trim", text: "text-orange-700" },
-  "Exit": { dot: "bg-red-500", label: "Exit", text: "text-red-700" },
+// ─── Holding signal config ────────────────────────────────────────────────────
+const SIGNAL_CFG: Record<HoldingSignal, { dot: string; label: string; text: string; cls: string }> = {
+  "Strong Add": { dot: "bg-emerald-500", label: "Strong Add", text: "text-emerald-700", cls: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+  "Add":        { dot: "bg-teal-500",    label: "Add",        text: "text-teal-700",    cls: "bg-teal-100 text-teal-800 border-teal-300" },
+  "Hold":       { dot: "bg-amber-500",   label: "Hold",       text: "text-amber-700",   cls: "bg-amber-100 text-amber-800 border-amber-300" },
+  "Trim":       { dot: "bg-orange-500",  label: "Trim",       text: "text-orange-700",  cls: "bg-orange-100 text-orange-800 border-orange-300" },
+  "Exit":       { dot: "bg-red-500",     label: "Exit",       text: "text-red-700",     cls: "bg-red-100 text-red-800 border-red-300" },
 };
 
-function HoldingsSection({ holdings }: { holdings: OracleHoldingAnalysis[] }) {
-  const [scoreDir, setScoreDir] = useState<"desc" | "asc">("desc");
+// ─── Holding card ─────────────────────────────────────────────────────────────
+// Portfolio position with shares, avg cost, P&L and the Oracle signal.
+function HoldingCard({ holding }: { holding: OracleHoldingAnalysis }) {
+  const cfg = SIGNAL_CFG[holding.signal];
+  const adv = holding.advanced;
+  const plPositive = (holding.unrealizedPLPct ?? 0) >= 0;
 
-  if (holdings.length === 0) return null;
-
-  const sorted = [...holdings].sort((a, b) =>
-    scoreDir === "desc" ? b.score - a.score : a.score - b.score,
-  );
+  const mosHighlight = adv.marginOfSafety != null
+    ? (adv.marginOfSafety > 0 ? "positive" as const : "negative" as const)
+    : "neutral" as const;
+  const eyHighlight = adv.earningsYield != null
+    ? (adv.earningsYield / 100 >= 0.095 ? "positive" as const : "negative" as const)
+    : "neutral" as const;
+  const roeHighlight = adv.roe != null
+    ? (adv.roe >= 15 ? "positive" as const : adv.roe >= 8 ? "neutral" as const : "negative" as const)
+    : "neutral" as const;
 
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
-      <h3 className="mb-3 text-[14px] font-semibold text-[var(--ink-strong)]">Portfolio Analysis</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-left text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-              <th className="pb-1.5 pr-3">Symbol</th>
-              <th className="pb-1.5 pr-3">
-                <button
-                  type="button"
-                  onClick={() => setScoreDir((d) => d === "desc" ? "asc" : "desc")}
-                  className="flex items-center text-[var(--accent-700)] hover:opacity-80"
-                >
-                  Score<SortIcon dir={scoreDir} />
-                </button>
-              </th>
-              <th className="pb-1.5 pr-3">Signal</th>
-              <th className="pb-1.5 pr-3">LTP</th>
-              <th className="pb-1.5 pr-3">P/L%</th>
-              <th className="pb-1.5 pr-3">Graham #</th>
-              <th className="pb-1.5 pr-3">MoS%</th>
-              <th className="pb-1.5 pr-3">EY%</th>
-              <th className="pb-1.5">ROE%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((h) => {
-              const cfg = SIGNAL_CFG[h.signal];
-              const adv = h.advanced as { grahamNumber?: number | null; marginOfSafety?: number | null; earningsYield?: number | null; roe?: number | null };
-              const plPositive = (h.unrealizedPLPct ?? 0) >= 0;
-              const mosPositive = (adv.marginOfSafety ?? null) !== null && (adv.marginOfSafety ?? 0) > 0;
-              return (
-                <tr key={h.symbol} className="border-b border-[var(--line)]/40">
-                  <td className="py-1.5 pr-3">
-                    <span className="font-semibold text-[var(--ink-strong)]">{h.symbol}</span>
-                    {h.sector && <span className="ml-1.5 text-[10px] text-[var(--ink-muted)]">{h.sector}</span>}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums text-[var(--ink-muted)]">{h.score > 0 ? h.score : "—"}</td>
-                  <td className="py-1.5 pr-3">
-                    <span className={`flex items-center gap-1 font-semibold ${cfg.text}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                      {cfg.label}
-                    </span>
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums">{fmtPrice(h.currentPrice)}</td>
-                  <td className={`py-1.5 pr-3 tabular-nums font-medium ${plPositive ? "text-emerald-700" : "text-red-600"}`}>
-                    {h.unrealizedPLPct !== null ? `${plPositive ? "+" : ""}${fmt(h.unrealizedPLPct, "%")}` : "—"}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums">{fmtPrice(adv.grahamNumber ?? null)}</td>
-                  <td className={`py-1.5 pr-3 tabular-nums font-medium ${mosPositive ? "text-emerald-700" : "text-[var(--ink-muted)]"}`}>
-                    {adv.marginOfSafety !== null && adv.marginOfSafety !== undefined
-                      ? `${adv.marginOfSafety > 0 ? "+" : ""}${fmt(adv.marginOfSafety, "%")}`
-                      : "—"}
-                  </td>
-                  <td className="py-1.5 pr-3 tabular-nums text-[var(--ink-muted)]">{fmt(adv.earningsYield ?? null, "%")}</td>
-                  <td className="py-1.5 tabular-nums text-[var(--ink-muted)]">{fmt(adv.roe ?? null, "%")}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="flex items-start gap-3">
+        <ScoreBadge score={holding.score > 0 ? holding.score : 0} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[17px] font-bold text-[var(--ink-strong)]">{holding.symbol}</span>
+            <SourceBadge source="holding" />
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.cls}`}>
+              {cfg.label}
+            </span>
+          </div>
+          {holding.sector && <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{holding.sector}</p>}
+          {holding.signal !== "Hold" && holding.signalReason && (
+            <p className={`mt-1 text-[11.5px] ${cfg.text}`}>{holding.signalReason}</p>
+          )}
+        </div>
       </div>
-      {/* Signal explanation for the first holding with a non-Hold signal */}
-      {(() => {
-        const notable = sorted.find((h) => h.signal !== "Hold" && h.signalReason);
-        return notable ? (
-          <p className="mt-2 text-[11px] text-[var(--ink-muted)]">
-            <span className={`font-medium ${SIGNAL_CFG[notable.signal].text}`}>{notable.symbol} — {notable.signal}:</span>{" "}
-            {notable.signalReason}
+
+      {/* Position snapshot */}
+      <div className="mt-3 grid grid-cols-3 gap-2 text-[11.5px]">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP / Avg</p>
+          <p className="font-semibold text-[var(--ink-strong)]">
+            {fmtPrice(holding.currentPrice)}
+            <span className="ml-1 text-[var(--ink-muted)]">/ {fmtPrice(holding.avgCost)}</span>
           </p>
-        ) : null;
-      })()}
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Shares</p>
+          <p className="font-semibold text-[var(--ink-strong)] tabular-nums">{holding.shares.toLocaleString("en-IN")}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">P/L</p>
+          <p className={`font-semibold tabular-nums ${plPositive ? "text-emerald-700" : "text-red-600"}`}>
+            {holding.unrealizedPLPct !== null ? `${plPositive ? "+" : ""}${fmt(holding.unrealizedPLPct, "%")}` : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Advanced Analytics */}
+      <div className="mt-3 rounded-lg bg-[var(--bg-canvas)] px-3 py-2">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
+          Advanced Analytics
+        </p>
+        <AdvRow label="Graham Number" value={fmtPrice(adv.grahamNumber ?? null)} context="Intrinsic value ceiling" />
+        <AdvRow
+          label="Margin of Safety"
+          value={adv.marginOfSafety != null ? `${adv.marginOfSafety > 0 ? "+" : ""}${fmt(adv.marginOfSafety, "%")}` : "—"}
+          context="vs Graham Number"
+          highlight={mosHighlight}
+        />
+        <AdvRow label="Earnings Yield" value={fmt(adv.earningsYield ?? null, "%")} context="BD risk-free ~9.5%" highlight={eyHighlight} />
+        <AdvRow label="Return on Equity" value={fmt(adv.roe ?? null, "%")} context="≥15% = strong" highlight={roeHighlight} />
+      </div>
     </div>
   );
 }
 
+// ─── Watch card ───────────────────────────────────────────────────────────────
+// Watchlist entry — has a score but did not clear the Oracle pick threshold.
+function WatchCard({ item }: { item: OracleWatchlistItem }) {
+  const adv = item.advanced;
+  const pred = watchlistPrediction(item);
+
+  const mosHighlight = adv.marginOfSafety != null
+    ? (adv.marginOfSafety > 0 ? "positive" as const : "negative" as const)
+    : "neutral" as const;
+  const eyHighlight = adv.earningsYield != null
+    ? (adv.earningsYield / 100 >= 0.095 ? "positive" as const : "negative" as const)
+    : "neutral" as const;
+  const roeHighlight = adv.roe != null
+    ? (adv.roe >= 15 ? "positive" as const : adv.roe >= 8 ? "neutral" as const : "negative" as const)
+    : "neutral" as const;
+
+  const predCls = pred === "BUY"
+    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+    : "bg-amber-100 text-amber-800 border-amber-300";
+
+  return (
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--bg-surface)] p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <ScoreBadge score={item.score} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[17px] font-bold text-[var(--ink-strong)]">{item.symbol}</span>
+            <SourceBadge source="watch" />
+            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${predCls}`}>
+              {pred}
+            </span>
+          </div>
+          {item.sector && <p className="mt-0.5 text-[12px] text-[var(--ink-muted)]">{item.sector}</p>}
+          {item.trigger && <p className="mt-1 text-[11.5px] text-[var(--ink-muted)]">{item.trigger}</p>}
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-[11.5px]">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">LTP</p>
+          <p className="font-semibold text-[var(--ink-strong)]">{fmtPrice(item.currentPrice)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">Graham #</p>
+          <p className="font-semibold text-[var(--ink-strong)]">{fmtPrice(adv.grahamNumber ?? null)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-lg bg-[var(--bg-canvas)] px-3 py-2">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
+          Advanced Analytics
+        </p>
+        <AdvRow
+          label="Margin of Safety"
+          value={adv.marginOfSafety != null ? `${adv.marginOfSafety > 0 ? "+" : ""}${fmt(adv.marginOfSafety, "%")}` : "—"}
+          context="vs Graham Number"
+          highlight={mosHighlight}
+        />
+        <AdvRow label="Earnings Yield" value={fmt(adv.earningsYield ?? null, "%")} context="BD risk-free ~9.5%" highlight={eyHighlight} />
+        <AdvRow label="Return on Equity" value={fmt(adv.roe ?? null, "%")} context="≥15% = strong" highlight={roeHighlight} />
+      </div>
+    </div>
+  );
+}
 // ─── Avoided section ──────────────────────────────────────────────────────────
 function AvoidedSection({ items }: { items: OracleGateReject[] }) {
   if (items.length === 0) return null;
@@ -505,10 +509,42 @@ function AvoidedSection({ items }: { items: OracleGateReject[] }) {
 }
 
 // ─── Main view ────────────────────────────────────────────────────────────────
+type UnifiedItem =
+  | { kind: "pick"; symbol: string; score: number; data: OraclePickResult }
+  | { kind: "discovery"; symbol: string; score: number; data: OraclePickResult }
+  | { kind: "holding"; symbol: string; score: number; data: OracleHoldingAnalysis }
+  | { kind: "watch"; symbol: string; score: number; data: OracleWatchlistItem };
+
+// Priority used when the same symbol appears in multiple buckets — keep the
+// most informative card representation.
+const KIND_PRIORITY: Record<UnifiedItem["kind"], number> = {
+  holding: 4, // own position is most important context
+  pick: 3,
+  discovery: 2,
+  watch: 1,
+};
+
+function buildUnifiedItems(data: TradeDeskData): UnifiedItem[] {
+  const bySymbol = new Map<string, UnifiedItem>();
+  const consider = (next: UnifiedItem) => {
+    const prev = bySymbol.get(next.symbol);
+    if (!prev || KIND_PRIORITY[next.kind] > KIND_PRIORITY[prev.kind]) {
+      bySymbol.set(next.symbol, next);
+    }
+  };
+  for (const p of data.picks)     consider({ kind: "pick",      symbol: p.symbol, score: p.score, data: p });
+  for (const h of data.holdings)  consider({ kind: "holding",   symbol: h.symbol, score: h.score, data: h });
+  for (const d of data.discovery) consider({ kind: "discovery", symbol: d.symbol, score: d.score, data: d });
+  for (const w of data.watchlist) consider({ kind: "watch",     symbol: w.symbol, score: w.score, data: w });
+  return [...bySymbol.values()].sort((a, b) => b.score - a.score);
+}
+
+const PAGE_SIZE = 12;
+
 export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
   const [data, setData] = useState<TradeDeskData>(initialData);
   const [loading, setLoading] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [page, setPage] = useState(1);
 
   const handleRefresh = useCallback(async () => {
     setLoading(true);
@@ -517,17 +553,26 @@ export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
       if (res.ok) {
         const json = (await res.json()) as TradeDeskData;
         setData(json);
-        setLastRefreshed(new Date());
+        setPage(1);
       }
     } catch { /* silently ignore */ } finally {
       setLoading(false);
     }
   }, []);
 
+  const items = useMemo(() => buildUnifiedItems(data), [data]);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Refresh button only */}
-      <div className="flex justify-end">
+      {/* Header row: counts + refresh */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[12px] text-[var(--ink-muted)]">
+          {items.length} opportunit{items.length === 1 ? "y" : "ies"} ranked by Oracle score
+          {items.length > PAGE_SIZE && <> · showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, items.length)}</>}
+        </p>
         <button
           onClick={() => void handleRefresh()}
           disabled={loading}
@@ -539,16 +584,48 @@ export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
         </button>
       </div>
 
-      {data.picks.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-          {data.picks.map((pick, i) => (
-            <PickCard key={pick.symbol} pick={pick} rank={i + 1} />
-          ))}
+      {/* Unified card grid */}
+      {pageItems.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {pageItems.map((item) => {
+            if (item.kind === "pick" || item.kind === "discovery") {
+              return <PickCard key={`${item.kind}:${item.symbol}`} pick={item.data} source={item.kind} />;
+            }
+            if (item.kind === "holding") {
+              return <HoldingCard key={`holding:${item.symbol}`} holding={item.data} />;
+            }
+            return <WatchCard key={`watch:${item.symbol}`} item={item.data} />;
+          })}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--bg-surface)] p-6 text-center text-[12.5px] text-[var(--ink-muted)]">
+          No scored opportunities right now. Try refreshing in a few minutes.
+        </p>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 text-[12.5px]">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            className="rounded-md border border-[var(--line)] bg-[var(--bg-surface)] px-3 py-1 font-medium text-[var(--ink-strong)] hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ← Prev
+          </button>
+          <span className="tabular-nums text-[var(--ink-muted)]">Page {safePage} of {totalPages}</span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            className="rounded-md border border-[var(--line)] bg-[var(--bg-surface)] px-3 py-1 font-medium text-[var(--ink-strong)] hover:bg-[var(--bg-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next →
+          </button>
         </div>
       )}
 
-      <HoldingsSection holdings={data.holdings} />
-      <WatchlistSection items={data.watchlist} topSectors={data.topSectors} />
       <AvoidedSection items={data.avoided} />
 
       <p className="text-[11px] leading-relaxed text-[var(--ink-muted)]">{data.disclaimer}</p>

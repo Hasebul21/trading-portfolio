@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
+import { computeDiscoveryPicks } from "@/lib/market/discovery";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
   computeOracleScore,
@@ -47,6 +48,7 @@ export async function GET() {
       watchlist: [],
       avoided: [],
       holdings: [],
+      discovery: [],
       disclaimer: ORACLE_DISCLAIMER,
       totalSymbols: watchlistSymbols.length,
       gatedOut: 0,
@@ -99,6 +101,11 @@ export async function GET() {
       );
     });
 
+  const { picks: discovery } = await computeDiscoveryPicks({
+    bySymbol: lspRes.bySymbol,
+    excludeSymbols: allSymbols,
+  });
+
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
     sentiment,
@@ -107,6 +114,7 @@ export async function GET() {
     watchlist,
     avoided: gateRejects,
     holdings: holdingAnalyses,
+    discovery,
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: watchlistSymbols.length,
     gatedOut: gateRejects.length,
