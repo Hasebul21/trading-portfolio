@@ -350,7 +350,6 @@ export function PortfolioHoldingsTable({
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-4">
                 <KpiCell label="Total invested">
                     <span className="tabular-nums">{formatBdt(totalInvestedDisplay)}</span>
-                    <span className="ml-2 text-[12px] font-normal text-[var(--ink-muted)]">BDT</span>
                 </KpiCell>
                 <KpiCell label="Unrealized P/L">
                     <span
@@ -366,11 +365,6 @@ export function PortfolioHoldingsTable({
                             {fmtPct(totalUnrealizedPct)}
                         </span>
                     </span>
-                    {summary.cashAdjustments !== 0 ? (
-                        <div className="mt-0.5 text-[11px] font-normal text-[var(--ink-muted)] tabular-nums">
-                            incl. cash adj. {fmtSignedBdt(summary.cashAdjustments)}
-                        </div>
-                    ) : null}
                 </KpiCell>
                 <KpiCell label="Positions">
                     <span className="tabular-nums">{positionCount}</span>
