@@ -9,7 +9,7 @@ import {
  sectorMatchKey,
 } from "@/lib/sector-targets";
 import { Alert, Button, Card, Input, InputNumber } from "antd";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 type DraftRow = {
  /** Stable key for React; preserves identity across edits. */
@@ -22,13 +22,9 @@ type DraftRow = {
  has_position: boolean;
 };
 
-function rowKey(seed: string): string {
- return `${seed}::${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function fromServer(rows: SectorTargetWithCurrent[]): DraftRow[] {
  return rows.map((r) => ({
- key: rowKey(r.sector),
+ key: r.sector || `row-${rows.indexOf(r)}`,
  sector: r.sector,
  target: r.target_percent === null ? "" : String(r.target_percent),
  current_percent: r.has_position ? r.current_percent : null,
@@ -45,6 +41,7 @@ export function SectorTargetsForm({
 }: {
  initialRows: SectorTargetWithCurrent[];
 }) {
+ const newRowSeq = useRef(0);
  const [draft, setDraft] = useState<DraftRow[]>(() => fromServer(initialRows));
  const [saving, setSaving] = useState(false);
  const [error, setError] = useState<string | null>(null);
@@ -90,10 +87,11 @@ export function SectorTargetsForm({
  setError(null);
  setOk(false);
  if (draft.length >= SECTOR_TARGET_MAX_ROWS) return;
+ const seq = ++newRowSeq.current;
  setDraft((prev) => [
  ...prev,
  {
- key: rowKey("new"),
+ key: `new::${seq}`,
  sector: "",
  target: "",
  current_percent: null,
