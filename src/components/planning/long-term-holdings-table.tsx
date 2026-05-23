@@ -296,7 +296,7 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                     className="mt-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]"
                     title="52-week low – high"
                 >
-                    52w {row.week52Low !== null && row.week52Low !== undefined ? formatBdt(row.week52Low) : "—"}
+                    {row.week52Low !== null && row.week52Low !== undefined ? formatBdt(row.week52Low) : "—"}
                     {" – "}
                     {row.week52High !== null && row.week52High !== undefined ? formatBdt(row.week52High) : "—"}
                 </div>

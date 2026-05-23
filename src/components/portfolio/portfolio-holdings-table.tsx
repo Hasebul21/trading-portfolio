@@ -664,7 +664,7 @@ function HoldingRow({
                     className="mt-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]"
                     title="52-week low – high"
                 >
-                    52w {row.week52Low !== null ? formatBdt(row.week52Low) : "—"}
+                    {row.week52Low !== null ? formatBdt(row.week52Low) : "—"}
                     {" – "}
                     {row.week52High !== null ? formatBdt(row.week52High) : "—"}
                 </div>
