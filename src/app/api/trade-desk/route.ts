@@ -13,8 +13,6 @@ import type { TradeDeskData } from "@/components/trade-desk/trade-desk-view";
 
 export const dynamic = "force-dynamic";
 
-const MAX_UNIVERSE = 250;
-
 export async function GET() {
   const supabase = await createClient();
   const {
@@ -24,23 +22,34 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const lspRes = await fetchDseLspQuoteMapFresh();
+  const [lspRes, ltRes] = await Promise.all([
+    fetchDseLspQuoteMapFresh(),
+    supabase
+      .from("long_term_holdings")
+      .select("symbol")
+      .order("symbol", { ascending: true }),
+  ]);
 
-  if (lspRes.bySymbol.size === 0) {
+  const symbols = [
+    ...new Set(
+      (ltRes.data ?? []).map((r) => String(r.symbol).trim().toUpperCase()),
+    ),
+  ].filter(Boolean);
+
+  if (symbols.length === 0 || lspRes.bySymbol.size === 0) {
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       sentiment: "Neutral",
-      sentimentReason: lspRes.error ?? "No DSE price data available",
+      sentimentReason: symbols.length === 0 ? "No symbols in Watchlist" : (lspRes.error ?? "No DSE price data"),
       picks: [],
       watchlist: [],
       avoided: [],
       disclaimer: ORACLE_DISCLAIMER,
-      totalSymbols: 0,
+      totalSymbols: symbols.length,
       gatedOut: 0,
     } satisfies TradeDeskData);
   }
 
-  const symbols = [...lspRes.bySymbol.keys()].sort().slice(0, MAX_UNIVERSE);
   const extrasMap = await fetchDseCompanyExtrasMap(symbols);
 
   const scored: Parameters<typeof rankAndSelect>[0] = [];
@@ -69,7 +78,7 @@ export async function GET() {
     picks.length > 0 ? picks.reduce((s, p) => s + p.score, 0) / picks.length : 0;
   const { sentiment, reason: sentimentReason } = computeSentiment(picks.length, avgScore);
 
-  const payload: TradeDeskData = {
+  return NextResponse.json({
     generatedAt: new Date().toISOString(),
     sentiment,
     sentimentReason,
@@ -79,7 +88,5 @@ export async function GET() {
     disclaimer: ORACLE_DISCLAIMER,
     totalSymbols: symbols.length,
     gatedOut: gateRejects.length,
-  };
-
-  return NextResponse.json(payload);
+  } satisfies TradeDeskData);
 }
