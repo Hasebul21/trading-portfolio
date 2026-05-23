@@ -11,6 +11,7 @@ import {
 } from "@/lib/format-bdt";
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
+import { sectorMatchKey } from "@/lib/sector-targets";
 import { Alert, AutoComplete, Button, Select, Space } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -24,6 +25,7 @@ type SectorGroup = {
     unrealizedPl: number;
     hasQuote: boolean;
     sharePct: number;
+    targetPct: number | null;
 };
 
 const SECTOR_FALLBACK = "Unsectorised";
@@ -31,6 +33,40 @@ const SECTOR_FALLBACK = "Unsectorised";
 function sectorLabel(s: string | null | undefined): string {
     const t = (s ?? "").trim();
     return t || SECTOR_FALLBACK;
+}
+
+type PortfolioSortKey =
+    | "default"
+    | "invested-desc"
+    | "invested-asc"
+    | "pl-desc"
+    | "pl-asc";
+
+const PORTFOLIO_SORT_OPTIONS: Array<{ value: PortfolioSortKey; label: string }> = [
+    { value: "default", label: "Default (invested ↓)" },
+    { value: "invested-desc", label: "Invested — high to low" },
+    { value: "invested-asc", label: "Invested — low to high" },
+    { value: "pl-desc", label: "Unrealized P/L — high to low" },
+    { value: "pl-asc", label: "Unrealized P/L — low to high" },
+];
+
+function applyPortfolioSort(
+    items: PortfolioMarketRow[],
+    key: PortfolioSortKey,
+): PortfolioMarketRow[] {
+    if (key === "default") return items.slice().sort((a, b) => b.totalCost - a.totalCost);
+    const dir = key.endsWith("-asc") ? 1 : -1;
+    const pick: (r: PortfolioMarketRow) => number | null = key.startsWith("invested")
+        ? (r) => (Number.isFinite(r.totalCost) ? r.totalCost : null)
+        : (r) => (r.unrealizedPl !== null && Number.isFinite(r.unrealizedPl) ? r.unrealizedPl : null);
+    return items.slice().sort((a, b) => {
+        const va = pick(a);
+        const vb = pick(b);
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        return (va - vb) * dir;
+    });
 }
 
 /**
@@ -41,6 +77,8 @@ function sectorLabel(s: string | null | undefined): string {
 function groupBySector(
     rows: PortfolioMarketRow[],
     totalInvested: number,
+    sortKey: PortfolioSortKey = "default",
+    sectorTargetsByKey: Record<string, number> = {},
 ): SectorGroup[] {
     const bySector = new Map<string, PortfolioMarketRow[]>();
     for (const r of rows) {
@@ -66,16 +104,16 @@ function groupBySector(
                 hasQuote = true;
             }
         }
+        const targetRaw = sectorTargetsByKey[sectorMatchKey(sector)];
         return {
             sector,
             invested,
             unrealizedPl,
             hasQuote,
             sharePct: totalInvested > 0 ? (invested / totalInvested) * 100 : 0,
-            items: raw
-                .slice()
-                .sort((a, b) => b.totalCost - a.totalCost)
-                .map((h) => ({ ...h, key: h.symbol })),
+            targetPct:
+                typeof targetRaw === "number" && Number.isFinite(targetRaw) ? targetRaw : null,
+            items: applyPortfolioSort(raw, sortKey).map((h) => ({ ...h, key: h.symbol })),
         };
     });
 }
@@ -129,6 +167,7 @@ export function PortfolioHoldingsTable({
     totalRealizedBdt = 0,
     totalInvestedBdt = 0,
     totalCashAdjustmentsBdt = 0,
+    sectorTargetsByKey = {},
     enableBookEdit = false,
     onAfterBookSave,
 }: {
@@ -139,11 +178,14 @@ export function PortfolioHoldingsTable({
     totalInvestedBdt?: number;
     /** Net of manual cash add/deduct entries from Settings. */
     totalCashAdjustmentsBdt?: number;
+    /** Per-sector target % (keys are sectorMatchKey-normalised). */
+    sectorTargetsByKey?: Record<string, number>;
     enableBookEdit?: boolean;
     onAfterBookSave?: () => void | Promise<void>;
 }) {
     const [symbolQuery, setSymbolQuery] = useState("");
     const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
+    const [sortKey, setSortKey] = useState<PortfolioSortKey>("default");
     const [draft, setDraft] = useState<Record<string, BookDraft>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -220,8 +262,8 @@ export function PortfolioHoldingsTable({
             if (sectorFilter !== SECTOR_FILTER_ALL && sectorLabel(h.sector) !== sectorFilter) return false;
             return true;
         });
-        return groupBySector(filtered, totalInvestedDisplay);
-    }, [displayHoldings, symbolQuery, sectorFilter, totalInvestedDisplay]);
+        return groupBySector(filtered, totalInvestedDisplay, sortKey, sectorTargetsByKey);
+    }, [displayHoldings, symbolQuery, sectorFilter, totalInvestedDisplay, sortKey, sectorTargetsByKey]);
 
     const sectorOptions = useMemo(() => {
         const set = new Set<string>();
@@ -410,6 +452,14 @@ export function PortfolioHoldingsTable({
                         className="w-full sm:w-64"
                         aria-label="Filter by sector"
                     />
+                    <Select<PortfolioSortKey>
+                        value={sortKey}
+                        onChange={(v) => setSortKey(v)}
+                        options={PORTFOLIO_SORT_OPTIONS}
+                        size="middle"
+                        className="w-full sm:w-64"
+                        aria-label="Sort holdings"
+                    />
                 </Space>
                 {enableBookEdit ? (
                     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -532,6 +582,11 @@ function SectorCard({
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] tabular-nums">
                         <BannerStat label="Invested" value={formatBdt(group.invested)} />
                         <BannerStat label="Share of portfolio" value={`${group.sharePct.toFixed(1)}%`} />
+                        <BannerStat
+                            label="Target"
+                            value={group.targetPct !== null ? `${group.targetPct.toFixed(1)}%` : "—"}
+                            valueClass={group.targetPct === null ? "text-white/60" : undefined}
+                        />
                         <BannerStat
                             label="Unrealized P/L"
                             value={group.hasQuote ? fmtSignedBdt(group.unrealizedPl) : "—"}

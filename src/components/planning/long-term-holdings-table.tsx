@@ -55,9 +55,44 @@ function isSellSignal(row: LongTermHoldingRow): boolean {
     return row.ltp >= row.sell_point_bdt;
 }
 
+type WatchlistSortKey = "default" | "ltp-asc" | "ltp-desc" | "fromlow-asc" | "fromlow-desc";
+
+const WATCHLIST_SORT_OPTIONS: Array<{ value: WatchlistSortKey; label: string }> = [
+    { value: "default", label: "Default (symbol)" },
+    { value: "ltp-desc", label: "LTP — high to low" },
+    { value: "ltp-asc", label: "LTP — low to high" },
+    { value: "fromlow-desc", label: "From 52w low — high to low" },
+    { value: "fromlow-asc", label: "From 52w low — low to high" },
+];
+
+function fromLowPctValue(row: LongTermHoldingRow): number | null {
+    if (row.ltp === null || !Number.isFinite(row.ltp)) return null;
+    if (row.week52Low === null || row.week52Low === undefined) return null;
+    if (!Number.isFinite(row.week52Low) || row.week52Low <= 0) return null;
+    return ((row.ltp - row.week52Low) / row.week52Low) * 100;
+}
+
+function applyWatchlistSort(items: Row[], key: WatchlistSortKey): Row[] {
+    if (key === "default") return items;
+    const dir = key.endsWith("-asc") ? 1 : -1;
+    const pick: (r: Row) => number | null = key.startsWith("ltp")
+        ? (r) => (r.ltp !== null && Number.isFinite(r.ltp) ? r.ltp : null)
+        : (r) => fromLowPctValue(r);
+    return items.slice().sort((a, b) => {
+        const va = pick(a);
+        const vb = pick(b);
+        // Nulls always sink to the bottom regardless of direction.
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        return (va - vb) * dir;
+    });
+}
+
 export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) {
     const [searchText, setSearchText] = useState("");
     const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
+    const [sortKey, setSortKey] = useState<WatchlistSortKey>("default");
 
     const filteredRows = useMemo(() => {
         const q = searchText.trim().toUpperCase();
@@ -88,9 +123,10 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                 return a.localeCompare(b);
             })
             .map(([sector, items]) => {
-                const sorted = items
+                const symbolSorted = items
                     .slice()
                     .sort((x, y) => String(x.symbol).localeCompare(String(y.symbol)));
+                const sorted = applyWatchlistSort(symbolSorted, sortKey);
                 let quoted = 0;
                 let buySignals = 0;
                 let sellSignals = 0;
@@ -101,7 +137,7 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                 }
                 return { sector, items: sorted, quoted, buySignals, sellSignals };
             });
-    }, [filteredRows]);
+    }, [filteredRows, sortKey]);
 
     const symbolOptions = useMemo(
         () =>
@@ -165,6 +201,14 @@ export function LongTermHoldingsTable({ rows }: { rows: LongTermHoldingRow[] }) 
                     optionFilterProp="label"
                     className="w-32 shrink-0 sm:w-44"
                     aria-label="Filter by sector"
+                />
+                <Select<WatchlistSortKey>
+                    value={sortKey}
+                    onChange={(v) => setSortKey(v)}
+                    options={WATCHLIST_SORT_OPTIONS}
+                    size="middle"
+                    className="w-36 shrink-0 sm:w-56"
+                    aria-label="Sort"
                 />
             </div>
 
@@ -267,7 +311,7 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
 
     return (
         <div
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(3,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
                 <span
@@ -312,26 +356,6 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                     }
                 >
                     {fromLowPct !== null ? fmtFromLow(fromLowPct) : "—"}
-                </span>
-            </RowCell>
-
-            <RowCell label="Buy point">
-                <span
-                    className={`tabular-nums text-[13px] ${buySignal ? "text-[var(--gain-700)]" : "text-[var(--ink-strong)]"}`}
-                >
-                    {row.buy_point_bdt !== null && row.buy_point_bdt !== undefined
-                        ? formatBdt(row.buy_point_bdt)
-                        : "—"}
-                </span>
-            </RowCell>
-
-            <RowCell label="Sell point">
-                <span
-                    className={`tabular-nums text-[13px] ${sellSignal ? "text-[var(--loss-700)]" : "text-[var(--ink-strong)]"}`}
-                >
-                    {row.sell_point_bdt !== null && row.sell_point_bdt !== undefined
-                        ? formatBdt(row.sell_point_bdt)
-                        : "—"}
                 </span>
             </RowCell>
 

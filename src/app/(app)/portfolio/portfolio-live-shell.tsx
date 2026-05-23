@@ -28,12 +28,14 @@ export function PortfolioLiveShell({
  initialTotalRealizedBdt,
  initialTotalInvestedBdt,
  initialTotalCashAdjustmentsBdt,
+ sectorTargetsByKey,
 }: {
  initialHoldings: PortfolioMarketRow[];
  initialMarketError: string | null;
  initialTotalRealizedBdt: number;
  initialTotalInvestedBdt: number;
  initialTotalCashAdjustmentsBdt: number;
+ sectorTargetsByKey: Record<string, number>;
 }) {
  const [rows, setRows] = useState(initialHoldings);
  const [totalRealizedBdt, setTotalRealizedBdt] = useState(initialTotalRealizedBdt);
@@ -150,6 +152,7 @@ export function PortfolioLiveShell({
  totalRealizedBdt={totalRealizedBdt}
  totalInvestedBdt={totalInvestedBdt}
  totalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
+ sectorTargetsByKey={sectorTargetsByKey}
  enableBookEdit
  onAfterBookSave={refresh}
  />

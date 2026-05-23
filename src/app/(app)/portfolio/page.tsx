@@ -1,5 +1,7 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
+import { getSectorTargets } from "../sector-target-actions";
+import { sectorMatchKey } from "@/lib/sector-targets";
 import { siteTextLinkNeutralClass } from "@/lib/site-typography";
 import Link from "next/link";
 import { Card, Empty } from "antd";
@@ -9,9 +11,21 @@ import { PortfolioLiveShell } from "./portfolio-live-shell";
 export const revalidate = 0;
 
 export default async function PortfolioPage() {
- const portfolioRes = await fetchPortfolioWithDseMarket();
+ const [portfolioRes, targetsRes] = await Promise.all([
+ fetchPortfolioWithDseMarket(),
+ getSectorTargets(),
+ ]);
 
  const { error, holdings, marketError, totalRealizedBdt, totalInvestedBdt, totalCashAdjustmentsBdt } = portfolioRes;
+
+ const sectorTargetsByKey: Record<string, number> = {};
+ if (targetsRes.ok) {
+ for (const r of targetsRes.data.rows) {
+ if (r.target_percent !== null && Number.isFinite(r.target_percent)) {
+ sectorTargetsByKey[sectorMatchKey(r.sector)] = r.target_percent;
+ }
+ }
+ }
 
  if (error) {
  const missingTable =
@@ -92,6 +106,7 @@ export default async function PortfolioPage() {
  initialTotalRealizedBdt={totalRealizedBdt}
  initialTotalInvestedBdt={totalInvestedBdt}
  initialTotalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
+ sectorTargetsByKey={sectorTargetsByKey}
  />
  </div>
  )}
