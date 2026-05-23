@@ -11,13 +11,20 @@ export type PortfolioMarketRow = HoldingRow & {
   pivot: FloorPivot | null;
   /** (LTP − breakEvenPrice) × shares when LTP known. Includes round-trip fees. */
   unrealizedPl: number | null;
+  /** 52-week low from the DSE company page; null when not available. */
+  week52Low: number | null;
+  /** 52-week high from the DSE company page; null when not available. */
+  week52High: number | null;
 };
 
 /** Merge ledger/override holdings with DSE market and company metadata. */
 export function holdingsToMarketRows(
   holdings: HoldingRow[],
   bySymbol: Map<string, DseLspQuote>,
-  companyExtrasBySymbol: Map<string, { sector: string | null }>,
+  companyExtrasBySymbol: Map<
+    string,
+    { sector: string | null; week52Low?: number | null; week52High?: number | null }
+  >,
 ): PortfolioMarketRow[] {
   return holdings.map((h) => {
     const q = bySymbol.get(h.symbol);
@@ -28,13 +35,16 @@ export function holdingsToMarketRows(
         ? (marketLtp - h.breakEvenPrice) * h.shares
         : null;
     const pivot = q ? computeFloorPivot(q.dayHigh, q.dayLow, q.closep) : null;
-    const sector = companyExtrasBySymbol.get(h.symbol)?.sector ?? h.category ?? null;
+    const extras = companyExtrasBySymbol.get(h.symbol);
+    const sector = extras?.sector ?? h.category ?? null;
     return {
       ...h,
       sector,
       marketLtp,
       pivot,
       unrealizedPl,
+      week52Low: extras?.week52Low ?? null,
+      week52High: extras?.week52High ?? null,
     };
   });
 }

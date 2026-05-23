@@ -125,20 +125,23 @@ export function PortfolioLiveShell({
  const marketWarning = liveLspError ?? (!hasPolled ? initialMarketError : null);
 
  return (
- <div className="flex flex-col gap-4 sm:gap-5">
- <div className="flex flex-wrap items-center justify-center gap-2">
- <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--bg-surface)] px-3 py-2 text-left text-[15px] font-normal text-[var(--accent-700)] shadow-sm backdrop-blur-sm sm:px-4 ">
- <span className="relative flex h-2 w-2">
+ <div className="flex flex-col gap-3 sm:gap-4">
+ <div className="flex justify-end">
+ <span
+ className="inline-flex items-center gap-1.5 text-[11px] leading-none text-[var(--ink-muted)] tabular-nums"
+ title={updatedAt ? "Live DSE prices" : "Connecting to live prices…"}
+ >
+ <span className="relative flex h-1.5 w-1.5">
  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400 opacity-60" />
- <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent-700)]" />
+ <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent-700)]" />
  </span>
  {updatedAt
- ? `Live prices · ${updatedAt.toLocaleTimeString(undefined, {
+ ? `Live · ${updatedAt.toLocaleTimeString(undefined, {
  hour: "2-digit",
  minute: "2-digit",
  second: "2-digit",
  })}`
- : "Connecting to live prices…"}
+ : "Connecting…"}
  </span>
  </div>
 

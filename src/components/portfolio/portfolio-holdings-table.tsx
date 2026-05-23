@@ -655,11 +655,21 @@ function HoldingRow({
                 </span>
             </RowCell>
 
-            {/* Last price */}
+            {/* Last price + 52-week range */}
             <RowCell label="Last price">
                 <span className="tabular-nums text-[14px] text-[var(--ink-strong)]">
                     {ltpKnown ? formatBdt(row.marketLtp!) : "—"}
                 </span>
+                {row.week52Low !== null || row.week52High !== null ? (
+                    <div
+                        className="mt-0.5 text-[11px] tabular-nums text-[var(--ink-muted)]"
+                        title="52-week low – high"
+                    >
+                        52w {row.week52Low !== null ? formatBdt(row.week52Low) : "—"}
+                        {" – "}
+                        {row.week52High !== null ? formatBdt(row.week52High) : "—"}
+                    </div>
+                ) : null}
             </RowCell>
 
             {/* Invested */}

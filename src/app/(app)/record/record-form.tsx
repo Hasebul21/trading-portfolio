@@ -163,8 +163,8 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
                     />
                 </FieldLabel>
 
-                {/* Qty + Price side-by-side on sm+. */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Qty + Price side-by-side on sm+. Quantity gets the wider slot. */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.6fr_1fr]">
                     <FieldLabel label="Quantity" hint="Shares">
                         <InputNumber
                             value={quantity === "" ? null : Number(quantity)}
