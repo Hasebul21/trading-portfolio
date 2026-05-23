@@ -20,29 +20,29 @@ import type { DseLspQuote } from "./dse-lsp-quotes";
 
 // ─── Weights (must sum to 100) ────────────────────────────────────────────────
 // Pillar A — Valuation (30)
-const W_PE       = 10;
-const W_GRAHAM   = 12;
-const W_EY       = 8;
+const W_PE = 10;
+const W_GRAHAM = 12;
+const W_EY = 8;
 // Pillar B — Quality (25)
-const W_ROE      = 12;
-const W_DIV      = 8;
-const W_PAYOUT   = 5;
+const W_ROE = 12;
+const W_DIV = 8;
+const W_PAYOUT = 5;
 // Pillar C — Safety (20)
-const W_MCAP     = 6;
-const W_FLOAT    = 5;
-const W_AGE      = 5;
+const W_MCAP = 6;
+const W_FLOAT = 5;
+const W_AGE = 5;
 const W_CATEGORY = 4;
 // Pillar D — Technical (25)
-const W_52W      = 12;
+const W_52W = 12;
 const W_DRAWDOWN = 8;
-const W_PNAV     = 5;
+const W_PNAV = 5;
 
 /** Bangladesh 10Y T-bill proxy — used for Earnings Yield comparison. */
 const BD_RISK_FREE = 0.095;
 
-export const ORACLE_THRESHOLD     = 55;
+export const ORACLE_THRESHOLD = 55;
 export const ORACLE_WATCHLIST_MIN = 40;
-const MAX_PICKS  = 8;
+const MAX_PICKS = 8;
 const SECTOR_CAP = 2;
 
 // ─── Gate reasons ─────────────────────────────────────────────────────────────
@@ -56,9 +56,9 @@ export type GateReason =
   | "AGM overdue (> 18 months)";
 
 // ─── Output types ─────────────────────────────────────────────────────────────
-export type ConvictionTier  = "High Conviction" | "Strong Buy" | "Buy";
+export type ConvictionTier = "High Conviction" | "Strong Buy" | "Buy";
 export type ValuationSignal = "Deep Value" | "Undervalued" | "Fair Value" | "Overvalued";
-export type HoldingSignal   = "Strong Add" | "Add" | "Hold" | "Trim" | "Exit";
+export type HoldingSignal = "Strong Add" | "Add" | "Hold" | "Trim" | "Exit";
 export type OracleSentiment = "Bullish" | "Neutral" | "Cautious";
 
 export type OracleReasonTag =
@@ -229,15 +229,15 @@ function computeAdvancedMetrics(extras: DseCompanyExtras, ltp: number): Advanced
 
   let valuationSignal: ValuationSignal | null = null;
   if (grahamNumber !== null) {
-    if (ltp < grahamNumber * 0.7)      valuationSignal = "Deep Value";
-    else if (ltp < grahamNumber)        valuationSignal = "Undervalued";
-    else if (ltp < grahamNumber * 1.3)  valuationSignal = "Fair Value";
-    else                                valuationSignal = "Overvalued";
+    if (ltp < grahamNumber * 0.7) valuationSignal = "Deep Value";
+    else if (ltp < grahamNumber) valuationSignal = "Undervalued";
+    else if (ltp < grahamNumber * 1.3) valuationSignal = "Fair Value";
+    else valuationSignal = "Overvalued";
   } else if (priceNav !== null) {
-    if (priceNav < 1.0)      valuationSignal = "Deep Value";
+    if (priceNav < 1.0) valuationSignal = "Deep Value";
     else if (priceNav < 1.5) valuationSignal = "Undervalued";
     else if (priceNav < 2.5) valuationSignal = "Fair Value";
-    else                     valuationSignal = "Overvalued";
+    else valuationSignal = "Overvalued";
   }
 
   let fairValue: number | null = null;
@@ -279,7 +279,7 @@ function checkGates(extras: DseCompanyExtras, ltp: number): GateReason | null {
 // ─── Sub-scorers ──────────────────────────────────────────────────────────────
 function scorePE(pe: number | null): number {
   if (pe === null) return 2;
-  if (pe <= 8)  return W_PE;
+  if (pe <= 8) return W_PE;
   if (pe <= 12) return Math.round(W_PE * 0.8);
   if (pe <= 15) return Math.round(W_PE * 0.6);
   if (pe <= 20) return Math.round(W_PE * 0.4);
@@ -292,17 +292,17 @@ function scoreGraham(mos: number | null): number {
   if (mos >= 50) return W_GRAHAM;
   if (mos >= 30) return Math.round(W_GRAHAM * 0.83);
   if (mos >= 15) return Math.round(W_GRAHAM * 0.58);
-  if (mos >= 0)  return Math.round(W_GRAHAM * 0.33);
+  if (mos >= 0) return Math.round(W_GRAHAM * 0.33);
   return 0;
 }
 
 function scoreEY(ey: number | null): number {
   if (ey === null) return 0;
   const d = ey / 100;
-  if (d >= 0.14)                  return W_EY;
-  if (d >= BD_RISK_FREE + 0.035)  return Math.round(W_EY * 0.75);
-  if (d >= BD_RISK_FREE)          return Math.round(W_EY * 0.5);
-  if (d >= 0.06)                  return Math.round(W_EY * 0.25);
+  if (d >= 0.14) return W_EY;
+  if (d >= BD_RISK_FREE + 0.035) return Math.round(W_EY * 0.75);
+  if (d >= BD_RISK_FREE) return Math.round(W_EY * 0.5);
+  if (d >= 0.06) return Math.round(W_EY * 0.25);
   return 0;
 }
 
@@ -311,7 +311,7 @@ function scoreROE(roe: number | null): number {
   if (roe >= 20) return W_ROE;
   if (roe >= 15) return Math.round(W_ROE * 0.75);
   if (roe >= 10) return Math.round(W_ROE * 0.5);
-  if (roe >= 5)  return Math.round(W_ROE * 0.25);
+  if (roe >= 5) return Math.round(W_ROE * 0.25);
   return 0;
 }
 
@@ -327,9 +327,9 @@ function scoreDivYield(yld: number | null): number {
 function scorePayout(payout: number | null, yld: number | null): number {
   if (!yld) return 0;
   if (payout === null) return Math.round(W_PAYOUT * 0.4);
-  if (payout <= 40)  return W_PAYOUT;
-  if (payout <= 60)  return Math.round(W_PAYOUT * 0.8);
-  if (payout <= 80)  return Math.round(W_PAYOUT * 0.6);
+  if (payout <= 40) return W_PAYOUT;
+  if (payout <= 60) return Math.round(W_PAYOUT * 0.8);
+  if (payout <= 80) return Math.round(W_PAYOUT * 0.6);
   if (payout <= 100) return Math.round(W_PAYOUT * 0.2);
   return 0;
 }
@@ -337,10 +337,10 @@ function scorePayout(payout: number | null, yld: number | null): number {
 function scoreMcap(cr: number | null): number {
   if (cr === null) return 1;
   if (cr >= 1000) return W_MCAP;
-  if (cr >= 500)  return Math.round(W_MCAP * 0.83);
-  if (cr >= 200)  return Math.round(W_MCAP * 0.67);
-  if (cr >= 100)  return Math.round(W_MCAP * 0.5);
-  if (cr >= 50)   return Math.round(W_MCAP * 0.17);
+  if (cr >= 500) return Math.round(W_MCAP * 0.83);
+  if (cr >= 200) return Math.round(W_MCAP * 0.67);
+  if (cr >= 100) return Math.round(W_MCAP * 0.5);
+  if (cr >= 50) return Math.round(W_MCAP * 0.17);
   return 0;
 }
 
@@ -358,8 +358,8 @@ function scoreAge(yrs: number | null): number {
   if (yrs >= 25) return W_AGE;
   if (yrs >= 15) return Math.round(W_AGE * 0.8);
   if (yrs >= 10) return Math.round(W_AGE * 0.6);
-  if (yrs >= 5)  return Math.round(W_AGE * 0.4);
-  if (yrs >= 2)  return Math.round(W_AGE * 0.2);
+  if (yrs >= 5) return Math.round(W_AGE * 0.4);
+  if (yrs >= 2) return Math.round(W_AGE * 0.2);
   return 0;
 }
 
@@ -381,11 +381,11 @@ function score52w(pos: number | null): number {
 
 function scoreDrawdown(dd: number | null): number {
   // dd is negative (e.g. -22 = 22% below 52W high); healthy pullback = good entry
-  if (dd === null)    return Math.round(W_DRAWDOWN * 0.25);
-  if (dd >= -5)       return Math.round(W_DRAWDOWN * 0.25); // near peak, less upside
-  if (dd >= -20)      return W_DRAWDOWN;                     // ideal pullback zone
-  if (dd >= -35)      return Math.round(W_DRAWDOWN * 0.75);
-  if (dd >= -50)      return Math.round(W_DRAWDOWN * 0.4);
+  if (dd === null) return Math.round(W_DRAWDOWN * 0.25);
+  if (dd >= -5) return Math.round(W_DRAWDOWN * 0.25); // near peak, less upside
+  if (dd >= -20) return W_DRAWDOWN;                     // ideal pullback zone
+  if (dd >= -35) return Math.round(W_DRAWDOWN * 0.75);
+  if (dd >= -50) return Math.round(W_DRAWDOWN * 0.4);
   return Math.round(W_DRAWDOWN * 0.1);
 }
 
@@ -426,34 +426,34 @@ export function computeOracleScore(
   extras: DseCompanyExtras,
   quote: DseLspQuote | null,
 ): | { type: "pick"; result: Omit<OraclePickResult, "allocationPct"> }
-   | { type: "gate"; reason: GateReason }
-   | { type: "noPrice" } {
+  | { type: "gate"; reason: GateReason }
+  | { type: "noPrice" } {
   if (!quote) return { type: "noPrice" };
 
-  const ltp  = quote.ltp;
+  const ltp = quote.ltp;
   const gate = checkGates(extras, ltp);
-  if (gate)  return { type: "gate", reason: gate };
+  if (gate) return { type: "gate", reason: gate };
 
-  const adv   = computeAdvancedMetrics(extras, ltp);
-  const pnav  = extras.nav !== null && extras.nav > 0 ? ltp / extras.nav : null;
+  const adv = computeAdvancedMetrics(extras, ltp);
+  const pnav = extras.nav !== null && extras.nav > 0 ? ltp / extras.nav : null;
   const pos52 =
     extras.week52Low !== null && extras.week52High !== null && extras.week52High > extras.week52Low
       ? (ltp - extras.week52Low) / (extras.week52High - extras.week52Low)
       : null;
 
-  const peS   = scorePE(extras.pe);
-  const gS    = scoreGraham(adv.marginOfSafety);
-  const eyS   = scoreEY(adv.earningsYield);
-  const roeS  = scoreROE(adv.roe);
-  const divS  = scoreDivYield(extras.dividendYieldPct);
-  const payS  = scorePayout(adv.dividendPayoutRatio, extras.dividendYieldPct);
-  const mcS   = scoreMcap(extras.marketCapCr);
-  const ffS   = scoreFloat(extras.freeFloat);
-  const ageS  = scoreAge(extras.listedYears);
-  const catS  = scoreCat(extras.category);
-  const posS  = score52w(pos52);
-  const ddS   = scoreDrawdown(adv.drawdownFromHigh);
-  const pnS   = scorePNAV(pnav);
+  const peS = scorePE(extras.pe);
+  const gS = scoreGraham(adv.marginOfSafety);
+  const eyS = scoreEY(adv.earningsYield);
+  const roeS = scoreROE(adv.roe);
+  const divS = scoreDivYield(extras.dividendYieldPct);
+  const payS = scorePayout(adv.dividendPayoutRatio, extras.dividendYieldPct);
+  const mcS = scoreMcap(extras.marketCapCr);
+  const ffS = scoreFloat(extras.freeFloat);
+  const ageS = scoreAge(extras.listedYears);
+  const catS = scoreCat(extras.category);
+  const posS = score52w(pos52);
+  const ddS = scoreDrawdown(adv.drawdownFromHigh);
+  const pnS = scorePNAV(pnav);
 
   const total = Math.round(peS + gS + eyS + roeS + divS + payS + mcS + ffS + ageS + catS + posS + ddS + pnS);
 
@@ -476,13 +476,17 @@ export function computeOracleScore(
 
   // Buy zone anchored to fair value when stock is above it, else near current price
   const fv = adv.fairValue;
-  const buyZoneLow  = fv !== null && fv < ltp ? Math.round(fv * 0.95 * 10) / 10 : Math.round(ltp * 0.95 * 10) / 10;
+  const buyZoneLow = fv !== null && fv < ltp ? Math.round(fv * 0.95 * 10) / 10 : Math.round(ltp * 0.95 * 10) / 10;
   const buyZoneHigh = fv !== null && fv < ltp ? Math.round(fv * 1.02 * 10) / 10 : Math.round(ltp * 1.02 * 10) / 10;
-  const stopLoss    = Math.round(Math.max(ltp * 0.90, (extras.week52Low ?? ltp * 0.85) * 1.01) * 10) / 10;
+  // Stop loss: deeper of 10%-from-LTP or just-above-52W-low, but never closer
+  // than 3% to LTP (otherwise stocks sitting on their 52W low would yield a
+  // stop above current price → negative downside).
+  const rawStop = Math.max(ltp * 0.90, (extras.week52Low ?? ltp * 0.85) * 1.01);
+  const stopLoss = Math.round(Math.min(rawStop, ltp * 0.97) * 10) / 10;
   const targetPrice = fv !== null ? Math.round(fv * 1.05 * 10) / 10 : null;
-  const upsidePct   = targetPrice !== null ? Math.round((targetPrice / ltp - 1) * 1000) / 10 : null;
+  const upsidePct = targetPrice !== null ? Math.round((targetPrice / ltp - 1) * 1000) / 10 : null;
   const downsidePct = Math.round((1 - stopLoss / ltp) * 1000) / 10;
-  const horizon     = total >= 75 ? "Long (1Y+)" : total >= 62 ? "Medium (3–12M)" : "Short (1–3M)";
+  const horizon = total >= 75 ? "Long (1Y+)" : total >= 62 ? "Medium (3–12M)" : "Short (1–3M)";
 
   return {
     type: "pick",
@@ -527,13 +531,13 @@ export function computeHoldingAnalysis(
     if (sr.type === "pick") score = sr.result.score;
   }
 
-  const currentValue        = ltp !== null ? Math.round(ltp * holding.shares * 100) / 100 : null;
-  const unrealizedPL        = currentValue !== null ? Math.round((currentValue - holding.totalCost) * 100) / 100 : null;
-  const unrealizedPLPct     = ltp !== null ? Math.round((ltp / holding.avgPrice - 1) * 1000) / 10 : null;
-  const distanceFromBE      = ltp !== null ? Math.round((ltp / holding.breakEvenPrice - 1) * 1000) / 10 : null;
+  const currentValue = ltp !== null ? Math.round(ltp * holding.shares * 100) / 100 : null;
+  const unrealizedPL = currentValue !== null ? Math.round((currentValue - holding.totalCost) * 100) / 100 : null;
+  const unrealizedPLPct = ltp !== null ? Math.round((ltp / holding.avgPrice - 1) * 1000) / 10 : null;
+  const distanceFromBE = ltp !== null ? Math.round((ltp / holding.breakEvenPrice - 1) * 1000) / 10 : null;
 
   const mos = (adv as AdvancedMetrics).marginOfSafety ?? null;
-  const gn  = (adv as AdvancedMetrics).grahamNumber  ?? null;
+  const gn = (adv as AdvancedMetrics).grahamNumber ?? null;
 
   let signal: HoldingSignal = "Hold";
   let signalReason = "";
@@ -603,25 +607,53 @@ export function rankAndSelect(
   for (const item of sorted) {
     if (item.score < ORACLE_WATCHLIST_MIN) continue;
     if (item.score < ORACLE_THRESHOLD) { watchlistCandidates.push(item); continue; }
-    if (picks.length >= MAX_PICKS) continue;
     const sk = item.sector?.toLowerCase() ?? "__unknown__";
-    if ((sectorCount[sk] ?? 0) >= SECTOR_CAP) continue;
+    // Demote to watchlist when we'd otherwise drop a high-score name due to
+    // hard caps — the user should still see it instead of silently losing it.
+    if (picks.length >= MAX_PICKS || (sectorCount[sk] ?? 0) >= SECTOR_CAP) {
+      watchlistCandidates.push(item);
+      continue;
+    }
     sectorCount[sk] = (sectorCount[sk] ?? 0) + 1;
     picks.push({ ...item.result, allocationPct: 0 });
   }
 
+  // Score-weighted allocation with per-pick floor (5%) and ceiling (25%).
+  // Distribute the rounding/clamp residual proportionally across picks that
+  // still have headroom so the top pick never silently breaches the ceiling.
   const totalScore = picks.reduce((s, p) => s + p.score, 0);
-  if (totalScore > 0) {
-    const raw = picks.map((p) => Math.max(5, Math.min(25, Math.round((p.score / totalScore) * 100))));
-    const diff = 100 - raw.reduce((a, b) => a + b, 0);
-    if (raw.length > 0) raw[0] = (raw[0] ?? 0) + diff;
+  if (picks.length === 1) {
+    picks[0]!.allocationPct = 100;
+  } else if (totalScore > 0 && picks.length > 0) {
+    const FLOOR = 5;
+    const CEIL = 25;
+    const raw = picks.map((p) => Math.max(FLOOR, Math.min(CEIL, Math.round((p.score / totalScore) * 100))));
+    let diff = 100 - raw.reduce((a, b) => a + b, 0);
+    // Iteratively nudge picks (top-score first when adding, bottom-score first
+    // when subtracting) without violating the per-pick caps.
+    const order = picks.map((_, i) => i);
+    const guard = picks.length * Math.abs(diff) + 1;
+    let steps = 0;
+    while (diff !== 0 && steps < guard) {
+      let progressed = false;
+      const iter = diff > 0 ? order : [...order].reverse();
+      for (const i of iter) {
+        if (diff === 0) break;
+        if (diff > 0 && raw[i]! < CEIL) { raw[i]! += 1; diff -= 1; progressed = true; }
+        else if (diff < 0 && raw[i]! > FLOOR) { raw[i]! -= 1; diff += 1; progressed = true; }
+      }
+      if (!progressed) break; // every pick at its bound — accept residual rather than corrupt caps
+      steps += 1;
+    }
     picks.forEach((p, i) => { p.allocationPct = raw[i] ?? 0; });
   }
 
   const watchlist: OracleWatchlistItem[] = watchlistCandidates.map((item) => {
     const adv = item.result.advanced;
     let trigger = `Score ${item.score}/100`;
-    if (adv.marginOfSafety !== null && adv.marginOfSafety > 0) {
+    if (item.score >= ORACLE_THRESHOLD) {
+      trigger += ` · qualifies but capped (sector or max picks)`;
+    } else if (adv.marginOfSafety !== null && adv.marginOfSafety > 0) {
       trigger += ` · ${adv.marginOfSafety.toFixed(0)}% below Graham fair value`;
     } else if (adv.earningsYield !== null && adv.earningsYield / 100 >= BD_RISK_FREE) {
       trigger += ` · earnings yield ${adv.earningsYield.toFixed(1)}% beats risk-free`;
@@ -652,9 +684,9 @@ export function computeSentiment(
   avgScore: number,
 ): { sentiment: OracleSentiment; reason: string } {
   if (picksCount === 0) return { sentiment: "Cautious", reason: "No stocks passed the quality threshold — market may be overheated or data is limited" };
-  if (avgScore >= 70) return { sentiment: "Bullish",  reason: `${picksCount} high-quality picks averaging ${Math.round(avgScore)}/100` };
-  if (avgScore >= 55) return { sentiment: "Neutral",  reason: `${picksCount} picks with moderate conviction (avg ${Math.round(avgScore)}/100)` };
-  return               { sentiment: "Neutral",  reason: `${picksCount} picks with low-to-moderate conviction (avg ${Math.round(avgScore)}/100)` };
+  if (avgScore >= 70) return { sentiment: "Bullish", reason: `${picksCount} high-quality picks averaging ${Math.round(avgScore)}/100` };
+  if (avgScore >= 55) return { sentiment: "Neutral", reason: `${picksCount} picks with moderate conviction (avg ${Math.round(avgScore)}/100)` };
+  return { sentiment: "Neutral", reason: `${picksCount} picks with low-to-moderate conviction (avg ${Math.round(avgScore)}/100)` };
 }
 
 export const ORACLE_DISCLAIMER =

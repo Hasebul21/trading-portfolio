@@ -122,12 +122,80 @@ export type DseCompanyExtras = {
 };
 
 /**
- * Parse DSE's Financial Performance table.
+ * Parse DSE's Financial Performance / Year-End tables on the company page.
  *
- * The table uses column headers in the first row (Year, EPS, NAV, DivYield, P/E…)
- * and data rows below for each year.  EPS cells contain "Basic: X.XX | Diluted: Y.YY".
- * We read the first data row (most recent year) for each column we need.
+ * The page contains *several* tables that mention "EPS":
+ *   • Interim/quarterly results (Q1/Q2/Half/Q3/9M/Annual) — first match, NOT what we want.
+ *   • Annual EPS/NAV table — has "NAV Per Share" header. Per-row layout:
+ *       [year, EPS-Basic-Orig, EPS-Basic-Restated, EPS-Diluted-Orig, …, NAV-Orig, NAV-Restated, …]
+ *     Most cells are "-" with the actual value sitting in the "continuing operations
+ *     original" slot. Strategy: collect all non-dash numerics in the latest year row
+ *     and take [0] = EPS, [1] = NAV (profit/OCI cells trail after).
+ *   • Year-end P/E + Dividend Yield table — has "Dividend Yield in %" header. Per-row:
+ *       [year, PE-Basic-Orig, PE-Basic-Restated, …, Dividend %, Dividend Yield %]
+ *     Numerics in latest year row: [PE, Div%, DivYield%]. Take [0] = PE, last = DivYield.
  */
+
+// Extract text from a single <td> / <th> inner HTML.
+function cellText(inner: string): string {
+  return inner
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function rowCells(row: string): string[] {
+  return [...row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => cellText(m[1]));
+}
+
+/** Pull all `<table>` HTML blobs from the document (non-greedy, no nesting). */
+function allTables(html: string): string[] {
+  return [...html.matchAll(/<table[^>]*>([\s\S]*?)<\/table>/gi)].map((m) => m[0]);
+}
+
+/** Pull all `<tr>` blobs from a table HTML blob. */
+function allRows(tbl: string): string[] {
+  return [...tbl.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)].map((m) => m[0]);
+}
+
+/**
+ * Return numeric values from the most recent year row of a table.
+ * A "year row" is any row whose first non-empty cell parses to a 4-digit year
+ * in 2000–2099. Skips cells that are dashes / asterisks / blanks.
+ */
+function latestYearRowNumerics(tbl: string): { year: number; numerics: number[] } | null {
+  const rows = allRows(tbl);
+  let best: { year: number; numerics: number[] } | null = null;
+  for (const r of rows) {
+    const cells = rowCells(r).filter((c) => c.length > 0);
+    if (cells.length < 2) continue;
+    let yearIdx = -1;
+    let year = -1;
+    for (let i = 0; i < Math.min(4, cells.length); i++) {
+      const n = Number(cells[i]);
+      if (Number.isInteger(n) && n >= 2000 && n <= 2099) {
+        yearIdx = i;
+        year = n;
+        break;
+      }
+    }
+    if (yearIdx < 0) continue;
+    const numerics: number[] = [];
+    for (let i = yearIdx + 1; i < cells.length; i++) {
+      const raw = cells[i];
+      if (!raw || /^[-—–*\s]+$/.test(raw)) continue;
+      const n = Number(raw.replace(/,/g, "").replace(/%/g, "").trim());
+      if (Number.isFinite(n)) numerics.push(n);
+    }
+    if (numerics.length === 0) continue;
+    if (!best || year > best.year) best = { year, numerics };
+  }
+  return best;
+}
+
 function parseFinancialPerformanceTable(html: string): {
   eps: number | null;
   nav: number | null;
@@ -136,69 +204,28 @@ function parseFinancialPerformanceTable(html: string): {
 } {
   const EMPTY = { eps: null, nav: null, dividendYieldPct: null, pe: null };
 
-  // Find the table that holds EPS/NAV columns
-  const tblMatch = html.match(/<table[\s\S]*?Earnings per share[\s\S]*?<\/table>/i);
-  if (!tblMatch) return EMPTY;
-  const tbl = tblMatch[0];
+  const tables = allTables(html);
+  // Annual EPS/NAV table — uniquely identified by "NAV Per Share" header.
+  const navTable = tables.find((t) => /NAV Per Share/i.test(t)) ?? null;
+  // Year-end P/E + Dividend Yield table — uniquely identified by "Dividend Yield in %".
+  const yieldTable = tables.find((t) => /Dividend Yield in %/i.test(t)) ?? null;
 
-  // Collect all <tr> inner contents
-  const rows: string[] = [];
-  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  let rm: RegExpExecArray | null;
-  while ((rm = rowRe.exec(tbl)) !== null) rows.push(rm[1]);
-  if (rows.length < 2) return EMPTY;
+  const navData = navTable ? latestYearRowNumerics(navTable) : null;
+  const yldData = yieldTable ? latestYearRowNumerics(yieldTable) : null;
 
-  // Strip HTML from a cell's inner content
-  function cellText(inner: string): string {
-    return inner
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+  // Latest-year EPS & NAV: first two non-dash numerics in the data row.
+  const eps = navData?.numerics[0] ?? null;
+  const nav = navData?.numerics[1] ?? null;
 
-  // Extract all th/td cells from a row
-  function parseCells(row: string): string[] {
-    return [...row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(m => cellText(m[1]));
-  }
+  // Latest-year P/E & Dividend Yield: PE = first numeric, DivYield% = last numeric.
+  const pe = yldData?.numerics[0] ?? null;
+  const dividendYieldPct =
+    yldData && yldData.numerics.length > 0
+      ? yldData.numerics[yldData.numerics.length - 1] ?? null
+      : null;
 
-  const headers = parseCells(rows[0]).map(h => h.toLowerCase());
-
-  // Column index helpers
-  const epsContIdx = headers.findIndex(h => h.includes("continuing"));
-  const epsIdx     = headers.findIndex(h => h.includes("earnings per share") || (h.includes("eps") && !h.includes("continuing")));
-  const navIdx     = headers.findIndex(h => h.includes("nav") && (h.includes("per share") || h.includes("/share") || h.includes("per")));
-  const divYldIdx  = headers.findIndex(h => h.includes("dividend yield"));
-  const peIdx      = headers.findIndex(h => h.includes("p/e") || h.includes("price earning"));
-
-  // First data row (most recent year — skip pure-header rows)
-  let cells: string[] = [];
-  for (let i = 1; i < rows.length; i++) {
-    const c = parseCells(rows[i]).filter(x => x.length > 0);
-    if (c.length > 2) { cells = c; break; }
-  }
-
-  function extractNum(idx: number): number | null {
-    if (idx < 0 || idx >= cells.length) return null;
-    const raw = cells[idx];
-    if (!raw || /^[-—–n\/a*\s]+$/i.test(raw)) return null;
-    // "Basic: 6.95 | Diluted: —" format — extract after "Basic:"
-    const basicMatch = raw.match(/Basic\s*:\s*([\d,.]+)/i);
-    if (basicMatch) {
-      const n = Number(basicMatch[1].replace(/,/g, ""));
-      if (Number.isFinite(n)) return n;
-    }
-    // Plain number
-    const n = Number(raw.replace(/,/g, "").replace(/%/g, "").split(/\s/)[0].trim());
-    return Number.isFinite(n) ? n : null;
-  }
-
-  return {
-    eps:             extractNum(epsContIdx >= 0 ? epsContIdx : epsIdx),
-    nav:             extractNum(navIdx),
-    dividendYieldPct: extractNum(divYldIdx),
-    pe:              extractNum(peIdx),
-  };
+  if (eps === null && nav === null && pe === null && dividendYieldPct === null) return EMPTY;
+  return { eps, nav, dividendYieldPct, pe };
 }
 
 function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week52Low" | "week52High" | "sector"> {
@@ -211,9 +238,9 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   // EPS, NAV, DividendYield, P/E (year-end) from the Financial Performance table
   const fin = parseFinancialPerformanceTable(html);
 
-  const pe             = peInfo ?? fin.pe;
-  const eps            = fin.eps;
-  const nav            = fin.nav;
+  const pe = peInfo ?? fin.pe;
+  const eps = fin.eps;
+  const nav = fin.nav;
   const dividendYieldPct = fin.dividendYieldPct;
 
   // Market Capitalization (mn) — convert mn BDT → crore BDT (1 crore = 10 mn)
