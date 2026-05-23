@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { JetBrains_Mono, Lato } from "next/font/google";
 import {
@@ -62,7 +63,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <AntdRegistry>{children}</AntdRegistry>
+          <Suspense>
+            <AntdRegistry>{children}</AntdRegistry>
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>
