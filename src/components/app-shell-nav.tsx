@@ -22,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { type: "divider" },
   // ── Records / misc ────────────────────────────
   { type: "link", href: "/trade-history", label: "History" },
+  { type: "link", href: "/knowledge", label: "Knowledge" },
   { type: "link", href: "/settings", label: "Settings" },
 ];
 
