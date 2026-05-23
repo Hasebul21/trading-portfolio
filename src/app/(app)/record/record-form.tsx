@@ -163,8 +163,8 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
                     />
                 </FieldLabel>
 
-                {/* Qty + Price side-by-side on sm+. Quantity gets the wider slot. */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.6fr_1fr]">
+                {/* Qty + Price side-by-side on sm+. Both inputs share the row equally. */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FieldLabel label="Quantity" hint="Shares">
                         <InputNumber
                             value={quantity === "" ? null : Number(quantity)}
@@ -175,6 +175,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
                             size="large"
                             controls={false}
                             className="mt-1 w-full"
+                            style={{ width: "100%" }}
                             inputMode="numeric"
                         />
                         <input type="hidden" name="quantity" value={quantity} />
@@ -192,6 +193,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
                             size="large"
                             controls={false}
                             className="mt-1 w-full"
+                            style={{ width: "100%" }}
                             inputMode="decimal"
                         />
                         <input type="hidden" name="price_per_share" value={pricePerShare} />
