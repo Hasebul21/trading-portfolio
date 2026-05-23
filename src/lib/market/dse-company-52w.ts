@@ -2,10 +2,9 @@
  * 52-week range, sector, and fundamental data from the DSE company page.
  * Unofficial HTML parse; layout may change.
  */
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 
 const DEFAULT_COMPANY_BASE = "https://dsebd.org/displayCompany.php";
-const SECTOR_REVALIDATE_SECONDS = 60 * 60 * 24;
 
 function parseRangeCell(raw: string): { low: number; high: number } | null {
   const t = raw.replace(/,/g, "").trim();
@@ -211,9 +210,13 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   };
 }
 
-export const fetchDseCompanyExtras = cache(async (
+export async function fetchDseCompanyExtras(
   symbol: string,
-): Promise<DseCompanyExtras> => {
+): Promise<DseCompanyExtras> {
+  "use cache";
+  cacheLife({ stale: 3600, revalidate: 86400, expire: 90000 });
+  cacheTag(`dse-company-${symbol.trim().toLowerCase()}`);
+
   const sym = symbol.trim();
   const nullResult: DseCompanyExtras = {
     week52Low: null, week52High: null, sector: null, category: null,
@@ -222,15 +225,11 @@ export const fetchDseCompanyExtras = cache(async (
   };
   if (!sym) return nullResult;
 
-  const base =
-    process.env.DSE_COMPANY_URL_BASE?.trim() || DEFAULT_COMPANY_BASE;
+  const base = process.env.DSE_COMPANY_URL_BASE?.trim() || DEFAULT_COMPANY_BASE;
   const url = `${base}?name=${encodeURIComponent(sym)}`;
 
   try {
-    const res = await fetch(url, {
-      headers: { Accept: "text/html,*/*" },
-      next: { revalidate: SECTOR_REVALIDATE_SECONDS },
-    });
+    const res = await fetch(url, { headers: { Accept: "text/html,*/*" } });
     if (!res.ok) return nullResult;
     const html = await res.text();
     const w52 = parseDseCompany52WeekRange(html);
@@ -245,14 +244,14 @@ export const fetchDseCompanyExtras = cache(async (
   } catch {
     return nullResult;
   }
-});
+}
 
-export const fetchDseCompanyExtrasMap = cache(async (
+export async function fetchDseCompanyExtrasMap(
   symbols: string[],
-): Promise<Map<string, DseCompanyExtras>> => {
-  const uniqueSymbols = [...new Set(symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean))];
+): Promise<Map<string, DseCompanyExtras>> {
+  const uniqueSymbols = [...new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))];
   const entries = await Promise.all(
-    uniqueSymbols.map(async (symbol) => [symbol, await fetchDseCompanyExtras(symbol)] as const),
+    uniqueSymbols.map(async (sym) => [sym, await fetchDseCompanyExtras(sym)] as const),
   );
   return new Map(entries);
-});
+}

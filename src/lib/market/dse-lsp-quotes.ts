@@ -2,15 +2,12 @@
  * Today's LTP / high / low from DSE latest share price page (all listed equities).
  * Unofficial HTML parse; layout may change.
  */
-import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 
 const DEFAULT_LSP_URLS = [
   "https://dsebd.org/latest_share_price_scroll_l.php",
   "https://dsebd.com.bd/latest_share_price_scroll_l.php",
 ] as const;
-
-/** Quotes refresh frequently but not every second; 60s smooths a thundering herd. */
-const LSP_REVALIDATE_SECONDS = 60;
 
 export type DseLspQuote = {
   ltp: number;
@@ -72,10 +69,18 @@ function parseLspHtml(html: string): Map<string, DseLspQuote> {
   return bySymbol;
 }
 
-export const fetchDseLspQuoteMap = cache(async (): Promise<{
-  bySymbol: Map<string, DseLspQuote>;
+/**
+ * Cached fetch layer — returns serialisable plain arrays so Next.js can
+ * store the result in its data cache. Map construction happens in the wrapper.
+ */
+async function _fetchLspRaw(): Promise<{
+  entries: [string, DseLspQuote][];
   error: string | null;
-}> => {
+}> {
+  "use cache";
+  cacheLife({ stale: 30, revalidate: 60, expire: 120 });
+  cacheTag("dse-lsp-quotes");
+
   const urls = process.env.DSE_LSP_URL?.trim()
     ? [process.env.DSE_LSP_URL.trim()]
     : [...DEFAULT_LSP_URLS];
@@ -84,28 +89,27 @@ export const fetchDseLspQuoteMap = cache(async (): Promise<{
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, {
-        headers: { Accept: "text/html,*/*" },
-        next: { revalidate: LSP_REVALIDATE_SECONDS },
-      });
-      if (!res.ok) {
-        lastErr = `DSE LSP HTTP ${res.status}`;
-        continue;
-      }
+      const res = await fetch(url, { headers: { Accept: "text/html,*/*" } });
+      if (!res.ok) { lastErr = `DSE LSP HTTP ${res.status}`; continue; }
       const html = await res.text();
       const bySymbol = parseLspHtml(html);
-      if (bySymbol.size === 0) {
-        lastErr = "No price rows parsed from DSE LSP";
-        continue;
-      }
-      return { bySymbol, error: null };
+      if (bySymbol.size === 0) { lastErr = "No price rows parsed from DSE LSP"; continue; }
+      return { entries: [...bySymbol.entries()], error: null };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : "Unknown error";
     }
   }
 
-  return { bySymbol: new Map(), error: lastErr };
-});
+  return { entries: [], error: lastErr };
+}
+
+export async function fetchDseLspQuoteMap(): Promise<{
+  bySymbol: Map<string, DseLspQuote>;
+  error: string | null;
+}> {
+  const { entries, error } = await _fetchLspRaw();
+  return { bySymbol: new Map(entries), error };
+}
 
 /** Same as {@link fetchDseLspQuoteMap} but bypasses cache for live polling (API / client refresh). */
 export async function fetchDseLspQuoteMapFresh(): Promise<{

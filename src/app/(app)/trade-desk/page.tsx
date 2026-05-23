@@ -15,8 +15,6 @@ import {
   type OracleHoldingAnalysis,
 } from "@/lib/market/oracle-scoring";
 
-export const revalidate = 0;
-
 export default async function TradeDeskPage() {
   const supabase = await createClient();
   const [lspRes, ltRes, settingsRes, holdingsRes] = await Promise.all([

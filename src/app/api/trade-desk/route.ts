@@ -14,8 +14,6 @@ import {
 } from "@/lib/market/oracle-scoring";
 import type { TradeDeskData } from "@/components/trade-desk/trade-desk-view";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

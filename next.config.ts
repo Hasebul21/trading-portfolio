@@ -7,6 +7,7 @@ import type { NextConfig } from "next";
 // API surface (where freshness matters) and let pages/static assets keep their
 // defaults so navigations are instant after first load.
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   async headers() {
     return [
       {
