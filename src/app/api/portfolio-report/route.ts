@@ -1,7 +1,6 @@
 import { sendDailyPortfolioReportForConfiguredUser } from "@/lib/portfolio-report-email";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
 
 /**
  * Daily portfolio email cron, fired by Vercel at 11:00 UTC = 17:00 (5 PM)

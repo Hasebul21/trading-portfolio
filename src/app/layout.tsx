@@ -7,9 +7,6 @@ import {
 } from "@/components/theme-provider";
 import "./globals.css";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 // Lato carries all weights the system needs (light 300 / regular / medium /
 // bold / black). JetBrains Mono is used for symbols and tabular numbers.

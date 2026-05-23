@@ -8,7 +8,6 @@ import { getSectorTargets } from "../sector-target-actions";
 import { fetchUserHoldings } from "@/lib/holdings";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
 
-export const revalidate = 0;
 
 export default async function AllocationPage() {
  const [holdingsRes, targetsRes] = await Promise.all([

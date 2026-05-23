@@ -121,36 +121,100 @@ export type DseCompanyExtras = {
   lastAgmMonthsAgo: number | null;
 };
 
+/**
+ * Parse DSE's Financial Performance table.
+ *
+ * The table uses column headers in the first row (Year, EPS, NAV, DivYield, P/E…)
+ * and data rows below for each year.  EPS cells contain "Basic: X.XX | Diluted: Y.YY".
+ * We read the first data row (most recent year) for each column we need.
+ */
+function parseFinancialPerformanceTable(html: string): {
+  eps: number | null;
+  nav: number | null;
+  dividendYieldPct: number | null;
+  pe: number | null;
+} {
+  const EMPTY = { eps: null, nav: null, dividendYieldPct: null, pe: null };
+
+  // Find the table that holds EPS/NAV columns
+  const tblMatch = html.match(/<table[\s\S]*?Earnings per share[\s\S]*?<\/table>/i);
+  if (!tblMatch) return EMPTY;
+  const tbl = tblMatch[0];
+
+  // Collect all <tr> inner contents
+  const rows: string[] = [];
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rm: RegExpExecArray | null;
+  while ((rm = rowRe.exec(tbl)) !== null) rows.push(rm[1]);
+  if (rows.length < 2) return EMPTY;
+
+  // Strip HTML from a cell's inner content
+  function cellText(inner: string): string {
+    return inner
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  // Extract all th/td cells from a row
+  function parseCells(row: string): string[] {
+    return [...row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map(m => cellText(m[1]));
+  }
+
+  const headers = parseCells(rows[0]).map(h => h.toLowerCase());
+
+  // Column index helpers
+  const epsContIdx = headers.findIndex(h => h.includes("continuing"));
+  const epsIdx     = headers.findIndex(h => h.includes("earnings per share") || (h.includes("eps") && !h.includes("continuing")));
+  const navIdx     = headers.findIndex(h => h.includes("nav") && (h.includes("per share") || h.includes("/share") || h.includes("per")));
+  const divYldIdx  = headers.findIndex(h => h.includes("dividend yield"));
+  const peIdx      = headers.findIndex(h => h.includes("p/e") || h.includes("price earning"));
+
+  // First data row (most recent year — skip pure-header rows)
+  let cells: string[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const c = parseCells(rows[i]).filter(x => x.length > 0);
+    if (c.length > 2) { cells = c; break; }
+  }
+
+  function extractNum(idx: number): number | null {
+    if (idx < 0 || idx >= cells.length) return null;
+    const raw = cells[idx];
+    if (!raw || /^[-—–n\/a*\s]+$/i.test(raw)) return null;
+    // "Basic: 6.95 | Diluted: —" format — extract after "Basic:"
+    const basicMatch = raw.match(/Basic\s*:\s*([\d,.]+)/i);
+    if (basicMatch) {
+      const n = Number(basicMatch[1].replace(/,/g, ""));
+      if (Number.isFinite(n)) return n;
+    }
+    // Plain number
+    const n = Number(raw.replace(/,/g, "").replace(/%/g, "").split(/\s/)[0].trim());
+    return Number.isFinite(n) ? n : null;
+  }
+
+  return {
+    eps:             extractNum(epsContIdx >= 0 ? epsContIdx : epsIdx),
+    nav:             extractNum(navIdx),
+    dividendYieldPct: extractNum(divYldIdx),
+    pe:              extractNum(peIdx),
+  };
+}
+
 function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week52Low" | "week52High" | "sector"> {
-  // P/E — label on DSE contains a <br> tag, so [\s\S]*? in parseNumericField handles it
-  const pe = parseNumericField(
-    html,
-    "Current P\\/E Ratio using Basic EPS",
-    "P\\/E Ratio",
-    "P\\/E",
-  );
-
-  // EPS — from Financial Performance table; first td = most recent year
-  const eps = parseNumericField(
-    html,
-    "Earnings per share\\(EPS\\)",
-    "EPS - Continuing Operations",
-    "Earnings Per Share",
-    "EPS",
-  );
-
-  // NAV Per Share — from Financial Performance table
-  const nav = parseNumericField(html, "NAV Per Share", "NAV\\/Share");
-
-  // Market Category: "Market Category" label in a table row
+  // Market Category: key-value row, not in the financial table
   const category = parseTextField(html, "Market Category", "Category");
 
-  // Dividend Yield in % — from Financial Performance table, most recent year
-  const dividendYieldPct = parseNumericField(
-    html,
-    "Dividend Yield in %",
-    "Dividend Yield",
-  );
+  // P/E: try company info section first, fall back to financial table
+  const peInfo = parseNumericField(html, "Current P\\/E Ratio using Basic EPS", "P\\/E Ratio");
+
+  // EPS, NAV, DividendYield, P/E (year-end) from the Financial Performance table
+  const fin = parseFinancialPerformanceTable(html);
+
+  const pe             = peInfo ?? fin.pe;
+  const eps            = fin.eps;
+  const nav            = fin.nav;
+  const dividendYieldPct = fin.dividendYieldPct;
 
   // Market Capitalization (mn) — convert mn BDT → crore BDT (1 crore = 10 mn)
   const mcapMn = parseNumericField(

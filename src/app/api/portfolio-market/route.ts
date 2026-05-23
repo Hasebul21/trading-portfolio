@@ -5,7 +5,6 @@ import { holdingsToMarketRows } from "@/lib/market/portfolio-with-quotes";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   const supabase = await createClient();

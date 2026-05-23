@@ -7,8 +7,6 @@ import Link from "next/link";
 import { Card, Empty } from "antd";
 import { PortfolioLiveShell } from "./portfolio-live-shell";
 
-/** Always render with fresh data. */
-export const revalidate = 0;
 
 export default async function PortfolioPage() {
  const [portfolioRes, targetsRes] = await Promise.all([
