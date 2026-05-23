@@ -245,9 +245,29 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
 
     const rowBorder = isLast ? "" : "border-b border-[var(--line)]";
 
+    const fromLowPct =
+        ltpKnown &&
+        row.week52Low !== null &&
+        row.week52Low !== undefined &&
+        Number.isFinite(row.week52Low) &&
+        row.week52Low > 0
+            ? ((row.ltp! - row.week52Low) / row.week52Low) * 100
+            : null;
+    const fromLowPositive = fromLowPct !== null && fromLowPct >= 0;
+    const fromLowClass =
+        fromLowPct === null
+            ? "text-[var(--ink-muted)]"
+            : fromLowPositive
+                ? "text-[var(--gain-700)]"
+                : "text-[var(--loss-700)]";
+    const fmtFromLow = (n: number) => {
+        const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+        return `${sign}${Math.abs(n).toFixed(2)}%`;
+    };
+
     return (
         <div
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(4,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
                 <span
@@ -280,6 +300,19 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                     {" – "}
                     {row.week52High !== null && row.week52High !== undefined ? formatBdt(row.week52High) : "—"}
                 </div>
+            </RowCell>
+
+            <RowCell label="From 52w low">
+                <span
+                    className={`tabular-nums text-[13px] ${fromLowClass}`}
+                    title={
+                        fromLowPct === null
+                            ? "Needs both LTP and 52w low"
+                            : `LTP vs 52-week low (${row.week52Low !== null && row.week52Low !== undefined ? formatBdt(row.week52Low) : "—"})`
+                    }
+                >
+                    {fromLowPct !== null ? fmtFromLow(fromLowPct) : "—"}
+                </span>
             </RowCell>
 
             <RowCell label="Buy point">
