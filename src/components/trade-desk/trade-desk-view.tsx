@@ -6,7 +6,6 @@ import type {
   OraclePickResult,
   OracleWatchlistItem,
   OracleGateReject,
-  OracleSentiment,
   OracleHoldingAnalysis,
   HoldingSignal,
   ValuationSignal,
@@ -17,24 +16,6 @@ export type TradeDeskData = OracleResult & {
   gatedOut: number;
   topSectors: string[];
 };
-
-// ─── Sentiment badge ──────────────────────────────────────────────────────────
-function SentimentBadge({ sentiment, reason }: { sentiment: OracleSentiment; reason: string }) {
-  const cls: Record<OracleSentiment, string> = {
-    Bullish:  "bg-emerald-50 border-emerald-200 text-emerald-800",
-    Neutral:  "bg-amber-50 border-amber-200 text-amber-800",
-    Cautious: "bg-red-50 border-red-200 text-red-800",
-  };
-  const dot: Record<OracleSentiment, string> = {
-    Bullish: "bg-emerald-500", Neutral: "bg-amber-500", Cautious: "bg-red-500",
-  };
-  return (
-    <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] ${cls[sentiment]}`}>
-      <span className={`h-2 w-2 shrink-0 rounded-full ${dot[sentiment]}`} />
-      <span><span className="font-semibold">{sentiment}</span>{" — "}{reason}</span>
-    </div>
-  );
-}
 
 // ─── Score ring ───────────────────────────────────────────────────────────────
 function ScoreBadge({ score }: { score: number }) {
@@ -476,19 +457,10 @@ export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
     }
   }, []);
 
-  const genAt = new Date(data.generatedAt);
-
   return (
     <div className="flex flex-col gap-4">
-      {/* Header row — no h2 title */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[12px] text-[var(--ink-muted)]">
-          {data.totalSymbols} symbols screened · {data.picks.length} picks · {data.gatedOut} filtered out
-          {" · "}
-          {lastRefreshed
-            ? `Refreshed ${lastRefreshed.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
-            : `Generated ${genAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`}
-        </p>
+      {/* Refresh button only */}
+      <div className="flex justify-end">
         <button
           onClick={() => void handleRefresh()}
           disabled={loading}
@@ -500,15 +472,7 @@ export function TradeDeskView({ initialData }: { initialData: TradeDeskData }) {
         </button>
       </div>
 
-      <SentimentBadge sentiment={data.sentiment} reason={data.sentimentReason} />
-
-      {data.picks.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--bg-surface)] px-6 py-8 text-center text-[14px] text-[var(--ink-muted)]">
-          No stocks reached the conviction threshold of {55}/100 this refresh.
-          <br />
-          Check the watchlist or try again when market data updates.
-        </div>
-      ) : (
+      {data.picks.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
           {data.picks.map((pick, i) => (
             <PickCard key={pick.symbol} pick={pick} rank={i + 1} />
