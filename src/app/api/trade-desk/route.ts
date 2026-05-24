@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchDseLspQuoteMapFresh } from "@/lib/market/dse-lsp-quotes";
 import { fetchDseCompanyExtrasMap } from "@/lib/market/dse-company-52w";
-import { scoreDseUniverse } from "@/lib/market/discovery";
 import { fetchUserHoldings } from "@/lib/holdings";
 import {
   computeOracleScore,
@@ -16,8 +15,6 @@ import {
   type OracleWatchlistItem,
 } from "@/lib/market/oracle-scoring";
 import type { TradeDeskData } from "@/components/trade-desk/trade-desk-view";
-
-const TOP_RANKED_LIMIT = 40;
 
 export async function GET() {
   const supabase = await createClient();
@@ -60,64 +57,64 @@ export async function GET() {
     } satisfies TradeDeskData);
   }
 
-  // Score full DSE universe and take the true top-N.
-  const { scored: universeScored } = await scoreDseUniverse({
-    bySymbol: lspRes.bySymbol,
-  });
-
-  // Gate rejects across the user's own lists only — keeps the "Filtered
-  // Out" strip readable instead of dumping every gated DSE name.
+  // Trade Desk is scoped to the user's curated set: watchlist ∪ portfolio.
   const curatedSymbols = [...new Set([...watchlistSet, ...portfolioSet])];
   const curatedExtras = await fetchDseCompanyExtrasMap(curatedSymbols);
+
+  const picks: OraclePickResult[] = [];
+  const watchlist: OracleWatchlistItem[] = [];
   const gateRejects: OracleGateReject[] = [];
+  const scoredHoldingSymbols = new Set<string>();
+  const highConvictionScores: number[] = [];
+
   for (const sym of curatedSymbols) {
     const extras = curatedExtras.get(sym);
     const quote = lspRes.bySymbol.get(sym) ?? null;
     if (!extras || !quote) continue;
+
     const r = computeOracleScore(sym, extras, quote);
-    if (r.type === "gate") gateRejects.push({ symbol: sym, reason: r.reason });
-  }
+    if (r.type === "gate") {
+      gateRejects.push({ symbol: sym, reason: r.reason });
+      continue;
+    }
+    if (r.type !== "pick") continue;
 
-  const topRanked = universeScored.slice(0, TOP_RANKED_LIMIT);
+    const score = r.result.score;
+    if (score >= ORACLE_THRESHOLD) highConvictionScores.push(score);
 
-  // Partition top-N → picks / watchlist / discovery; track which holdings
-  // fell in top-N for the holding-analysis pass below.
-  const picks: OraclePickResult[] = [];
-  const watchlist: OracleWatchlistItem[] = [];
-  const discovery: OraclePickResult[] = [];
-  const topRankedHoldingSymbols = new Set<string>();
-
-  for (const item of topRanked) {
-    if (portfolioSet.has(item.symbol)) {
-      topRankedHoldingSymbols.add(item.symbol);
-    } else if (watchlistSet.has(item.symbol)) {
-      if (item.score >= ORACLE_THRESHOLD) {
-        picks.push({ ...item.result, allocationPct: 0 });
+    if (portfolioSet.has(sym)) {
+      scoredHoldingSymbols.add(sym);
+      continue;
+    }
+    if (watchlistSet.has(sym)) {
+      if (score >= ORACLE_THRESHOLD) {
+        picks.push({ ...r.result, allocationPct: 0 });
       } else {
         watchlist.push({
-          symbol: item.symbol,
-          sector: item.sector,
-          score: item.score,
-          currentPrice: item.result.currentPrice,
-          divYieldPct: item.result.divYieldPct,
-          trigger: `Score ${item.score}/100 · top ${TOP_RANKED_LIMIT} DSE-wide`,
+          symbol: sym,
+          sector: r.result.sector,
+          score,
+          currentPrice: r.result.currentPrice,
+          divYieldPct: r.result.divYieldPct,
+          trigger: `Score ${score}/100 · below ${ORACLE_THRESHOLD} threshold`,
           advanced: {
-            grahamNumber: item.result.advanced.grahamNumber,
-            marginOfSafety: item.result.advanced.marginOfSafety,
-            earningsYield: item.result.advanced.earningsYield,
-            roe: item.result.advanced.roe,
+            grahamNumber: r.result.advanced.grahamNumber,
+            marginOfSafety: r.result.advanced.marginOfSafety,
+            earningsYield: r.result.advanced.earningsYield,
+            roe: r.result.advanced.roe,
           },
         });
       }
-    } else {
-      discovery.push({ ...item.result, allocationPct: 0 });
     }
   }
+
+  picks.sort((a, b) => b.score - a.score);
+  watchlist.sort((a, b) => b.score - a.score);
 
   const holdingAnalyses: OracleHoldingAnalysis[] = holdingsRes.holdings
     .filter((h) => h.shares > 0)
     .map((h) => ({ h, sym: h.symbol.trim().toUpperCase() }))
-    .filter(({ sym }) => topRankedHoldingSymbols.has(sym))
+    .filter(({ sym }) => scoredHoldingSymbols.has(sym))
     .map(({ h, sym }) => {
       const extras = curatedExtras.get(sym);
       const quote = lspRes.bySymbol.get(sym) ?? null;
@@ -139,12 +136,11 @@ export async function GET() {
       );
     });
 
-  const highConvictionInTop = topRanked.filter((s) => s.score >= ORACLE_THRESHOLD);
-  const avgScore = highConvictionInTop.length > 0
-    ? highConvictionInTop.reduce((s, p) => s + p.score, 0) / highConvictionInTop.length
+  const avgScore = highConvictionScores.length > 0
+    ? highConvictionScores.reduce((s, n) => s + n, 0) / highConvictionScores.length
     : 0;
   const { sentiment, reason: sentimentReason } = computeSentiment(
-    highConvictionInTop.length,
+    highConvictionScores.length,
     avgScore,
   );
 
@@ -156,9 +152,9 @@ export async function GET() {
     watchlist,
     avoided: gateRejects,
     holdings: holdingAnalyses,
-    discovery,
+    discovery: [],
     disclaimer: ORACLE_DISCLAIMER,
-    totalSymbols: universeScored.length,
+    totalSymbols: curatedSymbols.length,
     gatedOut: gateRejects.length,
     topSectors,
   } satisfies TradeDeskData);
