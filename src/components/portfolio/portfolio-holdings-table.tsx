@@ -704,9 +704,16 @@ function HoldingRow({
 
     const rowBorder = isLast ? "" : "border-b border-[var(--line)]";
 
+    const divKnown =
+        row.expectedAnnualDividendBdt !== null && Number.isFinite(row.expectedAnnualDividendBdt);
+    const divPct =
+        divKnown && row.totalCost > 0
+            ? ((row.expectedAnnualDividendBdt as number) / row.totalCost) * 100
+            : null;
+
     return (
         <div
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             {/* Symbol + shares */}
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
@@ -774,6 +781,30 @@ function HoldingRow({
                 ) : null}
             </RowCell>
 
+            {/* Unrealized dividend — shares × (DSE-declared yield) × LTP. Null
+                when either the yield or live price is unavailable. */}
+            <RowCell label="Unrealized Div">
+                <div
+                    className={`text-[14px] tabular-nums ${
+                        divKnown && (row.expectedAnnualDividendBdt as number) > 0
+                            ? "text-[var(--gain-700)]"
+                            : "text-[var(--ink-strong)]"
+                    }`}
+                    title={
+                        row.divYieldPct !== null && row.divYieldPct > 0
+                            ? `Latest DSE-declared yield ${row.divYieldPct.toFixed(2)}%`
+                            : "No dividend yield published"
+                    }
+                >
+                    {divKnown ? formatBdt(row.expectedAnnualDividendBdt as number) : "—"}
+                </div>
+                {divPct !== null ? (
+                    <div className="text-[11px] tabular-nums text-[var(--ink-muted)]">
+                        {fmtPct(divPct)}
+                    </div>
+                ) : null}
+            </RowCell>
+
             {/* Signal — Oracle holding analysis verdict, calculated server-side
                 in lib/market/portfolio-with-quotes.ts. */}
             <RowCell label="Signal">
@@ -783,7 +814,7 @@ function HoldingRow({
             {/* Hidden book-edit fields (shares + avg) — surfaced only in edit mode
  as a thin row underneath to keep the read view clean. */}
             {bookEditing ? (
-                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4">
+                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-7 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4">
                     <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] md:col-span-1">
                         Edit shares & avg
                     </div>

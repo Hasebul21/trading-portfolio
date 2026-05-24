@@ -545,7 +545,19 @@ export function computeHoldingAnalysis(
   let signal: HoldingSignal = "Hold";
   let signalReason = "";
 
-  if (score >= ORACLE_THRESHOLD) {
+  // Reserved trigger: a fresh break below the published 52-week low. This is a
+  // pure technical-breakdown signal — no support has held — so it overrides any
+  // fundamental verdict regardless of score, P/L, or Graham value.
+  const broke52WLow =
+    ltp !== null &&
+    extras.week52Low !== null &&
+    extras.week52Low > 0 &&
+    ltp < extras.week52Low;
+
+  if (broke52WLow) {
+    signal = "Exit";
+    signalReason = `Price ${ltp!.toFixed(2)} broke below 52W low ${extras.week52Low!.toFixed(2)} — exit to limit further downside`;
+  } else if (score >= ORACLE_THRESHOLD) {
     if (unrealizedPLPct !== null && unrealizedPLPct <= -15 && mos !== null && mos > 0) {
       signal = "Strong Add";
       signalReason = "Quality stock below Graham value and below your cost — strong averaging opportunity";
@@ -571,12 +583,15 @@ export function computeHoldingAnalysis(
       signalReason = "Moderate quality — no strong action signal";
     }
   } else {
+    // Low quality (score < ORACLE_WATCHLIST_MIN). Exit is reserved for the
+    // 52W-low break above, so weak fundamentals + drawdown collapse to Trim
+    // — reduce exposure but only fully exit on a technical breakdown.
     if (unrealizedPLPct !== null && unrealizedPLPct >= 0) {
       signal = "Trim";
-      signalReason = "Low quality rating while in profit — strong case to reduce or exit";
+      signalReason = "Low quality rating while in profit — strong case to reduce";
     } else {
-      signal = "Exit";
-      signalReason = "Low quality score while at a loss — consider exiting to redeploy capital";
+      signal = "Trim";
+      signalReason = "Low quality score while at a loss — reduce exposure (no 52W break yet)";
     }
   }
 
