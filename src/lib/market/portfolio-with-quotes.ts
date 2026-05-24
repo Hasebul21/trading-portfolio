@@ -20,6 +20,10 @@ export type PortfolioMarketRow = HoldingRow & {
   signal: HoldingSignal;
   /** One-line rationale for the signal; empty string when no signal context. */
   signalReason: string;
+  /** Latest declared dividend yield % from DSE; null when not available. */
+  divYieldPct: number | null;
+  /** Expected annual cash dividend in BDT — shares × (divYieldPct/100) × LTP. */
+  expectedAnnualDividendBdt: number | null;
 };
 
 /** Merge ledger/override holdings with DSE market and company metadata. */
@@ -65,6 +69,12 @@ export function holdingsToMarketRows(
       signalReason = "Missing fundamentals";
     }
 
+    const divYieldPct = extras?.dividendYieldPct ?? null;
+    const expectedAnnualDividendBdt =
+      divYieldPct !== null && divYieldPct > 0 && marketLtp !== null && Number.isFinite(marketLtp)
+        ? Math.round((divYieldPct / 100) * marketLtp * h.shares * 100) / 100
+        : null;
+
     return {
       ...h,
       sector,
@@ -75,6 +85,8 @@ export function holdingsToMarketRows(
       week52High: extras?.week52High ?? null,
       signal,
       signalReason,
+      divYieldPct,
+      expectedAnnualDividendBdt,
     };
   });
 }

@@ -256,6 +256,19 @@ export function PortfolioHoldingsTable({
         totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
     const positionCount = displayHoldings.length;
 
+    // Expected upcoming-year cash dividend across the book. Each row's
+    // expectedAnnualDividendBdt is shares × (declared yield %) × LTP from DSE; we
+    // re-multiply by `h.shares` here so the figure tracks any draft edits made
+    // in the book editor (where `displayHoldings` already reflects the draft).
+    const expectedAnnualDividendTotal = displayHoldings.reduce((sum, h) => {
+        if (h.divYieldPct !== null && h.divYieldPct > 0 && h.marketLtp !== null && Number.isFinite(h.marketLtp)) {
+            return sum + (h.divYieldPct / 100) * h.marketLtp * h.shares;
+        }
+        return sum;
+    }, 0);
+    const expectedAnnualDividendPct =
+        totalInvestedDisplay > 0 ? (expectedAnnualDividendTotal / totalInvestedDisplay) * 100 : 0;
+
     const data: SectorGroup[] = useMemo(() => {
         const q = symbolQuery.trim().toUpperCase();
         const filtered = displayHoldings.filter((h) => {
@@ -389,8 +402,8 @@ export function PortfolioHoldingsTable({
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-6 text-[var(--ink-strong)]">
-            {/* KPI strip — 4 cells in a 1px-divided grid. */}
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-4">
+            {/* KPI strip — 5 cells in a 1px-divided grid. */}
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-3 xl:grid-cols-5">
                 <KpiCell label="Total invested">
                     <span className="tabular-nums">{formatBdt(totalInvestedDisplay)}</span>
                 </KpiCell>
@@ -406,6 +419,20 @@ export function PortfolioHoldingsTable({
                         {fmtSignedBdt(totalUnrealized)}
                         <span className="ml-2 text-[12px] font-normal opacity-80">
                             {fmtPct(totalUnrealizedPct)}
+                        </span>
+                    </span>
+                </KpiCell>
+                <KpiCell label="Unrealized Dividend">
+                    <span
+                        className={`tabular-nums ${expectedAnnualDividendTotal > 0
+                            ? "text-[var(--gain-700)]"
+                            : ""
+                            }`}
+                        title="Expected upcoming-year cash dividend based on the latest DSE-declared yield × LTP × shares"
+                    >
+                        {formatBdt(expectedAnnualDividendTotal)}
+                        <span className="ml-2 text-[12px] font-normal opacity-80">
+                            {fmtPct(expectedAnnualDividendPct)}
                         </span>
                     </span>
                 </KpiCell>
