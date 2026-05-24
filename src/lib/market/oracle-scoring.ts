@@ -189,7 +189,7 @@ export type OracleResult = {
 };
 
 // ─── Advanced metrics computation ─────────────────────────────────────────────
-function computeAdvancedMetrics(extras: DseCompanyExtras, ltp: number): AdvancedMetrics {
+export function computeAdvancedMetrics(extras: DseCompanyExtras, ltp: number): AdvancedMetrics {
   const { eps, nav, dividendYieldPct, week52Low, week52High } = extras;
 
   const grahamNumber =
