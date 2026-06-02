@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { type: "link", href: "/allocation", label: "Allocation" },
   { type: "link", href: "/trade-desk", label: "Trade Desk" },
   { type: "link", href: "/calculator", label: "Calculator" },
+  { type: "link", href: "/dividend", label: "Dividend" },
   { type: "divider" },
   // ── Records / misc ────────────────────────────
   { type: "link", href: "/trade-history", label: "History" },

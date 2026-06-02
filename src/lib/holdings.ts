@@ -10,7 +10,7 @@ import { cache } from "react";
 
 export const fetchUserHoldings = cache(async () => {
   const supabase = await createClient();
-  const [txRes, ovRes, caRes] = await Promise.all([
+  const [txRes, ovRes, caRes, divRes] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -20,6 +20,7 @@ export const fetchUserHoldings = cache(async () => {
       .order("id", { ascending: true }),
     fetchPositionOverrides(supabase),
     supabase.from("cash_adjustments").select("amount_bdt"),
+    supabase.from("dividends").select("cash_dividend_bdt"),
   ]);
 
   if (txRes.error) {
@@ -52,15 +53,26 @@ export const fetchUserHoldings = cache(async () => {
   const totalInvested = totalInvestedBdt(holdings);
 
   // `cash_adjustments` may not yet exist on older databases; tolerate the
-  // missing-table error so the rest of the portfolio still renders.
+  // missing-table error so the rest of the portfolio still renders. Cash
+  // dividends recorded under /dividend roll into the same bucket so they nudge
+  // the Unrealized P/L / Net Gain-Loss exactly like a manual cash adjustment.
   let totalCashAdjustmentsBdt = 0;
   if (!caRes.error) {
     for (const row of (caRes.data ?? []) as { amount_bdt: number | string | null }[]) {
       const n = typeof row.amount_bdt === "number" ? row.amount_bdt : Number(row.amount_bdt ?? 0);
       if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
     }
-    totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
   }
+  if (!divRes.error) {
+    for (const row of (divRes.data ?? []) as { cash_dividend_bdt: number | string | null }[]) {
+      const n =
+        typeof row.cash_dividend_bdt === "number"
+          ? row.cash_dividend_bdt
+          : Number(row.cash_dividend_bdt ?? 0);
+      if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
+    }
+  }
+  totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
 
   return {
     error: null as string | null,
