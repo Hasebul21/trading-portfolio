@@ -11,15 +11,31 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 type SideFilter = "all" | "buy" | "sell";
+type RangeFilter = "7d" | "30d" | "90d" | "all";
+
+const RANGE_DAYS: Record<RangeFilter, number | null> = {
+ "7d": 7,
+ "30d": 30,
+ "90d": 90,
+ all: null,
+};
 
 type Props = {
  rows: TransactionRow[];
  pnlById?: Record<string, number>;
  avgCostById?: Record<string, number>;
  loadError: string | null;
+ /** When true, show a 7d/30d/90d/All Segmented picker. */
+ rangePicker?: boolean;
 };
 
-export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: Props) {
+export function TradeHistorySection({
+ rows,
+ pnlById,
+ avgCostById,
+ loadError,
+ rangePicker = false,
+}: Props) {
  type Row = TransactionRow & { key: string; realizedPnl: number | null; avgCostAtSell: number | null };
  const allData: Row[] = rows.map((r) => ({
  ...r,
@@ -37,23 +53,36 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
  const [removingId, setRemovingId] = useState<string | null>(null);
  const [removeError, setRemoveError] = useState<string | null>(null);
  const [sideFilter, setSideFilter] = useState<SideFilter>("all");
+ const [rangeFilter, setRangeFilter] = useState<RangeFilter>(
+ rangePicker ? "30d" : "all",
+ );
+ // Snapshot "now" once at mount so the filter is deterministic per render.
+ // Long-running sessions can hit Refresh to re-evaluate against current time.
+ const [nowMs] = useState(() => Date.now());
+
+ const rangedData = useMemo(() => {
+ const days = RANGE_DAYS[rangeFilter];
+ if (days === null) return allData;
+ const cutoff = nowMs - days * 24 * 60 * 60 * 1000;
+ return allData.filter((r) => new Date(r.created_at).getTime() >= cutoff);
+ }, [allData, rangeFilter, nowMs]);
 
  const { buyCount, sellCount } = useMemo(() => {
  let buys = 0;
  let sells = 0;
- for (const r of allData) {
+ for (const r of rangedData) {
  if (String(r.side).toLowerCase() === "sell") sells += 1;
  else buys += 1;
  }
  return { buyCount: buys, sellCount: sells };
- }, [allData]);
+ }, [rangedData]);
 
  const data = useMemo(
  () =>
  sideFilter === "all"
- ? allData
- : allData.filter((r) => String(r.side).toLowerCase() === sideFilter),
- [allData, sideFilter],
+ ? rangedData
+ : rangedData.filter((r) => String(r.side).toLowerCase() === sideFilter),
+ [rangedData, sideFilter],
  );
 
  const onRemove = useCallback(
@@ -205,17 +234,32 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
  <Typography.Paragraph type="secondary">No trades in this range.</Typography.Paragraph>
  ) : (
  <>
- <div className="flex flex-wrap items-center justify-between gap-2">
+ <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+ <div className="flex flex-wrap items-center gap-2">
+ {rangePicker ? (
+ <Segmented<RangeFilter>
+ value={rangeFilter}
+ onChange={(v) => setRangeFilter(v)}
+ options={[
+ { label: "7d", value: "7d" },
+ { label: "30d", value: "30d" },
+ { label: "90d", value: "90d" },
+ { label: "All", value: "all" },
+ ]}
+ size="middle"
+ />
+ ) : null}
  <Segmented<SideFilter>
  value={sideFilter}
  onChange={(v) => setSideFilter(v)}
  options={[
- { label: `All (${allData.length})`, value: "all" },
+ { label: `All (${rangedData.length})`, value: "all" },
  { label: `Buy (${buyCount})`, value: "buy" },
  { label: `Sell (${sellCount})`, value: "sell" },
  ]}
  size="middle"
  />
+ </div>
  <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
  Showing {data.length} of {allData.length}
  </span>

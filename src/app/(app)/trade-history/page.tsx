@@ -2,7 +2,7 @@ import { realizedPnlByTransaction } from "@/lib/portfolio";
 import {
   fetchAllUserTransactions,
   filterTransactionsDhakaCalendarDay,
-  filterTransactionsLastNDays,
+  sortTransactionsByLatest,
 } from "@/lib/user-transactions";
 import { TradeHistorySection } from "./trade-history-section";
 
@@ -18,10 +18,12 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
       : null;
 
   const txRes = await fetchAllUserTransactions();
+  // Running-average P/L must be computed against the full chronological ledger,
+  // never a filtered slice. Compute once here, then attach per-row.
   const detailsById = realizedPnlByTransaction(txRes.rows);
   const historyRows = dayParam
     ? filterTransactionsDhakaCalendarDay(txRes.rows, dayParam)
-    : filterTransactionsLastNDays(txRes.rows, 7);
+    : sortTransactionsByLatest(txRes.rows);
   const pnlForRows = Object.fromEntries(
     historyRows
       .map((r) => [r.id, detailsById.get(r.id)?.pnl] as const)
@@ -41,21 +43,21 @@ export default async function TradeHistoryPage({ searchParams }: PageProps) {
             History
           </div>
           <h1 className="mt-1 text-[28px] leading-tight tracking-tight text-[var(--ink-strong)]">
-            {dayParam ? `Trades on ${dayParam}` : "Recent trades"}
+            {dayParam ? `Trades on ${dayParam}` : "Trade history"}
           </h1>
         </div>
         <div className="text-right text-[12px] text-[var(--ink-muted)]">
-          <div>{dayParam ? "Single-day view" : "Last 7 days"}</div>
-          <div className="mt-0.5">{historyRows.length} entries</div>
+          <div>{dayParam ? "Single-day view" : `${historyRows.length} total entries`}</div>
         </div>
       </header>
 
       <TradeHistorySection
-        key={dayParam ?? "last-7-days"}
+        key={dayParam ?? "all-history"}
         rows={historyRows}
         pnlById={pnlForRows}
         avgCostById={avgCostForRows}
         loadError={txRes.error}
+        rangePicker={!dayParam}
       />
     </div>
   );
