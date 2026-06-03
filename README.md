@@ -55,7 +55,6 @@ In Supabase **Authentication → URL configuration**, set:
 
 For a solo project you may turn off **Confirm email** (see below).
 
-### Email verification (can’t verify / no inbox)
 
 Supabase decides whether a new user must click an email link before signing in.
 
