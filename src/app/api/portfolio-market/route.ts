@@ -38,5 +38,6 @@ export async function GET() {
     totalRealizedBdt: holdingsRes.totalRealizedBdt,
     totalInvestedBdt: holdingsRes.totalInvestedBdt,
     totalCashAdjustmentsBdt: holdingsRes.totalCashAdjustmentsBdt,
+    totalCashDividendsBdt: holdingsRes.totalCashDividendsBdt,
   });
 }

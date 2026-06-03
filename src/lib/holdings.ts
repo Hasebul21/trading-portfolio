@@ -30,6 +30,7 @@ export const fetchUserHoldings = cache(async () => {
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
       totalCashAdjustmentsBdt: 0,
+      totalCashDividendsBdt: 0,
     };
   }
 
@@ -40,6 +41,7 @@ export const fetchUserHoldings = cache(async () => {
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
       totalCashAdjustmentsBdt: 0,
+      totalCashDividendsBdt: 0,
     };
   }
 
@@ -53,9 +55,9 @@ export const fetchUserHoldings = cache(async () => {
   const totalInvested = totalInvestedBdt(holdings);
 
   // `cash_adjustments` may not yet exist on older databases; tolerate the
-  // missing-table error so the rest of the portfolio still renders. Cash
-  // dividends recorded under /dividend roll into the same bucket so they nudge
-  // the Unrealized P/L / Net Gain-Loss exactly like a manual cash adjustment.
+  // missing-table error so the rest of the portfolio still renders. Manual
+  // adjustments (deposits/withdrawals) flow into Unrealized P/L. Cash dividends
+  // from /dividend are tracked separately and roll into Net P/L instead.
   let totalCashAdjustmentsBdt = 0;
   if (!caRes.error) {
     for (const row of (caRes.data ?? []) as { amount_bdt: number | string | null }[]) {
@@ -63,16 +65,19 @@ export const fetchUserHoldings = cache(async () => {
       if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
     }
   }
+  totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
+
+  let totalCashDividendsBdt = 0;
   if (!divRes.error) {
     for (const row of (divRes.data ?? []) as { cash_dividend_bdt: number | string | null }[]) {
       const n =
         typeof row.cash_dividend_bdt === "number"
           ? row.cash_dividend_bdt
           : Number(row.cash_dividend_bdt ?? 0);
-      if (Number.isFinite(n)) totalCashAdjustmentsBdt += n;
+      if (Number.isFinite(n)) totalCashDividendsBdt += n;
     }
   }
-  totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
+  totalCashDividendsBdt = Math.round(totalCashDividendsBdt * 100) / 100;
 
   return {
     error: null as string | null,
@@ -80,5 +85,6 @@ export const fetchUserHoldings = cache(async () => {
     totalRealizedBdt,
     totalInvestedBdt: totalInvested,
     totalCashAdjustmentsBdt,
+    totalCashDividendsBdt,
   };
 });

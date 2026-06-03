@@ -100,6 +100,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
   totalRealizedBdt: number;
   totalInvestedBdt: number;
   totalCashAdjustmentsBdt: number;
+  totalCashDividendsBdt: number;
 }> {
   const [holdingsRes, lspRes] = await Promise.all([
     fetchUserHoldings(),
@@ -115,6 +116,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
       totalCashAdjustmentsBdt: 0,
+      totalCashDividendsBdt: 0,
     };
   }
 
@@ -138,5 +140,6 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
     totalRealizedBdt: holdingsRes.totalRealizedBdt,
     totalInvestedBdt: holdingsRes.totalInvestedBdt,
     totalCashAdjustmentsBdt: holdingsRes.totalCashAdjustmentsBdt,
+    totalCashDividendsBdt: holdingsRes.totalCashDividendsBdt,
   };
 }

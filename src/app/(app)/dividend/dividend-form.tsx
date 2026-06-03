@@ -185,8 +185,8 @@ export function DividendForm({
           title="Delete this dividend?"
           description={
             row.bonus_tx_id
-              ? "The cash will be removed from your Unrealized P/L and the bonus shares removed from your position."
-              : "The cash will be removed from your Unrealized P/L."
+              ? "The cash will be removed from your Net P/L and the bonus shares removed from your position."
+              : "The cash will be removed from your Net P/L."
           }
           okText="Delete"
           okButtonProps={{ danger: true }}
@@ -211,10 +211,10 @@ export function DividendForm({
             <h3 className="text-[14px] text-[var(--ink-strong)]">Record a dividend</h3>
             <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
               Pick the stock, then enter the cash and/or stock (bonus share)
-              dividend you received. The cash amount is added to your{" "}
-              <span className="text-[var(--ink-strong)]">Unrealized P/L</span> on
-              the Portfolio page. Bonus shares are added to that position, which
-              lowers its average cost.
+              dividend you received. The cash amount rolls into your{" "}
+              <span className="text-[var(--ink-strong)]">Net P/L</span> on the
+              Portfolio page alongside realized sell P/L. Bonus shares are added
+              to that position, which lowers its average cost.
             </p>
           </div>
 

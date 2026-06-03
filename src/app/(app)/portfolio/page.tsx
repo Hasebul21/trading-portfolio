@@ -14,7 +14,15 @@ export default async function PortfolioPage() {
  getSectorTargets(),
  ]);
 
- const { error, holdings, marketError, totalRealizedBdt, totalInvestedBdt, totalCashAdjustmentsBdt } = portfolioRes;
+ const {
+ error,
+ holdings,
+ marketError,
+ totalRealizedBdt,
+ totalInvestedBdt,
+ totalCashAdjustmentsBdt,
+ totalCashDividendsBdt,
+ } = portfolioRes;
 
  const sectorTargetsByKey: Record<string, number> = {};
  if (targetsRes.ok) {
@@ -104,6 +112,7 @@ export default async function PortfolioPage() {
  initialTotalRealizedBdt={totalRealizedBdt}
  initialTotalInvestedBdt={totalInvestedBdt}
  initialTotalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
+ initialTotalCashDividendsBdt={totalCashDividendsBdt}
  sectorTargetsByKey={sectorTargetsByKey}
  />
  </div>

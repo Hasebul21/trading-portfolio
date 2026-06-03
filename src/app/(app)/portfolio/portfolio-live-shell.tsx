@@ -20,6 +20,7 @@ type PortfolioMarketApi = {
  totalRealizedBdt: number;
  totalInvestedBdt: number;
  totalCashAdjustmentsBdt: number;
+ totalCashDividendsBdt: number;
 };
 
 export function PortfolioLiveShell({
@@ -28,6 +29,7 @@ export function PortfolioLiveShell({
  initialTotalRealizedBdt,
  initialTotalInvestedBdt,
  initialTotalCashAdjustmentsBdt,
+ initialTotalCashDividendsBdt,
  sectorTargetsByKey,
 }: {
  initialHoldings: PortfolioMarketRow[];
@@ -35,6 +37,7 @@ export function PortfolioLiveShell({
  initialTotalRealizedBdt: number;
  initialTotalInvestedBdt: number;
  initialTotalCashAdjustmentsBdt: number;
+ initialTotalCashDividendsBdt: number;
  sectorTargetsByKey: Record<string, number>;
 }) {
  const [rows, setRows] = useState(initialHoldings);
@@ -42,6 +45,9 @@ export function PortfolioLiveShell({
  const [totalInvestedBdt, setTotalInvestedBdt] = useState(initialTotalInvestedBdt);
  const [totalCashAdjustmentsBdt, setTotalCashAdjustmentsBdt] = useState(
  initialTotalCashAdjustmentsBdt,
+ );
+ const [totalCashDividendsBdt, setTotalCashDividendsBdt] = useState(
+ initialTotalCashDividendsBdt,
  );
  const [liveLspError, setLiveLspError] = useState<string | null>(null);
  const [hasPolled, setHasPolled] = useState(false);
@@ -54,8 +60,14 @@ export function PortfolioLiveShell({
  (h) =>
  `${h.symbol}:${h.sector ?? ""}:${Number(h.shares.toFixed(4))}:${Number(h.avgPrice.toFixed(4))}:${Number(h.totalCost.toFixed(2))}:${h.marketLtp ?? ""}`,
  )
- .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}|cash:${initialTotalCashAdjustmentsBdt}`,
- [initialHoldings, initialTotalRealizedBdt, initialTotalInvestedBdt, initialTotalCashAdjustmentsBdt],
+ .join("|")}|realized:${initialTotalRealizedBdt}|invested:${initialTotalInvestedBdt}|cash:${initialTotalCashAdjustmentsBdt}|div:${initialTotalCashDividendsBdt}`,
+ [
+ initialHoldings,
+ initialTotalRealizedBdt,
+ initialTotalInvestedBdt,
+ initialTotalCashAdjustmentsBdt,
+ initialTotalCashDividendsBdt,
+ ],
  );
 
  const prevInitialKey = useRef<string | null>(null);
@@ -66,12 +78,14 @@ export function PortfolioLiveShell({
  setTotalRealizedBdt(initialTotalRealizedBdt);
  setTotalInvestedBdt(initialTotalInvestedBdt);
  setTotalCashAdjustmentsBdt(initialTotalCashAdjustmentsBdt);
+ setTotalCashDividendsBdt(initialTotalCashDividendsBdt);
  }, [
  initialKey,
  initialHoldings,
  initialTotalRealizedBdt,
  initialTotalInvestedBdt,
  initialTotalCashAdjustmentsBdt,
+ initialTotalCashDividendsBdt,
  ]);
 
  const refresh = useCallback(async () => {
@@ -102,6 +116,12 @@ export function PortfolioLiveShell({
  Number.isFinite(data.totalCashAdjustmentsBdt)
  ) {
  setTotalCashAdjustmentsBdt(data.totalCashAdjustmentsBdt);
+ }
+ if (
+ typeof data.totalCashDividendsBdt === "number" &&
+ Number.isFinite(data.totalCashDividendsBdt)
+ ) {
+ setTotalCashDividendsBdt(data.totalCashDividendsBdt);
  }
  } catch (e) {
  setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
@@ -152,6 +172,7 @@ export function PortfolioLiveShell({
  totalRealizedBdt={totalRealizedBdt}
  totalInvestedBdt={totalInvestedBdt}
  totalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
+ totalCashDividendsBdt={totalCashDividendsBdt}
  sectorTargetsByKey={sectorTargetsByKey}
  enableBookEdit
  onAfterBookSave={refresh}

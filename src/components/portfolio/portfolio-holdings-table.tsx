@@ -168,6 +168,7 @@ export function PortfolioHoldingsTable({
     totalRealizedBdt = 0,
     totalInvestedBdt = 0,
     totalCashAdjustmentsBdt = 0,
+    totalCashDividendsBdt = 0,
     sectorTargetsByKey = {},
     enableBookEdit = false,
     onAfterBookSave,
@@ -179,6 +180,8 @@ export function PortfolioHoldingsTable({
     totalInvestedBdt?: number;
     /** Net of manual cash add/deduct entries from Settings. */
     totalCashAdjustmentsBdt?: number;
+    /** Σ of cash dividends recorded under /dividend — rolls into Net P/L. */
+    totalCashDividendsBdt?: number;
     /** Per-sector target % (keys are sectorMatchKey-normalised). */
     sectorTargetsByKey?: Record<string, number>;
     enableBookEdit?: boolean;
@@ -254,10 +257,10 @@ export function PortfolioHoldingsTable({
     const totalUnrealized = positionsUnrealized + summary.cashAdjustments;
     const totalUnrealizedPct =
         totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
-    // Net P/L = cumulative realized G/L from every sell in the ledger
-    // (`totalRealizedProfitLossBdt` summed by `computePortfolioSummary`). Mirrors
-    // the per-row P/L shown on the Trade History page so the two stay in sync.
-    const netRealizedPl = summary.realizedGainLoss;
+    // Net P/L = cumulative realized G/L from every sell in the ledger plus the
+    // cash dividends recorded under /dividend. Both are realized cash flows;
+    // the sell-side number mirrors the per-row P/L on the Trade History page.
+    const netRealizedPl = summary.realizedGainLoss + totalCashDividendsBdt;
     const positionCount = displayHoldings.length;
 
     // Expected upcoming-year cash dividend across the book. Each row's
@@ -434,7 +437,7 @@ export function PortfolioHoldingsTable({
                                 ? "text-[var(--loss-700)]"
                                 : ""
                             }`}
-                        title="Cumulative realized P/L from every sell in your trade history"
+                        title="Realized P/L from every sell in your trade history plus cash dividends from /dividend"
                     >
                         {fmtSignedBdt(netRealizedPl)}
                     </span>
