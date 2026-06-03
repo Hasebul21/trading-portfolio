@@ -5,10 +5,12 @@ import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import { tablePagination } from "@/lib/table-pagination";
 import type { TransactionRow } from "@/lib/portfolio";
 import { BROKERAGE_COMMISSION_RATE, roundToTickSize } from "@/lib/portfolio";
-import { Button, Popconfirm, Table, Typography } from "antd";
+import { Button, Popconfirm, Segmented, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+
+type SideFilter = "all" | "buy" | "sell";
 
 type Props = {
  rows: TransactionRow[];
@@ -19,7 +21,7 @@ type Props = {
 
 export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: Props) {
  type Row = TransactionRow & { key: string; realizedPnl: number | null; avgCostAtSell: number | null };
- const data: Row[] = rows.map((r) => ({
+ const allData: Row[] = rows.map((r) => ({
  ...r,
  key: r.id,
  realizedPnl:
@@ -34,6 +36,25 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
  const router = useRouter();
  const [removingId, setRemovingId] = useState<string | null>(null);
  const [removeError, setRemoveError] = useState<string | null>(null);
+ const [sideFilter, setSideFilter] = useState<SideFilter>("all");
+
+ const { buyCount, sellCount } = useMemo(() => {
+ let buys = 0;
+ let sells = 0;
+ for (const r of allData) {
+ if (String(r.side).toLowerCase() === "sell") sells += 1;
+ else buys += 1;
+ }
+ return { buyCount: buys, sellCount: sells };
+ }, [allData]);
+
+ const data = useMemo(
+ () =>
+ sideFilter === "all"
+ ? allData
+ : allData.filter((r) => String(r.side).toLowerCase() === sideFilter),
+ [allData, sideFilter],
+ );
 
  const onRemove = useCallback(
  async (id: string) => {
@@ -184,6 +205,28 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
  <Typography.Paragraph type="secondary">No trades in this range.</Typography.Paragraph>
  ) : (
  <>
+ <div className="flex flex-wrap items-center justify-between gap-2">
+ <Segmented<SideFilter>
+ value={sideFilter}
+ onChange={(v) => setSideFilter(v)}
+ options={[
+ { label: `All (${allData.length})`, value: "all" },
+ { label: `Buy (${buyCount})`, value: "buy" },
+ { label: `Sell (${sellCount})`, value: "sell" },
+ ]}
+ size="middle"
+ />
+ <span className="text-[12px] text-[var(--ink-muted)] tabular-nums">
+ Showing {data.length} of {allData.length}
+ </span>
+ </div>
+
+ {data.length === 0 ? (
+ <Typography.Paragraph type="secondary">
+ No {sideFilter} trades in this range.
+ </Typography.Paragraph>
+ ) : (
+ <>
  {/* Mobile (< md): compact card grid — 2 per row. */}
  <ul className="grid grid-cols-2 gap-2 md:hidden">
  {data.map((row) => (
@@ -212,6 +255,8 @@ export function TradeHistorySection({ rows, pnlById, avgCostById, loadError }: P
  tableLayout="auto"
  />
  </div>
+ </>
+ )}
  </>
  )}
  </div>
