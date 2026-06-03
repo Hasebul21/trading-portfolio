@@ -27,6 +27,11 @@ const TABS: MobileTab[] = [
         icon: <AllocationIcon />,
     },
     {
+        href: "/dividend",
+        label: "Dividend",
+        icon: <DividendIcon />,
+    },
+    {
         href: "/settings",
         label: "Settings",
         icon: <SettingsIcon />,
@@ -155,6 +160,26 @@ function AllocationIcon() {
         >
             <path d="M12 3a9 9 0 1 0 9 9h-9V3Z" />
             <path d="M14 4.4A8.5 8.5 0 0 1 19.6 10H14V4.4Z" />
+        </svg>
+    );
+}
+
+function DividendIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-full w-full"
+        >
+            <circle cx="9" cy="11" r="6" />
+            <path d="M9 8v6" />
+            <path d="M11 9.5c-.5-.7-1.5-1-2.5-1-1.5 0-2.5.7-2.5 1.7 0 2.3 5 1.3 5 3.6 0 1-.9 1.7-2.5 1.7-1 0-2-.3-2.5-1" />
+            <path d="M16.5 7.5a6 6 0 0 1 0 7" />
+            <path d="M19 5a9 9 0 0 1 0 12" />
         </svg>
     );
 }
