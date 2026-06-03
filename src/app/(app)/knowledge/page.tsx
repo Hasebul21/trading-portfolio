@@ -174,29 +174,6 @@ const METRICS: MetricEntry[] = [
             },
         ],
     },
-    {
-        term: "Conviction tier",
-        hint: "Score band → horizon",
-        def: "Trade Desk classifies each pick by composite score. The score also implies the holding horizon — higher scores justify longer holds.",
-        formula: "Score ≥ 75 · 62–74 · 55–61",
-        verdicts: [
-            {
-                tone: "buy",
-                label: "HIGH CONVICTION · SQURPHARMA",
-                detail: "Score 78 — long-term core (1Y+). Add on every dip below buy-zone low.",
-            },
-            {
-                tone: "hold",
-                label: "STRONG BUY · BRACBANK",
-                detail: "Score 65 — medium term (3–12 M). Position-size matters; honour the stop.",
-            },
-            {
-                tone: "exit",
-                label: "BUY (TACTICAL) · BEACONPHAR",
-                detail: "Score 57 — short term (1–3 M). Treat as a trade, not a hold; trim into strength.",
-            },
-        ],
-    },
 ];
 
 export default function KnowledgePage() {
@@ -207,9 +184,8 @@ export default function KnowledgePage() {
                     Knowledge — Advanced metrics explained
                 </p>
                 <p className="mb-1 text-[14px] leading-relaxed text-[var(--ink-default)]">
-                    Each pick card on Trade Desk shows these advanced fundamentals. They&apos;re
-                    computed from DSE-published EPS, NAV, and 52-week price data — values most
-                    retail screeners don&apos;t expose directly.
+                    These advanced fundamentals are computed from DSE-published EPS, NAV, and
+                    52-week price data — values most retail screeners don&apos;t expose directly.
                 </p>
                 <p className="text-[12px] leading-relaxed text-[var(--ink-muted)]">
                     Examples below use illustrative DSE tickers and round numbers to anchor the
