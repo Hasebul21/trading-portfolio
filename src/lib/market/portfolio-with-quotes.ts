@@ -69,7 +69,11 @@ export function holdingsToMarketRows(
       signalReason = "Missing fundamentals";
     }
 
-    const divYieldPct = extras?.dividendYieldPct ?? null;
+    // Unrealized Dividend on the portfolio uses the 5-year average yield to
+    // smooth one-off skip years. Falls back to the latest published yield only
+    // when no 5y data is available (e.g. newly listed shares).
+    const divYieldPct =
+      extras?.dividendYieldAvg5YPct ?? extras?.dividendYieldPct ?? null;
     const expectedAnnualDividendBdt =
       divYieldPct !== null && divYieldPct > 0 && marketLtp !== null && Number.isFinite(marketLtp)
         ? Math.round((divYieldPct / 100) * marketLtp * h.shares * 100) / 100

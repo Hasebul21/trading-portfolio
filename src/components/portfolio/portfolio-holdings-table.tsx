@@ -264,7 +264,7 @@ export function PortfolioHoldingsTable({
     const positionCount = displayHoldings.length;
 
     // Expected upcoming-year cash dividend across the book. Each row's
-    // expectedAnnualDividendBdt is shares × (declared yield %) × LTP from DSE; we
+    // expectedAnnualDividendBdt is shares × (5y-avg yield %) × LTP from DSE; we
     // re-multiply by `h.shares` here so the figure tracks any draft edits made
     // in the book editor (where `displayHoldings` already reflects the draft).
     const expectedAnnualDividendTotal = displayHoldings.reduce((sum, h) => {
@@ -448,7 +448,7 @@ export function PortfolioHoldingsTable({
                             ? "text-[var(--gain-700)]"
                             : ""
                             }`}
-                        title="Expected upcoming-year cash dividend based on the latest DSE-declared yield × LTP × shares"
+                        title="Expected upcoming-year cash dividend based on the 5-year average DSE dividend yield × LTP × shares"
                     >
                         {formatBdt(expectedAnnualDividendTotal)}
                         <span className="ml-2 text-[12px] font-normal opacity-80">
@@ -812,7 +812,7 @@ function HoldingRow({
                     }`}
                     title={
                         row.divYieldPct !== null && row.divYieldPct > 0
-                            ? `Latest DSE-declared yield ${row.divYieldPct.toFixed(2)}%`
+                            ? `5-year average DSE dividend yield ${row.divYieldPct.toFixed(2)}%`
                             : "No dividend yield published"
                     }
                 >

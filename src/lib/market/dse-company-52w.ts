@@ -116,7 +116,14 @@ export type DseCompanyExtras = {
   listedYears: number | null;
   betaFloat: number | null;
   freeFloat: number | null;
+  /** Latest year's dividend yield % from the year-end P/E table. */
   dividendYieldPct: number | null;
+  /**
+   * Simple arithmetic mean of dividend yield % across the most recent up-to-5
+   * year rows in the DSE year-end table. Smooths one-off skip years for the
+   * portfolio's Unrealized Dividend KPI. Null when no usable data is found.
+   */
+  dividendYieldAvg5YPct: number | null;
   /** Months since last AGM; null if unknown */
   lastAgmMonthsAgo: number | null;
 };
@@ -162,13 +169,14 @@ function allRows(tbl: string): string[] {
 }
 
 /**
- * Return numeric values from the most recent year row of a table.
+ * Return numeric values from year rows of a table, newest first.
  * A "year row" is any row whose first non-empty cell parses to a 4-digit year
- * in 2000–2099. Skips cells that are dashes / asterisks / blanks.
+ * in 2000–2099. Skips cells that are dashes / asterisks / blanks. Caller
+ * decides whether to take just the first entry or average over several.
  */
-function latestYearRowNumerics(tbl: string): { year: number; numerics: number[] } | null {
+function yearRowsNumerics(tbl: string): Array<{ year: number; numerics: number[] }> {
   const rows = allRows(tbl);
-  let best: { year: number; numerics: number[] } | null = null;
+  const out: Array<{ year: number; numerics: number[] }> = [];
   for (const r of rows) {
     const cells = rowCells(r).filter((c) => c.length > 0);
     if (cells.length < 2) continue;
@@ -191,18 +199,31 @@ function latestYearRowNumerics(tbl: string): { year: number; numerics: number[] 
       if (Number.isFinite(n)) numerics.push(n);
     }
     if (numerics.length === 0) continue;
-    if (!best || year > best.year) best = { year, numerics };
+    out.push({ year, numerics });
   }
-  return best;
+  out.sort((a, b) => b.year - a.year);
+  return out;
+}
+
+function latestYearRowNumerics(tbl: string): { year: number; numerics: number[] } | null {
+  const rows = yearRowsNumerics(tbl);
+  return rows[0] ?? null;
 }
 
 function parseFinancialPerformanceTable(html: string): {
   eps: number | null;
   nav: number | null;
   dividendYieldPct: number | null;
+  dividendYieldAvg5YPct: number | null;
   pe: number | null;
 } {
-  const EMPTY = { eps: null, nav: null, dividendYieldPct: null, pe: null };
+  const EMPTY = {
+    eps: null,
+    nav: null,
+    dividendYieldPct: null,
+    dividendYieldAvg5YPct: null,
+    pe: null,
+  };
 
   const tables = allTables(html);
   // Annual EPS/NAV table — uniquely identified by "NAV Per Share" header.
@@ -211,7 +232,8 @@ function parseFinancialPerformanceTable(html: string): {
   const yieldTable = tables.find((t) => /Dividend Yield in %/i.test(t)) ?? null;
 
   const navData = navTable ? latestYearRowNumerics(navTable) : null;
-  const yldData = yieldTable ? latestYearRowNumerics(yieldTable) : null;
+  const yieldRows = yieldTable ? yearRowsNumerics(yieldTable) : [];
+  const yldData = yieldRows[0] ?? null;
 
   // Latest-year EPS & NAV: first two non-dash numerics in the data row.
   const eps = navData?.numerics[0] ?? null;
@@ -224,8 +246,35 @@ function parseFinancialPerformanceTable(html: string): {
       ? yldData.numerics[yldData.numerics.length - 1] ?? null
       : null;
 
-  if (eps === null && nav === null && pe === null && dividendYieldPct === null) return EMPTY;
-  return { eps, nav, dividendYieldPct, pe };
+  // 5-year average dividend yield: take the last numeric (= div yield %) from
+  // each of the most recent 5 year rows. A row where the dividend-yield cell is
+  // a dash gets dropped entirely (its `numerics[]` would only hold the P/E),
+  // so we guard with a `numerics.length >= 2` check to avoid counting a
+  // PE-only row as a 0% yield.
+  let dividendYieldAvg5YPct: number | null = null;
+  const sampleYears = yieldRows.slice(0, 5);
+  const yields: number[] = [];
+  for (const row of sampleYears) {
+    if (row.numerics.length >= 2) {
+      const y = row.numerics[row.numerics.length - 1];
+      if (Number.isFinite(y)) yields.push(y);
+    }
+  }
+  if (yields.length > 0) {
+    const sum = yields.reduce((a, b) => a + b, 0);
+    dividendYieldAvg5YPct = Math.round((sum / yields.length) * 100) / 100;
+  }
+
+  if (
+    eps === null &&
+    nav === null &&
+    pe === null &&
+    dividendYieldPct === null &&
+    dividendYieldAvg5YPct === null
+  ) {
+    return EMPTY;
+  }
+  return { eps, nav, dividendYieldPct, dividendYieldAvg5YPct, pe };
 }
 
 function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week52Low" | "week52High" | "sector"> {
@@ -242,6 +291,7 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   const eps = fin.eps;
   const nav = fin.nav;
   const dividendYieldPct = fin.dividendYieldPct;
+  const dividendYieldAvg5YPct = fin.dividendYieldAvg5YPct;
 
   // Market Capitalization (mn) — convert mn BDT → crore BDT (1 crore = 10 mn)
   const mcapMn = parseNumericField(
@@ -297,7 +347,8 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   // Beta not published by DSE; always null
   return {
     pe, eps, nav, category, freeFloat, betaFloat: null,
-    dividendYieldPct, marketCapCr, listedYears, lastAgmMonthsAgo,
+    dividendYieldPct, dividendYieldAvg5YPct,
+    marketCapCr, listedYears, lastAgmMonthsAgo,
   };
 }
 
@@ -312,7 +363,9 @@ export async function fetchDseCompanyExtras(
   const nullResult: DseCompanyExtras = {
     week52Low: null, week52High: null, sector: null, category: null,
     pe: null, eps: null, nav: null, marketCapCr: null, listedYears: null,
-    betaFloat: null, freeFloat: null, dividendYieldPct: null, lastAgmMonthsAgo: null,
+    betaFloat: null, freeFloat: null,
+    dividendYieldPct: null, dividendYieldAvg5YPct: null,
+    lastAgmMonthsAgo: null,
   };
   if (!sym) return nullResult;
 
