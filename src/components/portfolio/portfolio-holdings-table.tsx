@@ -254,6 +254,10 @@ export function PortfolioHoldingsTable({
     const totalUnrealized = positionsUnrealized + summary.cashAdjustments;
     const totalUnrealizedPct =
         totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
+    // Net P/L = cumulative realized G/L from every sell in the ledger
+    // (`totalRealizedProfitLossBdt` summed by `computePortfolioSummary`). Mirrors
+    // the per-row P/L shown on the Trade History page so the two stay in sync.
+    const netRealizedPl = summary.realizedGainLoss;
     const positionCount = displayHoldings.length;
 
     // Expected upcoming-year cash dividend across the book. Each row's
@@ -402,8 +406,8 @@ export function PortfolioHoldingsTable({
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-6 text-[var(--ink-strong)]">
-            {/* KPI strip — 5 cells in a 1px-divided grid. */}
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-3 xl:grid-cols-5">
+            {/* KPI strip — 6 cells in a 1px-divided grid. */}
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-3 xl:grid-cols-6">
                 <KpiCell label="Total invested">
                     <span className="tabular-nums">{formatBdt(totalInvestedDisplay)}</span>
                 </KpiCell>
@@ -420,6 +424,19 @@ export function PortfolioHoldingsTable({
                         <span className="ml-2 text-[12px] font-normal opacity-80">
                             {fmtPct(totalUnrealizedPct)}
                         </span>
+                    </span>
+                </KpiCell>
+                <KpiCell label="Net P/L">
+                    <span
+                        className={`tabular-nums ${netRealizedPl > 0
+                            ? "text-[var(--gain-700)]"
+                            : netRealizedPl < 0
+                                ? "text-[var(--loss-700)]"
+                                : ""
+                            }`}
+                        title="Cumulative realized P/L from every sell in your trade history"
+                    >
+                        {fmtSignedBdt(netRealizedPl)}
                     </span>
                 </KpiCell>
                 <KpiCell label="Unrealized Dividend">
