@@ -300,11 +300,6 @@ export function PortfolioHoldingsTable({
         ];
     }, [displayHoldings]);
 
-    const sectorCount = useMemo(
-        () => new Set(displayHoldings.map((h) => sectorLabel(h.sector))).size,
-        [displayHoldings],
-    );
-
     const symbolOptions = useMemo(
         () =>
             [...holdings]
@@ -409,8 +404,8 @@ export function PortfolioHoldingsTable({
 
     return (
         <div className="flex w-full min-w-0 flex-col gap-6 text-[var(--ink-strong)]">
-            {/* KPI strip — 6 cells in a 1px-divided grid. */}
-            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-3 xl:grid-cols-6">
+            {/* KPI strip — 4 cells in a 1px-divided grid. */}
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-[var(--bg-inset)] md:grid-cols-4">
                 <KpiCell label="Total invested">
                     <span className="tabular-nums">{formatBdt(totalInvestedDisplay)}</span>
                 </KpiCell>
@@ -455,12 +450,6 @@ export function PortfolioHoldingsTable({
                             {fmtPct(expectedAnnualDividendPct)}
                         </span>
                     </span>
-                </KpiCell>
-                <KpiCell label="Positions">
-                    <span className="tabular-nums">{positionCount}</span>
-                </KpiCell>
-                <KpiCell label="Sectors">
-                    <span className="tabular-nums">{sectorCount}</span>
                 </KpiCell>
             </div>
 
