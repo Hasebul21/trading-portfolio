@@ -12,6 +12,36 @@ export type SectorTargetRow = {
 export const UNKNOWN_SECTOR_LABEL = "Unknown";
 export const SECTOR_TARGET_MAX_ROWS = 30;
 
+/**
+ * Canonical Dhaka Stock Exchange (DSE) sector list. Used to populate the
+ * sector pickers in Settings so every standard sector is selectable even
+ * before the user holds a position in it. Free-text entry is still allowed
+ * for anything outside this list.
+ */
+export const DSE_SECTORS: readonly string[] = [
+  "Bank",
+  "Cement",
+  "Ceramics Sector",
+  "Corporate Bond",
+  "Debenture",
+  "Engineering",
+  "Financial Institutions",
+  "Food and Allied",
+  "Fuel and Power",
+  "Insurance",
+  "IT Sector",
+  "Jute",
+  "Miscellaneous",
+  "Mutual Funds",
+  "Paper and Printing",
+  "Pharmaceuticals and Chemicals",
+  "Services and Real Estate",
+  "SME Sector",
+  "Tannery Industries",
+  "Telecommunication",
+  "Textile",
+];
+
 /** Trim and collapse internal whitespace; preserve original casing for display. */
 export function normalizeSectorLabel(raw: string | null | undefined): string {
   const s = String(raw ?? "").trim().replace(/\s+/g, " ");

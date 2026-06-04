@@ -1,6 +1,7 @@
 "use client";
 
 import { updateTopSectors } from "../settings-actions";
+import { DSE_SECTORS } from "@/lib/sector-targets";
 import { Alert, Button, Card, Select } from "antd";
 import { useCallback, useMemo, useState } from "react";
 
@@ -21,7 +22,7 @@ export function TopSectorsForm({
     const options = useMemo(() => {
         const seen = new Set<string>();
         const merged: string[] = [];
-        for (const s of [...suggestions, ...draft]) {
+        for (const s of [...DSE_SECTORS, ...suggestions, ...draft]) {
             const label = String(s ?? "").trim();
             if (!label) continue;
             const key = label.toLowerCase();

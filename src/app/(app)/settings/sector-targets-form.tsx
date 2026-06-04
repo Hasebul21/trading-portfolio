@@ -5,10 +5,11 @@ import {
  type SectorTargetWithCurrent,
 } from "@/app/(app)/sector-target-actions";
 import {
+ DSE_SECTORS,
  SECTOR_TARGET_MAX_ROWS,
  sectorMatchKey,
 } from "@/lib/sector-targets";
-import { Alert, Button, Card, Input, InputNumber } from "antd";
+import { Alert, AutoComplete, Button, Card, InputNumber } from "antd";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 type DraftRow = {
@@ -58,6 +59,15 @@ export function SectorTargetsForm({
 
  const sumStatus: "ok" | "under" | "over" =
  sumPercent > 100.01 ? "over" : sumPercent < 99.99 ? "under" : "ok";
+
+ // DSE sectors not already used by another row, so the dropdown never
+ // suggests a duplicate. Free typing is still allowed for custom sectors.
+ const sectorOptions = useMemo(() => {
+ const used = new Set(draft.map((row) => sectorMatchKey(row.sector)));
+ return DSE_SECTORS.filter((s) => !used.has(sectorMatchKey(s))).map((s) => ({
+ value: s,
+ }));
+ }, [draft]);
 
  const setTarget = useCallback((key: string, value: string) => {
  setError(null);
@@ -204,15 +214,20 @@ export function SectorTargetsForm({
  {row.sector}
  </span>
  ) : (
- <Input
+ <AutoComplete
  value={row.sector}
- onChange={(e) =>
- setSector(row.key, e.target.value)
+ onChange={(value) =>
+ setSector(row.key, value)
  }
+ options={sectorOptions}
  placeholder="Sector name"
  size="middle"
- className="rounded-md"
- maxLength={80}
+ className="w-full rounded-md"
+ filterOption={(input, option) =>
+ String(option?.value ?? "")
+ .toLowerCase()
+ .includes(input.toLowerCase())
+ }
  />
  )}
  </td>
