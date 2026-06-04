@@ -1,6 +1,7 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { getUserSettings, listCashAdjustments } from "../settings-actions";
 import { getSectorTargets } from "../sector-target-actions";
+import { getSectorMonthlyInvestments } from "../sector-investment-actions";
 import { SettingsForm } from "./settings-form";
 
 export const metadata = {
@@ -8,9 +9,10 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-    const [settingsRes, targetsRes, adjustmentsRes] = await Promise.all([
+    const [settingsRes, targetsRes, investmentsRes, adjustmentsRes] = await Promise.all([
         getUserSettings(),
         getSectorTargets(),
+        getSectorMonthlyInvestments(),
         listCashAdjustments(),
     ]);
 
@@ -21,6 +23,8 @@ export default async function SettingsPage() {
                     initialSettings={settingsRes.settings}
                     initialSectorTargets={targetsRes.ok ? targetsRes.data.rows : []}
                     sectorTargetsError={targetsRes.ok ? null : targetsRes.error}
+                    initialSectorInvestments={investmentsRes.ok ? investmentsRes.data.rows : []}
+                    sectorInvestmentsError={investmentsRes.ok ? null : investmentsRes.error}
                     initialCashAdjustments={adjustmentsRes.ok ? adjustmentsRes.rows : []}
                     initialCashAdjustmentsTotal={adjustmentsRes.ok ? adjustmentsRes.total : 0}
                     cashAdjustmentsError={adjustmentsRes.ok ? null : adjustmentsRes.error}
