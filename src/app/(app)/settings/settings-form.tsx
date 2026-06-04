@@ -5,18 +5,29 @@ import { updatePortfolioReportEmail, updateUserProfile, updateUserPassword } fro
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
+import type { SectorInvestmentRow } from "@/lib/sector-investments";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
+import { SectorInvestmentsForm } from "./sector-investments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
 import { TopSectorsForm } from "./top-sectors-form";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
 
-type TabKey = "profile" | "email" | "password" | "targets" | "top-sectors" | "cash";
+type TabKey =
+ | "profile"
+ | "email"
+ | "password"
+ | "targets"
+ | "monthly-investment"
+ | "top-sectors"
+ | "cash";
 
 export function SettingsForm({
  initialSettings,
  initialSectorTargets,
  sectorTargetsError,
+ initialSectorInvestments,
+ sectorInvestmentsError,
  initialCashAdjustments,
  initialCashAdjustmentsTotal,
  cashAdjustmentsError,
@@ -24,6 +35,8 @@ export function SettingsForm({
  initialSettings: UserSettings;
  initialSectorTargets: SectorTargetWithCurrent[];
  sectorTargetsError: string | null;
+ initialSectorInvestments: SectorInvestmentRow[];
+ sectorInvestmentsError: string | null;
  initialCashAdjustments: CashAdjustmentRow[];
  initialCashAdjustmentsTotal: number;
  cashAdjustmentsError: string | null;
@@ -375,6 +388,20 @@ export function SettingsForm({
  />
  ) : (
  <SectorTargetsForm initialRows={initialSectorTargets} />
+ ),
+ },
+ {
+ key: "monthly-investment",
+ label: "Monthly investment",
+ children: sectorInvestmentsError ? (
+ <Alert
+ type="error"
+ showIcon
+ message="Could not load monthly investments"
+ description={sectorInvestmentsError}
+ />
+ ) : (
+ <SectorInvestmentsForm initialRows={initialSectorInvestments} />
  ),
  },
  {
