@@ -48,23 +48,18 @@ export function SellPlansForm({
   const [ltpBySymbol, setLtpBySymbol] = useState<Record<string, number>>({});
   const [ltpLoading, setLtpLoading] = useState(false);
   const [ltpError, setLtpError] = useState<string | null>(null);
-  const [ltpUpdatedAt, setLtpUpdatedAt] = useState<Date | null>(null);
 
   const loadLtps = useCallback(async (symbols: ReadonlyArray<string>) => {
     const unique = Array.from(
       new Set(symbols.map((s) => normalizeSymbol(s)).filter(Boolean)),
     );
-    if (unique.length === 0) {
-      setLtpUpdatedAt(new Date());
-      return;
-    }
+    if (unique.length === 0) return;
     setLtpLoading(true);
     setLtpError(null);
     try {
       const res = await fetchSellPlanLtps(unique);
       setLtpBySymbol((prev) => ({ ...prev, ...res.ltpBySymbol }));
       setLtpError(res.error);
-      setLtpUpdatedAt(new Date());
     } catch (e) {
       setLtpError(e instanceof Error ? e.message : "Could not load prices.");
     } finally {
@@ -202,14 +197,6 @@ export function SellPlansForm({
       <div className="space-y-4">
         <div>
           <h3 className="text-[14px] text-[var(--ink-strong)]">Sell plan</h3>
-          <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-            Pick the stocks you plan to sell and how many shares of each. The
-            per-stock value uses the live DSE last price (LTP) and the total
-            below is the gross money you&apos;d get if you sold everything now.
-            These stocks are flagged with an{" "}
-            <span className="text-[var(--ink-strong)]">↑</span> in your
-            portfolio. Clear a quantity to drop a stock.
-          </p>
         </div>
 
         <div className="overflow-x-auto">
@@ -314,18 +301,8 @@ export function SellPlansForm({
           </div>
           <div className="text-right">
             <div className="text-[13px] tabular-nums text-[var(--ink-strong)]">
-              Total after sell:&nbsp;৳{formatBdt(totalProceeds)}
+              ৳{formatBdt(totalProceeds)}
             </div>
-            {ltpUpdatedAt ? (
-              <div className="text-[11px] tabular-nums text-[var(--ink-muted)]">
-                Live ·{" "}
-                {ltpUpdatedAt.toLocaleTimeString(undefined, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </div>
-            ) : null}
           </div>
         </div>
 

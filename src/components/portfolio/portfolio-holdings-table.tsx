@@ -11,7 +11,6 @@ import {
 } from "@/lib/format-bdt";
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
-import type { HoldingSignal } from "@/lib/market/oracle-scoring";
 import { sectorMatchKey } from "@/lib/sector-targets";
 import { normalizeSymbol } from "@/lib/sell-plans";
 import { Alert, AutoComplete, Button, Select, Space } from "antd";
@@ -705,10 +704,6 @@ function HoldingRow({
     /** True when this symbol is in the user's sell plan (Settings → Sell plan). */
     inSellPlan: boolean;
 }) {
-    const inProfit =
-        row.marketLtp !== null &&
-        Number.isFinite(row.marketLtp) &&
-        row.marketLtp > row.breakEvenPrice;
     const ltpKnown = row.marketLtp !== null && Number.isFinite(row.marketLtp);
     const plKnown = row.unrealizedPl !== null && Number.isFinite(row.unrealizedPl);
     const plPositive = plKnown && (row.unrealizedPl as number) >= 0;
@@ -720,11 +715,6 @@ function HoldingRow({
             ? "text-[var(--gain-700)]"
             : "text-[var(--loss-700)]"
         : "text-[var(--ink-muted)]";
-    const dotColor = !ltpKnown
-        ? "bg-[var(--line)]"
-        : inProfit
-            ? "bg-[var(--gain-600)]"
-            : "bg-[var(--loss-600)]";
 
     const rowBorder = isLast ? "" : "border-b border-[var(--line)]";
 
@@ -737,14 +727,10 @@ function HoldingRow({
 
     return (
         <div
-            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
+            className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             {/* Symbol + shares */}
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
-                <span
-                    aria-label={inProfit ? "In profit" : ltpKnown ? "In loss" : "No quote"}
-                    className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
-                />
                 <div className="flex flex-col">
                     <span className="flex items-center gap-1.5 font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
                         {row.symbol}
@@ -838,16 +824,10 @@ function HoldingRow({
                 ) : null}
             </RowCell>
 
-            {/* Signal — Oracle holding analysis verdict, calculated server-side
-                in lib/market/portfolio-with-quotes.ts. */}
-            <RowCell label="Signal">
-                <SignalPill signal={row.signal} reason={row.signalReason} hasQuote={ltpKnown} />
-            </RowCell>
-
             {/* Hidden book-edit fields (shares + avg) — surfaced only in edit mode
  as a thin row underneath to keep the read view clean. */}
             {bookEditing ? (
-                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-7 md:grid-cols-[1.5fr_repeat(6,1fr)] md:gap-4">
+                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4">
                     <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] md:col-span-1">
                         Edit shares & avg
                     </div>
@@ -880,46 +860,5 @@ function RowCell({ label, children }: { label: string; children: React.ReactNode
             <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)]">{label}</div>
             <div className="mt-0.5">{children}</div>
         </div>
-    );
-}
-
-/**
- * Holding-signal pill — colour-coded verdict from the Oracle holding analysis.
- * Calculation lives server-side (lib/market/portfolio-with-quotes.ts) so this
- * component only renders. Falls back to a muted "—" when no live quote exists
- * since the signal would be uninformative without LTP.
- */
-const SIGNAL_PILL_CFG: Record<HoldingSignal, { cls: string }> = {
-    "Strong Add": { cls: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-    "Add":        { cls: "bg-teal-100 text-teal-800 border-teal-300" },
-    "Hold":       { cls: "bg-amber-100 text-amber-800 border-amber-300" },
-    "Trim":       { cls: "bg-orange-100 text-orange-800 border-orange-300" },
-    "Exit":       { cls: "bg-red-100 text-red-800 border-red-300" },
-};
-
-function SignalPill({
-    signal,
-    reason,
-    hasQuote,
-}: {
-    signal: HoldingSignal;
-    reason: string;
-    hasQuote: boolean;
-}) {
-    if (!hasQuote) {
-        return (
-            <span className="text-[12px] text-[var(--ink-muted)]" title={reason || "Awaiting live quote"}>
-                —
-            </span>
-        );
-    }
-    const cfg = SIGNAL_PILL_CFG[signal];
-    return (
-        <span
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.cls}`}
-            title={reason || signal}
-        >
-            {signal}
-        </span>
     );
 }

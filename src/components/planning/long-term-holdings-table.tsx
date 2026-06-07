@@ -330,22 +330,6 @@ function WatchlistSectorCard({ group }: { group: SectorGroup }) {
 /** One watchlist symbol row. */
 function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
     const ltpKnown = row.ltp !== null && Number.isFinite(row.ltp);
-    const buySignal = isBuySignal(row);
-    const sellSignal = isSellSignal(row);
-    const dotColor = !ltpKnown
-        ? "bg-[var(--line)]"
-        : buySignal
-            ? "bg-[var(--gain-600)]"
-            : sellSignal
-                ? "bg-[var(--loss-600)]"
-                : "bg-zinc-400";
-    const dotTitle = !ltpKnown
-        ? "No live quote"
-        : buySignal
-            ? `Buy zone: LTP ≤ ${formatBdt(row.buy_point_bdt!)}`
-            : sellSignal
-                ? `Sell zone: LTP ≥ ${formatBdt(row.sell_point_bdt!)}`
-                : "Between buy and sell levels";
 
     const rowBorder = isLast ? "" : "border-b border-[var(--line)]";
 
@@ -374,11 +358,6 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
             className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(3,1fr)_auto] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
-                <span
-                    aria-label={dotTitle}
-                    title={dotTitle}
-                    className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
-                />
                 <div className="flex min-w-0 flex-col">
                     <span className="font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
                         {row.symbol}
