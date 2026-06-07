@@ -95,7 +95,10 @@ export default async function LongTermPage() {
         (rows ?? []).map((r) => String(r.symbol).trim()),
     );
 
-    const list: LongTermHoldingRow[] = (rows ?? []).map((row) => {
+    const list: LongTermHoldingRow[] = (rows ?? [])
+        // Hide watchlist entries already held in the portfolio.
+        .filter((row) => !bySymbol.has(String(row.symbol).trim().toUpperCase()))
+        .map((row) => {
         const sym = String(row.symbol).trim().toUpperCase();
         const h = bySymbol.get(sym);
         const quote = lspRes.bySymbol.get(sym);
