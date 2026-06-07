@@ -6,9 +6,12 @@ import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
 import type { SectorInvestmentRow } from "@/lib/sector-investments";
+import type { SellPlanRow } from "@/lib/sell-plans";
+import type { SymbolFieldInstrument } from "@/components/symbol-field";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { SectorInvestmentsForm } from "./sector-investments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
+import { SellPlansForm } from "./sell-plans-form";
 import { TopSectorsForm } from "./top-sectors-form";
 import { Alert, Button, Card, Input, InputNumber, Tabs } from "antd";
 import { useCallback, useState } from "react";
@@ -19,6 +22,7 @@ type TabKey =
  | "password"
  | "targets"
  | "monthly-investment"
+ | "sell-plan"
  | "top-sectors"
  | "cash";
 
@@ -28,6 +32,10 @@ export function SettingsForm({
  sectorTargetsError,
  initialSectorInvestments,
  sectorInvestmentsError,
+ initialSellPlans,
+ sellPlansError,
+ sellPlanInstruments,
+ sellPlanInstrumentsError,
  initialCashAdjustments,
  initialCashAdjustmentsTotal,
  cashAdjustmentsError,
@@ -37,6 +45,10 @@ export function SettingsForm({
  sectorTargetsError: string | null;
  initialSectorInvestments: SectorInvestmentRow[];
  sectorInvestmentsError: string | null;
+ initialSellPlans: SellPlanRow[];
+ sellPlansError: string | null;
+ sellPlanInstruments: SymbolFieldInstrument[];
+ sellPlanInstrumentsError: string | null;
  initialCashAdjustments: CashAdjustmentRow[];
  initialCashAdjustmentsTotal: number;
  cashAdjustmentsError: string | null;
@@ -402,6 +414,24 @@ export function SettingsForm({
  />
  ) : (
  <SectorInvestmentsForm initialRows={initialSectorInvestments} />
+ ),
+ },
+ {
+ key: "sell-plan",
+ label: "Sell plan",
+ children: sellPlansError ? (
+ <Alert
+ type="error"
+ showIcon
+ message="Could not load sell plan"
+ description={sellPlansError}
+ />
+ ) : (
+ <SellPlansForm
+ initialRows={initialSellPlans}
+ instruments={sellPlanInstruments}
+ instrumentsLoadError={sellPlanInstrumentsError}
+ />
  ),
  },
  {

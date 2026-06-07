@@ -17,9 +17,14 @@ const TABS: MobileTab[] = [
         icon: <PortfolioIcon />,
     },
     {
-        href: "/long-term",
-        label: "Watchlist",
-        icon: <WatchlistIcon />,
+        href: "/record",
+        label: "Transaction",
+        icon: <TransactionsIcon />,
+    },
+    {
+        href: "/trade-history",
+        label: "History",
+        icon: <HistoryIcon />,
     },
     {
         href: "/allocation",
@@ -40,9 +45,9 @@ const TABS: MobileTab[] = [
 
 /**
  * Fixed bottom navigation shown only on `< md` viewports (iPhone 12/13/14/15
- * widths 375–414px). The four tabs match the spec — Portfolio, Transactions,
- * Allocation, Settings — and respect the iOS safe-area inset so the bar
- * never sits under the home gesture.
+ * widths 375–414px). Tabs: Portfolio, Transaction (record), History (trade
+ * history), Allocation, Dividend, Settings — and respect the iOS safe-area
+ * inset so the bar never sits under the home gesture.
  */
 export function MobileBottomNav() {
     const pathname = usePathname() ?? "";
@@ -55,7 +60,7 @@ export function MobileBottomNav() {
                 paddingBottom: "max(env(safe-area-inset-bottom, 0px), 6px)",
             }}
         >
-            <ul className="flex items-stretch justify-around gap-1 px-2 pt-1.5">
+            <ul className="flex items-stretch justify-around gap-0.5 px-1 pt-1.5">
                 {TABS.map((tab) => {
                     const active =
                         pathname === tab.href || pathname.startsWith(`${tab.href}/`);
@@ -65,7 +70,7 @@ export function MobileBottomNav() {
                                 href={tab.href}
                                 aria-label={tab.label}
                                 aria-current={active ? "page" : undefined}
-                                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-md px-2 py-1.5 transition-colors no-underline hover:no-underline ${
+                                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-md px-1 py-1.5 transition-colors no-underline hover:no-underline ${
                                     active
                                         ? "text-[var(--accent-700)]"
                                         : "text-[var(--ink-muted)]"
@@ -79,7 +84,7 @@ export function MobileBottomNav() {
                                 >
                                     {tab.icon}
                                 </span>
-                                <span className="text-[11px] leading-tight tracking-tight">
+                                <span className="text-[10px] leading-tight tracking-tight">
                                     {tab.label}
                                 </span>
                             </Link>
@@ -130,7 +135,7 @@ function TransactionsIcon() {
     );
 }
 
-function WatchlistIcon() {
+function HistoryIcon() {
     return (
         <svg
             viewBox="0 0 24 24"
@@ -141,8 +146,9 @@ function WatchlistIcon() {
             strokeLinejoin="round"
             className="h-full w-full"
         >
-            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-            <circle cx="12" cy="12" r="3" />
+            <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+            <path d="M3 4v4h4" />
+            <path d="M12 8v4l3 1.5" />
         </svg>
     );
 }
