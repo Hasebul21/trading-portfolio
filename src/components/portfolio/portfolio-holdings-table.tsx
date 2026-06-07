@@ -196,7 +196,7 @@ export function PortfolioHoldingsTable({
     );
     const [symbolQuery, setSymbolQuery] = useState("");
     const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
-    const [sortKey, setSortKey] = useState<PortfolioSortKey>("default");
+    const [sortKey, setSortKey] = useState<PortfolioSortKey>("pl-desc");
     const [draft, setDraft] = useState<Record<string, BookDraft>>({});
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
