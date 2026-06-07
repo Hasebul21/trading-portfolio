@@ -1,6 +1,7 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
 import { getSectorTargets } from "../sector-target-actions";
+import { getSellPlans } from "../sell-plan-actions";
 import { sectorMatchKey } from "@/lib/sector-targets";
 import { siteTextLinkNeutralClass } from "@/lib/site-typography";
 import Link from "next/link";
@@ -9,10 +10,15 @@ import { PortfolioLiveShell } from "./portfolio-live-shell";
 
 
 export default async function PortfolioPage() {
- const [portfolioRes, targetsRes] = await Promise.all([
+ const [portfolioRes, targetsRes, sellPlansRes] = await Promise.all([
  fetchPortfolioWithDseMarket(),
  getSectorTargets(),
+ getSellPlans(),
  ]);
+
+ const sellPlanSymbols = sellPlansRes.ok
+ ? sellPlansRes.data.rows.map((r) => r.symbol)
+ : [];
 
  const {
  error,
@@ -114,6 +120,7 @@ export default async function PortfolioPage() {
  initialTotalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
  initialTotalCashDividendsBdt={totalCashDividendsBdt}
  sectorTargetsByKey={sectorTargetsByKey}
+ sellPlanSymbols={sellPlanSymbols}
  />
  </div>
  )}

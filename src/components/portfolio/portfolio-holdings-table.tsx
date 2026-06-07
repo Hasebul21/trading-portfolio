@@ -13,6 +13,7 @@ import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfoli
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import type { HoldingSignal } from "@/lib/market/oracle-scoring";
 import { sectorMatchKey } from "@/lib/sector-targets";
+import { normalizeSymbol } from "@/lib/sell-plans";
 import { Alert, AutoComplete, Button, Select, Space } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -170,6 +171,7 @@ export function PortfolioHoldingsTable({
     totalCashAdjustmentsBdt = 0,
     totalCashDividendsBdt = 0,
     sectorTargetsByKey = {},
+    sellPlanSymbols = [],
     enableBookEdit = false,
     onAfterBookSave,
 }: {
@@ -184,9 +186,15 @@ export function PortfolioHoldingsTable({
     totalCashDividendsBdt?: number;
     /** Per-sector target % (keys are sectorMatchKey-normalised). */
     sectorTargetsByKey?: Record<string, number>;
+    /** Symbols in the user's sell plan — flagged with an ↑ arrow. */
+    sellPlanSymbols?: string[];
     enableBookEdit?: boolean;
     onAfterBookSave?: () => void | Promise<void>;
 }) {
+    const sellPlanSet = useMemo(
+        () => new Set(sellPlanSymbols.map((s) => normalizeSymbol(s))),
+        [sellPlanSymbols],
+    );
     const [symbolQuery, setSymbolQuery] = useState("");
     const [sectorFilter, setSectorFilter] = useState<string>(SECTOR_FILTER_ALL);
     const [sortKey, setSortKey] = useState<PortfolioSortKey>("default");
@@ -536,6 +544,7 @@ export function PortfolioHoldingsTable({
                             bookEditing={bookEditing}
                             draft={draft}
                             onDraftChange={patchDraft}
+                            sellPlanSet={sellPlanSet}
                         />
                     ))}
                 </div>
@@ -593,11 +602,13 @@ function SectorCard({
     bookEditing,
     draft,
     onDraftChange,
+    sellPlanSet,
 }: {
     group: SectorGroup;
     bookEditing: boolean;
     draft: Record<string, BookDraft>;
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
+    sellPlanSet: ReadonlySet<string>;
 }) {
     const sectorPositive = group.unrealizedPl >= 0;
     const sectorAccent = sectorPositive ? "bg-emerald-400" : "bg-rose-400";
@@ -650,6 +661,7 @@ function SectorCard({
                         bookEditing={bookEditing}
                         draft={draft[row.symbol]}
                         onDraftChange={onDraftChange}
+                        inSellPlan={sellPlanSet.has(normalizeSymbol(row.symbol))}
                     />
                 ))}
             </div>
@@ -683,12 +695,15 @@ function HoldingRow({
     bookEditing,
     draft,
     onDraftChange,
+    inSellPlan,
 }: {
     row: DataRow;
     isLast: boolean;
     bookEditing: boolean;
     draft: BookDraft | undefined;
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
+    /** True when this symbol is in the user's sell plan (Settings → Sell plan). */
+    inSellPlan: boolean;
 }) {
     const inProfit =
         row.marketLtp !== null &&
@@ -731,8 +746,17 @@ function HoldingRow({
                     className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
                 />
                 <div className="flex flex-col">
-                    <span className="font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
+                    <span className="flex items-center gap-1.5 font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
                         {row.symbol}
+                        {inSellPlan ? (
+                            <span
+                                aria-label="In your sell plan"
+                                title="Marked for sale — in your sell plan"
+                                className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--loss-50)] text-[11px] font-bold leading-none text-[var(--loss-700)] ring-1 ring-[var(--loss-200)]"
+                            >
+                                ↑
+                            </span>
+                        ) : null}
                     </span>
                     <span className="text-[11px] text-[var(--ink-muted)] tabular-nums">
                         {formatNumberMax2Decimals(row.shares)} shares
