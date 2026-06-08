@@ -7,9 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 function pollIntervalMs(): number {
  const raw = process.env.NEXT_PUBLIC_PORTFOLIO_POLL_MS;
- if (!raw) return 45_000;
+ if (!raw) return 5_000;
  const n = Number.parseInt(raw, 10);
- if (!Number.isFinite(n) || n < 15_000) return 45_000;
+ if (!Number.isFinite(n) || n < 5_000) return 5_000;
  return Math.min(n, 120_000);
 }
 
@@ -54,6 +54,7 @@ export function PortfolioLiveShell({
  const [liveLspError, setLiveLspError] = useState<string | null>(null);
  const [hasPolled, setHasPolled] = useState(false);
  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+ const [refreshing, setRefreshing] = useState(false);
 
  const initialKey = useMemo(
  () =>
@@ -91,6 +92,7 @@ export function PortfolioLiveShell({
  ]);
 
  const refresh = useCallback(async () => {
+ setRefreshing(true);
  try {
  const res = await fetch("/api/portfolio-market", { cache: "no-store" });
  if (res.status === 401) return;
@@ -128,6 +130,8 @@ export function PortfolioLiveShell({
  } catch (e) {
  setLiveLspError(e instanceof Error ? e.message : "Refresh failed");
  setHasPolled(true);
+ } finally {
+ setRefreshing(false);
  }
  }, []);
 
@@ -150,7 +154,7 @@ export function PortfolioLiveShell({
 
  return (
  <div className="flex flex-col gap-3 sm:gap-4">
- <div className="flex justify-end">
+ <div className="flex items-center justify-end gap-2">
  <span
  className="inline-flex items-center gap-1.5 text-[11px] leading-none text-[var(--ink-muted)] tabular-nums"
  title={updatedAt ? "Live DSE prices" : "Connecting to live prices…"}
@@ -167,6 +171,28 @@ export function PortfolioLiveShell({
  })}`
  : "Connecting…"}
  </span>
+ <button
+ type="button"
+ onClick={() => void refresh()}
+ disabled={refreshing}
+ title="Refresh live prices"
+ aria-label="Refresh live prices"
+ className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--ink-muted)] ring-1 ring-[var(--line)] transition hover:bg-[var(--surface-2)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-50"
+ >
+ <svg
+ viewBox="0 0 24 24"
+ fill="none"
+ stroke="currentColor"
+ strokeWidth="2"
+ strokeLinecap="round"
+ strokeLinejoin="round"
+ className={`h-3.5 w-3.5${refreshing ? " animate-spin" : ""}`}
+ aria-hidden="true"
+ >
+ <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+ <path d="M21 3v6h-6" />
+ </svg>
+ </button>
  </div>
 
  <PortfolioHoldingsTable
