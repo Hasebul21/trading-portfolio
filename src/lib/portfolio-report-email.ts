@@ -130,7 +130,7 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
   const holdingsCols = [
     { title: "Symbol", w: 0.22 },
     { title: "Shares", w: 0.20 },
-    { title: "Avg (BDT)", w: 0.24 },
+    { title: "Break-even (BDT)", w: 0.24 },
     { title: "Invested (BDT)", w: 0.34 },
   ];
   const holdingsColWidths = holdingsCols.map((c) => c.w * tableWidth);
@@ -156,7 +156,7 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
       page.drawRectangle({ x: margin, y: y - 6, width: tableWidth, height: rowH, color: rgb(0.97, 0.98, 0.99) });
     }
     let x = margin + 10;
-    [row.symbol, fmt2(row.shares), fmt2(row.avgPrice), fmt2(row.totalCost)].forEach((v, idx) => {
+    [row.symbol, fmt2(row.shares), fmt2(row.breakEvenPrice), fmt2(row.totalCost)].forEach((v, idx) => {
       drawText(v.slice(0, 24), x, y, fontSize, idx === 0, rgb(0.14, 0.14, 0.14));
       x += holdingsColWidths[idx]!;
     });
@@ -196,52 +196,6 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
       ].forEach((v, idx) => {
         drawText(v, x, y, fontSize, idx === 0, rgb(0.14, 0.14, 0.14));
         x += sectorWidths[idx]!;
-      });
-      y -= rowH;
-    });
-  }
-
-  // ── Watchlist section ──
-  if (payload.watchlist.length > 0) {
-    y -= 20;
-    ensureSpace(60);
-
-    page.drawLine({ start: { x: margin, y }, end: { x: PW - margin, y }, thickness: 0.6, color: rgb(0.82, 0.86, 0.9) });
-    y -= 20;
-    drawText("Watchlist", margin, y, 16, true, rgb(0.02, 0.35, 0.45));
-    y -= 24;
-
-    const wlCols = [
-      { title: "Symbol", w: 0.13 },
-      { title: "Sector", w: 0.22 },
-      { title: "LTP", w: 0.11 },
-      { title: "Buy Point", w: 0.13 },
-      { title: "Sell Point", w: 0.13 },
-      { title: "Break-even", w: 0.14 },
-      { title: "52W Low", w: 0.07 },
-      { title: "52W High", w: 0.07 },
-    ];
-    const wlWidths = wlCols.map((c) => c.w * tableWidth);
-    drawTableHeader(wlCols, wlWidths);
-
-    payload.watchlist.forEach((item, rIdx) => {
-      ensureSpace(20);
-      if (rIdx % 2 === 0) {
-        page.drawRectangle({ x: margin, y: y - 6, width: tableWidth, height: rowH, color: rgb(0.97, 0.98, 0.99) });
-      }
-      let x = margin + 10;
-      [
-        item.symbol,
-        (item.sector ?? "—").slice(0, 28),
-        fmtBdt(item.ltp),
-        fmtBdt(item.buyPoint),
-        fmtBdt(item.sellPoint),
-        fmtBdt(item.breakEvenPrice),
-        fmtBdt(item.week52Low),
-        fmtBdt(item.week52High),
-      ].forEach((v, idx) => {
-        drawText(v, x, y, 11, idx === 0, rgb(0.14, 0.14, 0.14));
-        x += wlWidths[idx]!;
       });
       y -= rowH;
     });
@@ -371,7 +325,7 @@ export async function sendPortfolioReportEmail(
       `Open positions: ${summary.totalRows}`,
       `Positions with market price: ${summary.quotedCount}`,
       "",
-      "A PDF report is attached with holdings, sector allocation, and watchlist.",
+      "A PDF report is attached with holdings and sector allocation.",
     ].join("\n"),
     html: `
       <div style="font-family:sans-serif;max-width:900px;margin:0 auto">
