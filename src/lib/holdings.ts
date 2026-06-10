@@ -5,12 +5,16 @@ import {
   totalRealizedProfitLossBdt,
   type TransactionRow,
 } from "@/lib/portfolio";
-import { fetchPositionOverrides, mergeLedgerWithOverrides } from "@/lib/portfolio-overrides";
+import {
+  fetchHiddenPositionSymbols,
+  fetchPositionOverrides,
+  mergeLedgerWithOverrides,
+} from "@/lib/portfolio-overrides";
 import { cache } from "react";
 
 export const fetchUserHoldings = cache(async () => {
   const supabase = await createClient();
-  const [txRes, ovRes, caRes, divRes] = await Promise.all([
+  const [txRes, ovRes, hiddenRes, caRes, divRes] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -19,6 +23,7 @@ export const fetchUserHoldings = cache(async () => {
       .order("created_at", { ascending: true })
       .order("id", { ascending: true }),
     fetchPositionOverrides(supabase),
+    fetchHiddenPositionSymbols(supabase),
     supabase.from("cash_adjustments").select("amount_bdt"),
     supabase.from("dividends").select("cash_dividend_bdt"),
   ]);
@@ -27,6 +32,7 @@ export const fetchUserHoldings = cache(async () => {
     return {
       error: txRes.error.message,
       holdings: [] as ReturnType<typeof aggregateHoldings>,
+      hiddenSymbols: [] as string[],
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
       totalCashAdjustmentsBdt: 0,
@@ -38,6 +44,7 @@ export const fetchUserHoldings = cache(async () => {
     return {
       error: ovRes.error,
       holdings: [] as ReturnType<typeof aggregateHoldings>,
+      hiddenSymbols: [] as string[],
       totalRealizedBdt: 0,
       totalInvestedBdt: 0,
       totalCashAdjustmentsBdt: 0,
@@ -45,9 +52,14 @@ export const fetchUserHoldings = cache(async () => {
     };
   }
 
+  // `portfolio_hidden_positions` may be missing on older databases; tolerate
+  // that error so the rest of the portfolio still renders.
+  const hiddenSymbols = hiddenRes.symbols;
+  const hiddenSet = new Set(hiddenSymbols);
+
   const txRows = (txRes.data ?? []) as TransactionRow[];
   const ledger = aggregateHoldings(txRows);
-  const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows);
+  const holdings = mergeLedgerWithOverrides(ledger, ovRes.rows, hiddenSet);
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
   // Invested capital reflects only active holdings (after merging any user
   // overrides). Sums the same `totalCost` numbers that the holdings table
@@ -82,6 +94,7 @@ export const fetchUserHoldings = cache(async () => {
   return {
     error: null as string | null,
     holdings,
+    hiddenSymbols,
     totalRealizedBdt,
     totalInvestedBdt: totalInvested,
     totalCashAdjustmentsBdt,

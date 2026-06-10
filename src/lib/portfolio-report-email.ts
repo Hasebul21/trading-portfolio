@@ -415,7 +415,7 @@ export async function buildReportForUser(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<ReportPayload> {
-  const [txRes, ovRes, lspRes, ltRes, targetsRes, caRes] = await Promise.all([
+  const [txRes, ovRes, hiddenRes, lspRes, ltRes, targetsRes, caRes] = await Promise.all([
     supabase
       .from("transactions")
       .select("id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt")
@@ -425,6 +425,10 @@ export async function buildReportForUser(
     supabase
       .from("portfolio_position_overrides")
       .select("symbol, shares, avg_price_bdt, total_cost_bdt")
+      .eq("user_id", userId),
+    supabase
+      .from("portfolio_hidden_positions")
+      .select("symbol")
       .eq("user_id", userId),
     fetchDseLspQuoteMapFresh(),
     supabase
@@ -441,11 +445,19 @@ export async function buildReportForUser(
 
   if (txRes.error) throw new Error(txRes.error.message);
   if (ovRes.error) throw new Error(ovRes.error.message);
+  // `portfolio_hidden_positions` may be missing on older DBs; tolerate that.
 
   const txRows = (txRes.data ?? []) as TransactionRow[];
   const ledger = aggregateHoldings(txRows);
   const overrides = (ovRes.data ?? []) as PositionOverrideRow[];
-  const merged = mergeLedgerWithOverrides(ledger, overrides);
+  const hiddenSet = new Set(
+    hiddenRes.error
+      ? []
+      : ((hiddenRes.data ?? []) as { symbol: string }[]).map((r) =>
+        String(r.symbol ?? "").trim().toUpperCase(),
+      ),
+  );
+  const merged = mergeLedgerWithOverrides(ledger, overrides, hiddenSet);
 
   // Symbols to fetch extras for: portfolio + watchlist (deduped)
   const watchlistRows = ltRes.data ?? [];

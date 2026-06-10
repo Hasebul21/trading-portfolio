@@ -12,6 +12,7 @@ export type PositionOverrideRow = {
 export function mergeLedgerWithOverrides(
   ledger: HoldingRow[],
   overrides: PositionOverrideRow[],
+  hiddenSymbols: ReadonlySet<string> = new Set(),
 ): HoldingRow[] {
   const bySym = new Map<string, HoldingRow>(ledger.map((h) => [h.symbol, { ...h }]));
 
@@ -39,7 +40,7 @@ export function mergeLedgerWithOverrides(
   }
 
   return sortHoldingsByTotalInvestedDesc(
-    [...bySym.values()].filter((h) => h.shares > 0),
+    [...bySym.values()].filter((h) => h.shares > 0 && !hiddenSymbols.has(h.symbol)),
   );
 }
 
@@ -93,4 +94,28 @@ export async function fetchPositionOverrides(
   }));
 
   return { rows, error: null };
+}
+
+/**
+ * List symbols the user has hidden from their portfolio. Trade history is
+ * preserved; merge logic just drops these symbols from the holdings list.
+ * On older databases without the table, tolerate the error so the rest of
+ * the portfolio still loads.
+ */
+export async function fetchHiddenPositionSymbols(
+  supabase: SupabaseClient,
+): Promise<{ symbols: string[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("portfolio_hidden_positions")
+    .select("symbol");
+
+  if (error) {
+    return { symbols: [], error: error.message };
+  }
+
+  const symbols = (data ?? [])
+    .map((r: Record<string, unknown>) => String(r.symbol ?? "").trim().toUpperCase())
+    .filter((s) => s.length > 0);
+
+  return { symbols, error: null };
 }

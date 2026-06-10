@@ -217,6 +217,15 @@ export async function recordTransaction(
     .eq("user_id", user.id)
     .eq("symbol", symbol);
 
+  // If the symbol was previously hidden from the portfolio (via "Remove" in
+  // edit-book mode), recording a new trade for it implies the user wants it
+  // back in the view — un-hide it.
+  await supabase
+    .from("portfolio_hidden_positions")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("symbol", symbol);
+
   // Re-aggregate **after** the new row to derive the post-trade book, then
   // sync the watchlist against it. Sourcing the post-insert ledger (rather
   // than the pre-insert override) keeps watchlist totals consistent with the
@@ -316,6 +325,95 @@ export async function savePortfolioPositions(
     if (upErr) {
       return { error: upErr.message };
     }
+  }
+
+  revalidatePath("/portfolio");
+  revalidatePath("/allocation");
+  return { ok: true };
+}
+
+const SYMBOL_RE = /^[A-Z0-9][A-Z0-9._-]{0,31}$/;
+
+function normalizeSymbolForAction(raw: string): string | null {
+  const sym = String(raw ?? "").trim().toUpperCase();
+  if (!sym || !SYMBOL_RE.test(sym)) return null;
+  return sym;
+}
+
+/**
+ * Hide a stock symbol from the portfolio entirely. Trade history is preserved
+ * — only the holdings view, KPIs, sector aggregates and dependent reports
+ * stop counting this symbol. Also drops any book override for it so toggling
+ * the hide flag later restores the unmodified ledger position.
+ */
+export async function removePortfolioPosition(
+  symbol: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  const sym = normalizeSymbolForAction(symbol);
+  if (!sym) {
+    return { error: "Invalid symbol." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { error: hideErr } = await supabase
+    .from("portfolio_hidden_positions")
+    .upsert(
+      { user_id: user.id, symbol: sym, hidden_at: new Date().toISOString() },
+      { onConflict: "user_id,symbol" },
+    );
+  if (hideErr) {
+    return { error: hideErr.message };
+  }
+
+  // Any manual book override for this symbol is now moot — the row will not
+  // be displayed. Clean it up so restoring later starts from the ledger.
+  const { error: delOvErr } = await supabase
+    .from("portfolio_position_overrides")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("symbol", sym);
+  if (delOvErr) {
+    return { error: delOvErr.message };
+  }
+
+  revalidatePath("/portfolio");
+  revalidatePath("/allocation");
+  return { ok: true };
+}
+
+/** Un-hide a previously removed symbol so it re-appears in the portfolio. */
+export async function restorePortfolioPosition(
+  symbol: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  const sym = normalizeSymbolForAction(symbol);
+  if (!sym) {
+    return { error: "Invalid symbol." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { error } = await supabase
+    .from("portfolio_hidden_positions")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("symbol", sym);
+  if (error) {
+    return { error: error.message };
   }
 
   revalidatePath("/portfolio");

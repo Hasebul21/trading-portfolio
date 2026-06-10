@@ -35,6 +35,7 @@ export async function GET() {
     updatedAt: new Date().toISOString(),
     lspError: lspRes.error,
     holdings,
+    hiddenSymbols: holdingsRes.hiddenSymbols,
     totalRealizedBdt: holdingsRes.totalRealizedBdt,
     totalInvestedBdt: holdingsRes.totalInvestedBdt,
     totalCashAdjustmentsBdt: holdingsRes.totalCashAdjustmentsBdt,

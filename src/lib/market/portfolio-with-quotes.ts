@@ -99,6 +99,7 @@ export function holdingsToMarketRows(
 export async function fetchPortfolioWithDseMarket(): Promise<{
   error: string | null;
   holdings: PortfolioMarketRow[];
+  hiddenSymbols: string[];
   marketError: string | null;
   quotedSymbolCount: number;
   totalRealizedBdt: number;
@@ -115,6 +116,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
     return {
       error: holdingsRes.error,
       holdings: [],
+      hiddenSymbols: [],
       marketError: lspRes.error,
       quotedSymbolCount: 0,
       totalRealizedBdt: 0,
@@ -139,6 +141,7 @@ export async function fetchPortfolioWithDseMarket(): Promise<{
   return {
     error: null,
     holdings,
+    hiddenSymbols: holdingsRes.hiddenSymbols,
     marketError: lspError,
     quotedSymbolCount: quoted,
     totalRealizedBdt: holdingsRes.totalRealizedBdt,

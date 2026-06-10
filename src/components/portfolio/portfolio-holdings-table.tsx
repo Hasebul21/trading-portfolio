@@ -1,6 +1,8 @@
 "use client";
 
 import {
+    removePortfolioPosition,
+    restorePortfolioPosition,
     savePortfolioPositions,
     type PortfolioSaveRow,
 } from "@/app/(app)/actions";
@@ -13,7 +15,7 @@ import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfoli
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
 import { sectorMatchKey } from "@/lib/sector-targets";
 import { normalizeSymbol } from "@/lib/sell-plans";
-import { Alert, AutoComplete, Button, Select, Space } from "antd";
+import { Alert, AutoComplete, Button, Popconfirm, Select, Space } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SECTOR_FILTER_ALL = "__all__";
@@ -165,6 +167,7 @@ const bookInputClass =
 
 export function PortfolioHoldingsTable({
     holdings,
+    hiddenSymbols = [],
     totalRealizedBdt = 0,
     totalInvestedBdt = 0,
     totalCashAdjustmentsBdt = 0,
@@ -175,6 +178,8 @@ export function PortfolioHoldingsTable({
     onAfterBookSave,
 }: {
     holdings: PortfolioMarketRow[];
+    /** Symbols the user removed from the portfolio — listed in the editor so they can be restored. */
+    hiddenSymbols?: string[];
     /** Realized G/L from completed sells: Σ (sell price − avg at sell) × qty. */
     totalRealizedBdt?: number;
     /** Active capital only — buys add, sells deduct cost basis at avg. */
@@ -403,6 +408,59 @@ export function PortfolioHoldingsTable({
         }
     }
 
+    const [removingSymbol, setRemovingSymbol] = useState<string | null>(null);
+    const [restoringSymbol, setRestoringSymbol] = useState<string | null>(null);
+
+    const handleRemove = useCallback(
+        async (symbol: string) => {
+            setSaveError(null);
+            setSaveOk(false);
+            setRemovingSymbol(symbol);
+            try {
+                const res = await removePortfolioPosition(symbol);
+                if (res.error) {
+                    setSaveError(res.error);
+                    return;
+                }
+                // Drop any unsaved draft for the removed symbol so the editor
+                // doesn't keep stale numbers around if the user toggles back.
+                setDraft((prev) => {
+                    if (!(symbol in prev)) return prev;
+                    const next = { ...prev };
+                    delete next[symbol];
+                    return next;
+                });
+                await onAfterBookSave?.();
+            } catch (e) {
+                setSaveError(e instanceof Error ? e.message : "Remove failed");
+            } finally {
+                setRemovingSymbol(null);
+            }
+        },
+        [onAfterBookSave],
+    );
+
+    const handleRestore = useCallback(
+        async (symbol: string) => {
+            setSaveError(null);
+            setSaveOk(false);
+            setRestoringSymbol(symbol);
+            try {
+                const res = await restorePortfolioPosition(symbol);
+                if (res.error) {
+                    setSaveError(res.error);
+                    return;
+                }
+                await onAfterBookSave?.();
+            } catch (e) {
+                setSaveError(e instanceof Error ? e.message : "Restore failed");
+            } finally {
+                setRestoringSymbol(null);
+            }
+        },
+        [onAfterBookSave],
+    );
+
     const emptyMessage = symbolQuery.trim()
         ? "No symbols match your search."
         : sectorFilter !== SECTOR_FILTER_ALL
@@ -544,6 +602,8 @@ export function PortfolioHoldingsTable({
                             draft={draft}
                             onDraftChange={patchDraft}
                             sellPlanSet={sellPlanSet}
+                            onRemoveSymbol={bookEditing ? handleRemove : null}
+                            removingSymbol={removingSymbol}
                         />
                     ))}
                 </div>
@@ -557,11 +617,45 @@ export function PortfolioHoldingsTable({
                         slightly (e.g. fees or rounding). If all three match your transaction ledger, the manual override for that
                         symbol is removed.
                     </p>
+                    <p className="text-left text-[13px] leading-relaxed text-[var(--ink-muted)]">
+                        Use <span className="font-medium text-[var(--ink-strong)]">Remove</span> on any row to take the stock out of
+                        the portfolio view entirely. Trade history is preserved — you can restore the row from the panel below.
+                    </p>
                     {saveError ? (
                         <Alert type="error" showIcon title={saveError} className="text-left" />
                     ) : null}
                     {saveOk ? (
                         <Alert type="success" showIcon title="Portfolio book values saved." className="text-left" />
+                    ) : null}
+                    {hiddenSymbols.length > 0 ? (
+                        <div className="rounded-lg border border-[var(--line)] bg-[var(--bg-inset)] p-3">
+                            <div className="mb-2 text-[11px] uppercase tracking-wider text-[var(--ink-muted)]">
+                                Removed from portfolio ({hiddenSymbols.length})
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {hiddenSymbols
+                                    .slice()
+                                    .sort((a, b) => a.localeCompare(b))
+                                    .map((sym) => (
+                                        <div
+                                            key={sym}
+                                            className="inline-flex items-center gap-2 rounded-md bg-[var(--bg-surface)] px-2 py-1 ring-1 ring-[var(--line)]"
+                                        >
+                                            <span className="font-mono text-[13px] tracking-tight text-[var(--ink-strong)]">
+                                                {sym}
+                                            </span>
+                                            <Button
+                                                size="small"
+                                                type="default"
+                                                loading={restoringSymbol === sym}
+                                                onClick={() => void handleRestore(sym)}
+                                            >
+                                                Restore
+                                            </Button>
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
                     ) : null}
                     <div className="flex flex-wrap justify-center gap-2">
                         <Button
@@ -602,12 +696,16 @@ function SectorCard({
     draft,
     onDraftChange,
     sellPlanSet,
+    onRemoveSymbol,
+    removingSymbol,
 }: {
     group: SectorGroup;
     bookEditing: boolean;
     draft: Record<string, BookDraft>;
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
     sellPlanSet: ReadonlySet<string>;
+    onRemoveSymbol: ((symbol: string) => void | Promise<void>) | null;
+    removingSymbol: string | null;
 }) {
     const sectorPositive = group.unrealizedPl >= 0;
     const sectorAccent = sectorPositive ? "bg-emerald-400" : "bg-rose-400";
@@ -661,6 +759,8 @@ function SectorCard({
                         draft={draft[row.symbol]}
                         onDraftChange={onDraftChange}
                         inSellPlan={sellPlanSet.has(normalizeSymbol(row.symbol))}
+                        onRemove={onRemoveSymbol}
+                        removing={removingSymbol === row.symbol}
                     />
                 ))}
             </div>
@@ -695,6 +795,8 @@ function HoldingRow({
     draft,
     onDraftChange,
     inSellPlan,
+    onRemove,
+    removing,
 }: {
     row: DataRow;
     isLast: boolean;
@@ -703,6 +805,10 @@ function HoldingRow({
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
     /** True when this symbol is in the user's sell plan (Settings → Sell plan). */
     inSellPlan: boolean;
+    /** Provided only while editing — clicking Remove drops this symbol from the portfolio. */
+    onRemove: ((symbol: string) => void | Promise<void>) | null;
+    /** True while this row's removal request is in flight. */
+    removing: boolean;
 }) {
     const ltpKnown = row.marketLtp !== null && Number.isFinite(row.marketLtp);
     const plKnown = row.unrealizedPl !== null && Number.isFinite(row.unrealizedPl);
@@ -804,11 +910,10 @@ function HoldingRow({
                 when either the yield or live price is unavailable. */}
             <RowCell label="Unrealized Div">
                 <div
-                    className={`text-[14px] tabular-nums ${
-                        divKnown && (row.expectedAnnualDividendBdt as number) > 0
+                    className={`text-[14px] tabular-nums ${divKnown && (row.expectedAnnualDividendBdt as number) > 0
                             ? "text-[var(--gain-700)]"
                             : "text-[var(--ink-strong)]"
-                    }`}
+                        }`}
                     title={
                         row.divYieldPct !== null && row.divYieldPct > 0
                             ? `5-year average DSE dividend yield ${row.divYieldPct.toFixed(2)}%`
@@ -827,7 +932,7 @@ function HoldingRow({
             {/* Hidden book-edit fields (shares + avg) — surfaced only in edit mode
  as a thin row underneath to keep the read view clean. */}
             {bookEditing ? (
-                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4">
+                <div className="col-span-2 mt-1 grid grid-cols-2 gap-2 border-t border-[var(--line)] pt-2 md:col-span-6 md:grid-cols-[1.5fr_repeat(5,1fr)_auto] md:gap-4">
                     <div className="text-[10px] uppercase tracking-wider text-[var(--ink-muted)] md:col-span-1">
                         Edit shares & avg
                     </div>
@@ -847,6 +952,27 @@ function HoldingRow({
                             onChange={(e) => onDraftChange(row.symbol, "avg", e.target.value)}
                         />
                     </RowCell>
+                    {onRemove ? (
+                        <div className="col-span-2 flex items-center justify-end md:col-span-1 md:col-start-7">
+                            <Popconfirm
+                                title={`Remove ${row.symbol} from portfolio?`}
+                                description="Trade history is kept. You can restore it from the editor."
+                                okText="Remove"
+                                okButtonProps={{ danger: true }}
+                                cancelText="Cancel"
+                                onConfirm={() => void onRemove(row.symbol)}
+                            >
+                                <Button
+                                    danger
+                                    size="small"
+                                    loading={removing}
+                                    aria-label={`Remove ${row.symbol} from portfolio`}
+                                >
+                                    Remove
+                                </Button>
+                            </Popconfirm>
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
         </div>

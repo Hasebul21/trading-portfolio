@@ -475,6 +475,37 @@ create policy "portfolio_overrides_delete_own"
   using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
+-- portfolio_hidden_positions (user-removed symbols; filtered out of holdings)
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.portfolio_hidden_positions (
+  user_id uuid not null references auth.users (id) on delete cascade default auth.uid(),
+  symbol text not null,
+  hidden_at timestamptz not null default now(),
+  primary key (user_id, symbol)
+);
+
+create index if not exists portfolio_hidden_positions_user_idx
+  on public.portfolio_hidden_positions (user_id);
+
+alter table public.portfolio_hidden_positions enable row level security;
+
+drop policy if exists "portfolio_hidden_select_own" on public.portfolio_hidden_positions;
+create policy "portfolio_hidden_select_own"
+  on public.portfolio_hidden_positions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "portfolio_hidden_insert_own" on public.portfolio_hidden_positions;
+create policy "portfolio_hidden_insert_own"
+  on public.portfolio_hidden_positions for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "portfolio_hidden_delete_own" on public.portfolio_hidden_positions;
+create policy "portfolio_hidden_delete_own"
+  on public.portfolio_hidden_positions for delete
+  using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
 -- Patches for databases created before these columns existed
 -- (CREATE TABLE IF NOT EXISTS does not add columns to an existing table.)
 -- ---------------------------------------------------------------------------
