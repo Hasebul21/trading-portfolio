@@ -335,10 +335,10 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
 
     const fromLowPct =
         ltpKnown &&
-        row.week52Low !== null &&
-        row.week52Low !== undefined &&
-        Number.isFinite(row.week52Low) &&
-        row.week52Low > 0
+            row.week52Low !== null &&
+            row.week52Low !== undefined &&
+            Number.isFinite(row.week52Low) &&
+            row.week52Low > 0
             ? ((row.ltp! - row.week52Low) / row.week52Low) * 100
             : null;
     const fromLowPositive = fromLowPct !== null && fromLowPct >= 0;

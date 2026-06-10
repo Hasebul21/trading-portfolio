@@ -911,8 +911,8 @@ function HoldingRow({
             <RowCell label="Unrealized Div">
                 <div
                     className={`text-[14px] tabular-nums ${divKnown && (row.expectedAnnualDividendBdt as number) > 0
-                            ? "text-[var(--gain-700)]"
-                            : "text-[var(--ink-strong)]"
+                        ? "text-[var(--gain-700)]"
+                        : "text-[var(--ink-strong)]"
                         }`}
                     title={
                         row.divYieldPct !== null && row.divYieldPct > 0

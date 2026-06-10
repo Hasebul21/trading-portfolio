@@ -482,9 +482,9 @@ function DividendCalculatorCard({ instruments, instrumentsError }: Props) {
                   value={
                     reinvestFinalShares !== null
                       ? reinvestFinalShares.toLocaleString("en-IN", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
                       : "—"
                   }
                   context={
