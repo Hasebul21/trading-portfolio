@@ -76,6 +76,13 @@ export async function parseTradeConfirmationPdf(
   let parsed;
   try {
     const text = await extractPdfText(await file.arrayBuffer());
+    // TEMP DEBUG: dump the raw extracted text so we can tune the parser to the
+    // real PDF layout. Remove once parsing is verified.
+    console.log(
+      "\n========== [pdf-import] RAW EXTRACTED TEXT START ==========\n" +
+        text +
+        "\n========== [pdf-import] RAW EXTRACTED TEXT END ==========\n",
+    );
     parsed = parseTradeConfirmation(text);
   } catch {
     return { ...empty, error: "Could not read that PDF. Is it a valid file?" };
