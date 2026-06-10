@@ -36,11 +36,11 @@ Configure these env vars:
 - `RESEND_API_KEY`
 - `RESEND_FROM` (optional; defaults to `Portfolio <onboarding@resend.dev>`)
 - `PORTFOLIO_REPORT_RECIPIENT` (defaults to `hasebulhassan21@gmail.com`)
-- `SUPABASE_SERVICE_ROLE_KEY` (needed for scheduled monthly report)
+- `SUPABASE_SERVICE_ROLE_KEY` (needed for scheduled daily report)
 - `PORTFOLIO_REPORT_CRON_SECRET` (or `CRON_SECRET`) for cron endpoint auth
 - `DRAFT_MIP_CLEANUP_CRON_SECRET` (or `CRON_SECRET`) for Draft MIP cleanup cron auth
 
-Monthly schedule is configured in `vercel.json` to call `/api/portfolio-report` on the 1st day of each month.
+The portfolio report cron is configured in `vercel.json` to call `/api/portfolio-report` **daily at 11:00 UTC (5:00 PM Asia/Dhaka)**. The route uses `runtime = "nodejs"` and `maxDuration = 60` to avoid the default 10s Hobby timeout during PDF build + market fetch + Resend send.
 
 Draft MIP cleanup is configured in `vercel.json` to call `/api/draft-mip-cleanup` daily; the route deletes all Draft MIP headers (and cascading rows) only when it is the last calendar day in Asia/Dhaka.
 

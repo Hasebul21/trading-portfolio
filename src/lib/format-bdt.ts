@@ -1,10 +1,10 @@
 /**
- * Non-currency amounts for tables: locale grouping, at most two fraction digits.
+ * Non-currency amounts for tables: locale grouping, always two fraction digits.
  */
 export function formatNumberMax2Decimals(n: number): string {
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
@@ -24,7 +24,7 @@ export function formatPlainNumberMax2Decimals(n: number): string {
   if (!Number.isFinite(n)) return "";
   return n.toLocaleString("en-US", {
     useGrouping: false,
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }

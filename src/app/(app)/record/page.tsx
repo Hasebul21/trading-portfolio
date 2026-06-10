@@ -6,6 +6,7 @@ import {
 } from "@/lib/user-transactions";
 import { TradeHistorySection } from "../trade-history/trade-history-section";
 import { RecordForm } from "./record-form";
+import { PdfImport } from "./pdf-import";
 
 export default async function RecordPage() {
  const [{ instruments, error }, txRes] = await Promise.all([
@@ -17,6 +18,8 @@ export default async function RecordPage() {
  return (
  <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-4xl text-left">
  <RecordForm instruments={instruments} instrumentsError={error} />
+
+ <PdfImport />
 
  {/*
  Recent transactions — visible on mobile so the bottom-nav

@@ -367,7 +367,7 @@ function WatchlistRow({ row, isLast }: { row: Row; isLast: boolean }) {
                             className="text-[11px] tabular-nums text-[var(--ink-muted)]"
                             title={`Invested ${formatBdt(row.investedBdt)} · ${row.pctOfPortfolio.toFixed(2)}% of watchlist · ${row.pctOfSector.toFixed(2)}% of sector`}
                         >
-                            {row.pctOfPortfolio.toFixed(1)}% port · {row.pctOfSector.toFixed(1)}% sec
+                            {row.pctOfPortfolio.toFixed(2)}% port · {row.pctOfSector.toFixed(2)}% sec
                         </span>
                     ) : null}
                 </div>

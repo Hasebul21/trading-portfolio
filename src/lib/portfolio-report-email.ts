@@ -55,12 +55,7 @@ function fmt2(n: number): string {
 }
 
 function fmtPct(n: number): string {
-  return `${n.toFixed(1)}%`;
-}
-
-function fmtBdt(n: number | null): string {
-  if (n === null || !Number.isFinite(n)) return "—";
-  return n.toFixed(2);
+  return `${n.toFixed(2)}%`;
 }
 
 // ─── PDF builder ──────────────────────────────────────────────────────────────
@@ -278,35 +273,6 @@ export async function sendPortfolioReportEmail(
        </table>`
     : "";
 
-  // Build watchlist rows HTML
-  const watchlistHtml = payload.watchlist.length > 0
-    ? `<h3 style="margin-top:24px">Watchlist</h3>
-       <table style="border-collapse:collapse;width:100%;font-size:13px">
-         <thead><tr style="background:#1e596e;color:#fff">
-           <th style="padding:6px 10px;text-align:left">Symbol</th>
-           <th style="padding:6px 10px;text-align:left">Sector</th>
-           <th style="padding:6px 10px;text-align:right">LTP</th>
-           <th style="padding:6px 10px;text-align:right">Buy Point</th>
-           <th style="padding:6px 10px;text-align:right">Sell Point</th>
-           <th style="padding:6px 10px;text-align:right">Break-even</th>
-           <th style="padding:6px 10px;text-align:right">52W Low</th>
-           <th style="padding:6px 10px;text-align:right">52W High</th>
-         </tr></thead>
-         <tbody>${payload.watchlist.map((w, i) => `
-           <tr style="${i % 2 === 0 ? "background:#f5f8fa" : ""}">
-             <td style="padding:5px 10px;font-weight:600">${w.symbol}</td>
-             <td style="padding:5px 10px;color:#555">${w.sector ?? "—"}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.ltp)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.buyPoint)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.sellPoint)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.breakEvenPrice)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.week52Low)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtBdt(w.week52High)}</td>
-           </tr>`).join("")}
-         </tbody>
-       </table>`
-    : "";
-
   const result = await resend.emails.send({
     from,
     to: [recipient],
@@ -343,7 +309,6 @@ export async function sendPortfolioReportEmail(
         </ul>
 
         ${allocationHtml}
-        ${watchlistHtml}
 
         <p style="margin-top:24px;color:#888;font-size:12px">
           Full PDF attached with all details.

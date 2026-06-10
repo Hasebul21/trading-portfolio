@@ -82,13 +82,13 @@ function ModeButton({
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
-function fmt(n: number | null, suffix = "", dec = 1): string {
+function fmt(n: number | null, suffix = "", dec = 2): string {
   if (n === null) return "—";
   return n.toFixed(dec) + suffix;
 }
 function fmtPrice(n: number | null): string {
   if (n === null) return "—";
-  return `৳${n.toLocaleString("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+  return `৳${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function fmtMoney(n: number | null): string {
   if (n === null) return "—";
@@ -464,7 +464,7 @@ function DividendCalculatorCard({ instruments, instrumentsError }: Props) {
             {inputsReady && mode === "take" && (
               <>
                 <AdvRow
-                  label={`Annual cash for ${shares.toLocaleString("en-IN")} shares`}
+                  label={`Annual cash for ${shares.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares`}
                   value={annualTotal !== null ? fmtMoney(annualTotal) : "—"}
                 />
                 <AdvRow
@@ -482,14 +482,14 @@ function DividendCalculatorCard({ instruments, instrumentsError }: Props) {
                   value={
                     reinvestFinalShares !== null
                       ? reinvestFinalShares.toLocaleString("en-IN", {
-                          minimumFractionDigits: 0,
+                          minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })
                       : "—"
                   }
                   context={
                     reinvestExtraShares !== null
-                      ? `+${reinvestExtraShares.toLocaleString("en-IN", { maximumFractionDigits: 2 })} from reinvestment`
+                      ? `+${reinvestExtraShares.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} from reinvestment`
                       : undefined
                   }
                   highlight={

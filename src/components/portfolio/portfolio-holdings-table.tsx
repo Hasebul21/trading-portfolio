@@ -726,10 +726,10 @@ function SectorCard({
                     </div>
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] tabular-nums">
                         <BannerStat label="Invested" value={formatBdt(group.invested)} />
-                        <BannerStat label="Share of portfolio" value={`${group.sharePct.toFixed(1)}%`} />
+                        <BannerStat label="Share of portfolio" value={`${group.sharePct.toFixed(2)}%`} />
                         <BannerStat
                             label="Target"
-                            value={group.targetPct !== null ? `${group.targetPct.toFixed(1)}%` : "—"}
+                            value={group.targetPct !== null ? `${group.targetPct.toFixed(2)}%` : "—"}
                             valueClass={group.targetPct === null ? "text-white/60" : undefined}
                         />
                         <BannerStat

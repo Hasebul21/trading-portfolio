@@ -115,7 +115,7 @@ export function PortfolioSectorChart({ rows }: { rows: PortfolioMarketRow[] }) {
  </p>
  </div>
  <p className="text-[11px] font-semibold tabular-nums text-[var(--ink-strong)] flex-shrink-0">
- {slice.percent.toLocaleString(undefined, { maximumFractionDigits: 1 })}%
+ {slice.percent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
  </p>
  </div>
  ))}

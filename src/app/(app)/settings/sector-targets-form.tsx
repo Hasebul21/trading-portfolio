@@ -34,7 +34,7 @@ function fromServer(rows: SectorTargetWithCurrent[]): DraftRow[] {
 }
 
 function fmtPct(n: number): string {
- return `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+ return `${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
 export function SectorTargetsForm({

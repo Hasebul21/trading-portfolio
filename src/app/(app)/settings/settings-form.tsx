@@ -283,7 +283,7 @@ export function SettingsForm({
  Portfolio Report Email
  </label>
  <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
- Where monthly portfolio reports will be sent
+ Where portfolio reports will be sent
  </p>
  </div>
 
@@ -337,12 +337,14 @@ export function SettingsForm({
  <div>
  <h3 className="text-[14px] text-[var(--ink-strong)]">Delivery</h3>
  <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
- Reports are sent automatically on the{" "}
- <span className="text-[var(--ink-strong)]">last day of every month at 9:00 PM Bangladesh time</span>{" "}
+ Reports are sent automatically{" "}
+ <span className="text-[var(--ink-strong)]">every day at 5:00 PM Bangladesh time</span>{" "}
  (Asia/Dhaka, UTC+6).
  </p>
  <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
- Example: April 30, May 31, June 30.
+ Recipient for the automated job is configured in Vercel as{" "}
+ <span className="text-[var(--ink-strong)]">PORTFOLIO_REPORT_RECIPIENT</span>{" "}
+ — the address above only controls the manual “Send Report Now” button.
  </p>
  </div>
  <div>
@@ -379,10 +381,14 @@ export function SettingsForm({
  </div>
 
  <div className="rounded-lg border border-[var(--warn-200)] bg-[var(--warn-50)] px-4 py-3">
- <p className="text-[13px] text-[var(--warn-700)]">Automatic monthly reports</p>
+ <p className="text-[13px] text-[var(--warn-700)]">Automatic daily reports</p>
  <p className="mt-1 text-[12px] text-[var(--warn-700)]">
- Cron runs daily at 15:00 UTC; report is sent only when it is month-end in
- Bangladesh (9:00 PM BD time).
+ Cron runs daily at 11:00 UTC (5:00 PM Asia/Dhaka). Requires{" "}
+ <span className="text-[var(--warn-700)]">CRON_SECRET</span>,{" "}
+ <span className="text-[var(--warn-700)]">RESEND_API_KEY</span>,{" "}
+ <span className="text-[var(--warn-700)]">SUPABASE_SERVICE_ROLE_KEY</span>, and a{" "}
+ <span className="text-[var(--warn-700)]">PORTFOLIO_REPORT_RECIPIENT</span>{" "}
+ that matches an existing Supabase auth user.
  </p>
  </div>
  </div>

@@ -65,7 +65,7 @@ export function validateSectorInvestments(
     if (!Number.isFinite(num) || num < 0 || num > SECTOR_INVESTMENT_MAX_AMOUNT) {
       return {
         ok: false,
-        error: `${sector}: amount must be between 0 and ${SECTOR_INVESTMENT_MAX_AMOUNT.toLocaleString()}.`,
+        error: `${sector}: amount must be between 0 and ${SECTOR_INVESTMENT_MAX_AMOUNT.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`,
       };
     }
     const rounded = Math.round(num * 100) / 100;

@@ -269,7 +269,7 @@ export function RecordForm({ instruments, instrumentsError }: Props) {
                         </div>
                         <Descriptions column={1} size="small" bordered>
                             <Descriptions.Item label="Quantity">
-                                {confirmSnapshot.quantity.toLocaleString()} shares
+                                {confirmSnapshot.quantity.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} shares
                             </Descriptions.Item>
                             <Descriptions.Item label="Price / share">
                                 {formatBdt(confirmSnapshot.pricePerShare)}

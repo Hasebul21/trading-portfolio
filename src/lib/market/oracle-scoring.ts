@@ -674,9 +674,9 @@ export function rankAndSelect(
     if (item.score >= ORACLE_THRESHOLD) {
       trigger += ` · qualifies but capped (sector or max picks)`;
     } else if (adv.marginOfSafety !== null && adv.marginOfSafety > 0) {
-      trigger += ` · ${adv.marginOfSafety.toFixed(0)}% below Graham fair value`;
+      trigger += ` · ${adv.marginOfSafety.toFixed(2)}% below Graham fair value`;
     } else if (adv.earningsYield !== null && adv.earningsYield / 100 >= BD_RISK_FREE) {
-      trigger += ` · earnings yield ${adv.earningsYield.toFixed(1)}% beats risk-free`;
+      trigger += ` · earnings yield ${adv.earningsYield.toFixed(2)}% beats risk-free`;
     } else {
       trigger += ` · needs ${ORACLE_THRESHOLD} to enter picks`;
     }

@@ -61,7 +61,7 @@ export function validateSellPlans(
     if (!Number.isFinite(qty) || qty <= 0 || qty > SELL_PLAN_MAX_QUANTITY) {
       return {
         ok: false,
-        error: `${symbol}: quantity must be between 1 and ${SELL_PLAN_MAX_QUANTITY.toLocaleString()}.`,
+        error: `${symbol}: quantity must be between 1 and ${SELL_PLAN_MAX_QUANTITY.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`,
       };
     }
     rows.push({ symbol, quantity_shares: Math.round(qty * 100) / 100 });

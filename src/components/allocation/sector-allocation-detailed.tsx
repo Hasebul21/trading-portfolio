@@ -49,8 +49,8 @@ const COLORS = [
 ];
 
 const PCT_FORMATTER = new Intl.NumberFormat(undefined, {
- minimumFractionDigits: 1,
- maximumFractionDigits: 1,
+ minimumFractionDigits: 2,
+ maximumFractionDigits: 2,
 });
 
 function fmtPct(n: number): string {
@@ -463,6 +463,7 @@ function SectorCard({
  <td className="px-4 py-2 text-[var(--ink-strong)]">{h.symbol}</td>
  <td className="px-2 py-2 text-right text-[var(--ink-strong)]">
  {h.shares.toLocaleString(undefined, {
+ minimumFractionDigits: 2,
  maximumFractionDigits: 2,
  })}
  </td>

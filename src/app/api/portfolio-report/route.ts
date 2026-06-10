@@ -1,6 +1,14 @@
 import { sendDailyPortfolioReportForConfiguredUser } from "@/lib/portfolio-report-email";
 import { NextResponse } from "next/server";
 
+// Node runtime — pdf-lib + Resend + Supabase admin client need Node APIs, not Edge.
+export const runtime = "nodejs";
+// Never cache; this is a side-effecting endpoint.
+export const dynamic = "force-dynamic";
+// Allow up to 60s so PDF build + market fetch + Resend send don't get killed at the
+// default 10s Hobby timeout. (Vercel Hobby supports up to 60s for cron functions.)
+export const maxDuration = 60;
+
 
 /**
  * Daily portfolio email cron, fired by Vercel at 11:00 UTC = 17:00 (5 PM)
