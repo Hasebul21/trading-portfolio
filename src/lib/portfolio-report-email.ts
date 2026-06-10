@@ -479,24 +479,39 @@ export async function sendDailyPortfolioReportForConfiguredUser(): Promise<{
     );
   }
 
-  const { data, error } = await supabase
-    .schema("auth")
-    .from("users")
-    .select("id,email")
-    .ilike("email", recipient)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Supabase auth lookup failed: ${error.message}`);
+  // Look up the auth user by email via the Admin Auth API. The `auth.users`
+  // table is NOT exposed through PostgREST, so `supabase.schema("auth")` fails
+  // with "Invalid schema: auth". `auth.admin.listUsers` is the supported path
+  // — we paginate defensively but the page size is generous so a single page
+  // covers all realistic single-tenant deployments.
+  const target = recipient.toLowerCase();
+  let userId: string | null = null;
+  let page = 1;
+  const perPage = 200;
+  // Hard cap to avoid runaway loops if the API misbehaves.
+  for (let safety = 0; safety < 50 && userId === null; safety += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(`Supabase auth listUsers failed: ${error.message}`);
+    }
+    const match = data.users.find(
+      (u) => (u.email ?? "").trim().toLowerCase() === target,
+    );
+    if (match?.id) {
+      userId = match.id;
+      break;
+    }
+    if (data.users.length < perPage) break;
+    page += 1;
   }
-  if (!data?.id) {
+
+  if (!userId) {
     throw new Error(
       `No Supabase user found for "${recipient}". Either set PORTFOLIO_REPORT_RECIPIENT to an existing auth.users.email, or sign up that email in Supabase Auth.`,
     );
   }
 
-  const payload = await buildReportForUser(supabase, String(data.id));
+  const payload = await buildReportForUser(supabase, userId);
   await sendPortfolioReportEmail(payload, "daily");
   return { ok: true, recipient };
 }
