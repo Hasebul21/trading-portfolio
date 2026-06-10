@@ -40,9 +40,17 @@ const MONTHS: Record<string, number> = {
   jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
 };
 
-/** A single data row: a symbol token followed by exactly five numeric columns. */
+/**
+ * A single data row within one reconstructed line: a symbol token followed by
+ * exactly five numeric columns — Qty, Avg.Rate, Amount, Comm, Balance.
+ *
+ * Anchored to the end of the (trimmed) line so the five columns are pinned to
+ * this row, but NOT to the start — a leading "Buy"/"Sale"/section label that
+ * lands on the same reconstructed row is skipped, and the engine locks onto the
+ * symbol that actually precedes the five numbers.
+ */
 const ROW_RE =
-  /([A-Z][A-Z0-9.()&/_-]{0,24})\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)/g;
+  /([A-Z][A-Z0-9.()&/_-]{0,24})\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)$/;
 
 function toNumber(raw: string): number {
   return Number(raw.replace(/,/g, ""));
@@ -68,53 +76,53 @@ function parseConfirmationNo(text: string): string | null {
   return m[1].replace(/\s+/g, "");
 }
 
-/**
- * Extract trade rows from one section's text. Each match consumes a symbol +
- * five numeric columns, so consecutive rows line up even when PDF extraction
- * collapses the table onto one line.
- */
-function extractRows(zone: string, side: "buy" | "sell"): ParsedTrade[] {
-  const out: ParsedTrade[] = [];
-  ROW_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = ROW_RE.exec(zone)) !== null) {
-    const symbol = m[1].trim().toUpperCase();
-    const quantity = toNumber(m[2]);
-    const pricePerShare = toNumber(m[3]);
-    const feesBdt = toNumber(m[5]);
-    if (!symbol || !Number.isFinite(quantity) || quantity <= 0) continue;
-    if (!Number.isFinite(pricePerShare) || pricePerShare < 0) continue;
-    out.push({
-      symbol,
-      side,
-      quantity,
-      pricePerShare,
-      feesBdt: Number.isFinite(feesBdt) && feesBdt >= 0 ? feesBdt : 0,
-    });
-  }
-  return out;
+/** Parse one reconstructed line into a trade, or null if it isn't a data row. */
+function parseRow(line: string, side: "buy" | "sell"): ParsedTrade | null {
+  const m = ROW_RE.exec(line.trim());
+  if (!m) return null;
+  const symbol = m[1].trim().toUpperCase();
+  const quantity = toNumber(m[2]);
+  const pricePerShare = toNumber(m[3]);
+  const feesBdt = toNumber(m[5]);
+  if (!symbol || !Number.isFinite(quantity) || quantity <= 0) return null;
+  if (!Number.isFinite(pricePerShare) || pricePerShare < 0) return null;
+  return {
+    symbol,
+    side,
+    quantity,
+    pricePerShare,
+    feesBdt: Number.isFinite(feesBdt) && feesBdt >= 0 ? feesBdt : 0,
+  };
 }
 
 export function parseTradeConfirmation(rawText: string): ParsedConfirmation {
   const text = rawText ?? "";
+  const lines = text.split(/\r?\n/);
   const warnings: string[] = [];
 
-  const buyIdx = text.search(/TOTAL\s+BUY/i);
-  const saleIdx = text.search(/TOTAL\s+SALE/i);
+  // The "TOTAL BUY" / "TOTAL SALE" summary lines bracket the two sections.
+  // Buy rows precede TOTAL BUY; sell rows sit between TOTAL BUY and TOTAL SALE
+  // (or before TOTAL SALE when there is no buy section). This is far more
+  // reliable than the "Buy"/"Sale" header tokens.
+  let buyTotalLine = -1;
+  let saleTotalLine = -1;
+  lines.forEach((ln, i) => {
+    if (buyTotalLine < 0 && /TOTAL\s+BUY/i.test(ln)) buyTotalLine = i;
+    if (saleTotalLine < 0 && /TOTAL\s+SALE/i.test(ln)) saleTotalLine = i;
+  });
 
-  // Buy rows live before the "TOTAL BUY" summary; sell rows between the two
-  // totals. When a section is absent its anchor is -1, so we degrade safely.
-  const buyZone = buyIdx >= 0 ? text.slice(0, buyIdx) : "";
-  let sellZone = "";
-  if (saleIdx >= 0) {
-    const start = buyIdx >= 0 ? buyIdx : 0;
-    sellZone = text.slice(start, saleIdx);
-  }
-
-  const trades = [
-    ...extractRows(buyZone, "buy"),
-    ...extractRows(sellZone, "sell"),
-  ];
+  const trades: ParsedTrade[] = [];
+  lines.forEach((line, i) => {
+    let side: "buy" | "sell" | null = null;
+    if (buyTotalLine >= 0 && i < buyTotalLine) {
+      side = "buy";
+    } else if (saleTotalLine >= 0 && i < saleTotalLine && i > buyTotalLine) {
+      side = "sell";
+    }
+    if (!side) return;
+    const trade = parseRow(line, side);
+    if (trade) trades.push(trade);
+  });
 
   if (trades.length === 0) {
     warnings.push(
