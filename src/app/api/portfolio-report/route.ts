@@ -1,10 +1,11 @@
 import { sendDailyPortfolioReportForConfiguredUser } from "@/lib/portfolio-report-email";
 import { NextResponse } from "next/server";
 
-// Node runtime — pdf-lib + Resend + Supabase admin client need Node APIs, not Edge.
-export const runtime = "nodejs";
-// Never cache; this is a side-effecting endpoint.
-export const dynamic = "force-dynamic";
+// Node is the default runtime (Edge is unsupported with Cache Components), and
+// reading the request's `authorization` header / URL already makes this handler
+// dynamic — so the `runtime` and `dynamic` route-segment configs are both
+// removed here: Cache Components (next.config `cacheComponents: true`) rejects
+// them. Freshness is still enforced by the no-store header on `/api/*`.
 // Allow up to 60s so PDF build + market fetch + Resend send don't get killed at the
 // default 10s Hobby timeout. (Vercel Hobby supports up to 60s for cron functions.)
 export const maxDuration = 60;
