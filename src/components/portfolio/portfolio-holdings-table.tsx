@@ -6,6 +6,7 @@ import {
     savePortfolioPositions,
     type PortfolioSaveRow,
 } from "@/app/(app)/actions";
+import { saveStockAllocations } from "@/app/(app)/stock-allocation-actions";
 import {
     formatBdt,
     formatNumberMax2Decimals,
@@ -20,7 +21,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SECTOR_FILTER_ALL = "__all__";
 
-type DataRow = PortfolioMarketRow & { key: string };
+type DataRow = PortfolioMarketRow & {
+    key: string;
+    /** This stock's share of its sector's invested cost basis, 0–100. */
+    sectorWeightPct: number;
+    /** User's manual target % within the sector for this stock (null = unset). */
+    allocTargetPct: number | null;
+};
 type SectorGroup = {
     sector: string;
     items: DataRow[];
@@ -29,6 +36,10 @@ type SectorGroup = {
     hasQuote: boolean;
     sharePct: number;
     targetPct: number | null;
+    /** Sum of the per-stock allocation targets set within this sector. */
+    allocTargetSumPct: number;
+    /** Whether any stock in this sector has a per-stock target set. */
+    hasAllocTargets: boolean;
 };
 
 const SECTOR_FALLBACK = "Unsectorised";
@@ -82,6 +93,7 @@ function groupBySector(
     totalInvested: number,
     sortKey: PortfolioSortKey = "default",
     sectorTargetsByKey: Record<string, number> = {},
+    stockTargetsBySymbol: Record<string, number> = {},
 ): SectorGroup[] {
     const bySector = new Map<string, PortfolioMarketRow[]>();
     for (const r of rows) {
@@ -108,6 +120,23 @@ function groupBySector(
             }
         }
         const targetRaw = sectorTargetsByKey[sectorMatchKey(sector)];
+        let allocTargetSumPct = 0;
+        let hasAllocTargets = false;
+        const items: DataRow[] = applyPortfolioSort(raw, sortKey).map((h) => {
+            const tRaw = stockTargetsBySymbol[normalizeSymbol(h.symbol)];
+            const allocTargetPct =
+                typeof tRaw === "number" && Number.isFinite(tRaw) ? tRaw : null;
+            if (allocTargetPct !== null) {
+                allocTargetSumPct += allocTargetPct;
+                hasAllocTargets = true;
+            }
+            return {
+                ...h,
+                key: h.symbol,
+                sectorWeightPct: invested > 0 ? (h.totalCost / invested) * 100 : 0,
+                allocTargetPct,
+            };
+        });
         return {
             sector,
             invested,
@@ -116,7 +145,9 @@ function groupBySector(
             sharePct: totalInvested > 0 ? (invested / totalInvested) * 100 : 0,
             targetPct:
                 typeof targetRaw === "number" && Number.isFinite(targetRaw) ? targetRaw : null,
-            items: applyPortfolioSort(raw, sortKey).map((h) => ({ ...h, key: h.symbol })),
+            allocTargetSumPct: Math.round(allocTargetSumPct * 100) / 100,
+            hasAllocTargets,
+            items,
         };
     });
 }
@@ -173,6 +204,7 @@ export function PortfolioHoldingsTable({
     totalCashAdjustmentsBdt = 0,
     totalCashDividendsBdt = 0,
     sectorTargetsByKey = {},
+    stockTargetsBySymbol = {},
     sellPlanSymbols = [],
     enableBookEdit = false,
     onAfterBookSave,
@@ -190,6 +222,8 @@ export function PortfolioHoldingsTable({
     totalCashDividendsBdt?: number;
     /** Per-sector target % (keys are sectorMatchKey-normalised). */
     sectorTargetsByKey?: Record<string, number>;
+    /** Per-stock target % within its sector (keys are upper-cased symbols). */
+    stockTargetsBySymbol?: Record<string, number>;
     /** Symbols in the user's sell plan — flagged with an ↑ arrow. */
     sellPlanSymbols?: string[];
     enableBookEdit?: boolean;
@@ -209,6 +243,14 @@ export function PortfolioHoldingsTable({
     const [saveOk, setSaveOk] = useState(false);
     const [bookEditorOpen, setBookEditorOpen] = useState(false);
 
+    // Per-stock allocation-target editor (independent of the book editor).
+    const [allocEditorOpen, setAllocEditorOpen] = useState(false);
+    const [allocDraft, setAllocDraft] = useState<Record<string, string>>({});
+    const [allocDirty, setAllocDirty] = useState(false);
+    const [allocSaving, setAllocSaving] = useState(false);
+    const [allocError, setAllocError] = useState<string | null>(null);
+    const [allocOk, setAllocOk] = useState(false);
+
     const fp = useMemo(() => bookFingerprint(holdings), [holdings]);
     const prevFp = useRef(fp);
 
@@ -220,10 +262,46 @@ export function PortfolioHoldingsTable({
             setSaveError(null);
             setSaveOk(false);
             setBookEditorOpen(false);
+            setAllocDraft({});
+            setAllocDirty(false);
+            setAllocError(null);
+            setAllocOk(false);
+            setAllocEditorOpen(false);
         }
     }, [fp]);
 
     const bookEditing = enableBookEdit && bookEditorOpen;
+    const allocEditing = allocEditorOpen;
+
+    // Resolved per-symbol targets: saved values overlaid with any live draft
+    // edits while the allocation editor is open. Drives both the read-mode
+    // display and the per-sector target sums.
+    const resolvedStockTargets = useMemo(() => {
+        const out: Record<string, number> = {};
+        for (const [sym, v] of Object.entries(stockTargetsBySymbol)) {
+            if (Number.isFinite(v)) out[normalizeSymbol(sym)] = v;
+        }
+        if (allocEditing) {
+            for (const [sym, raw] of Object.entries(allocDraft)) {
+                const key = normalizeSymbol(sym);
+                const s = raw.trim();
+                if (s === "") {
+                    delete out[key];
+                    continue;
+                }
+                const n = Number(s);
+                if (Number.isFinite(n)) out[key] = n;
+            }
+        }
+        return out;
+    }, [stockTargetsBySymbol, allocDraft, allocEditing]);
+
+    const patchAllocDraft = useCallback((symbol: string, value: string) => {
+        setAllocDirty(true);
+        setAllocOk(false);
+        setAllocError(null);
+        setAllocDraft((prev) => ({ ...prev, [normalizeSymbol(symbol)]: value }));
+    }, []);
 
     const displayHoldings = useMemo(() => {
         if (!bookEditing) return holdings;
@@ -295,8 +373,22 @@ export function PortfolioHoldingsTable({
             if (sectorFilter !== SECTOR_FILTER_ALL && sectorLabel(h.sector) !== sectorFilter) return false;
             return true;
         });
-        return groupBySector(filtered, totalInvestedDisplay, sortKey, sectorTargetsByKey);
-    }, [displayHoldings, symbolQuery, sectorFilter, totalInvestedDisplay, sortKey, sectorTargetsByKey]);
+        return groupBySector(
+            filtered,
+            totalInvestedDisplay,
+            sortKey,
+            sectorTargetsByKey,
+            resolvedStockTargets,
+        );
+    }, [
+        displayHoldings,
+        symbolQuery,
+        sectorFilter,
+        totalInvestedDisplay,
+        sortKey,
+        sectorTargetsByKey,
+        resolvedStockTargets,
+    ]);
 
     const sectorOptions = useMemo(() => {
         const set = new Set<string>();
@@ -405,6 +497,62 @@ export function PortfolioHoldingsTable({
             setSaveError(e instanceof Error ? e.message : "Save failed");
         } finally {
             setSaving(false);
+        }
+    }
+
+    async function handleSaveAllocations() {
+        setAllocError(null);
+        setAllocOk(false);
+
+        // Build payload from saved targets overlaid with the draft. Blank
+        // entries are dropped (server deletes anything omitted). Validate
+        // locally for fast feedback.
+        const bySymbol = new Map<string, { sector: string; target: string }>();
+        for (const h of holdings) {
+            const sym = normalizeSymbol(h.symbol);
+            const saved = stockTargetsBySymbol[sym];
+            bySymbol.set(sym, {
+                sector: sectorLabel(h.sector),
+                target:
+                    typeof saved === "number" && Number.isFinite(saved)
+                        ? String(saved)
+                        : "",
+            });
+        }
+        for (const [sym, raw] of Object.entries(allocDraft)) {
+            const key = normalizeSymbol(sym);
+            const entry = bySymbol.get(key);
+            if (entry) entry.target = raw;
+        }
+
+        const payload: Array<{ symbol: string; sector: string; target_percent: number }> = [];
+        for (const [sym, { sector, target }] of bySymbol) {
+            const s = target.trim();
+            if (s === "") continue;
+            const n = Number(s);
+            if (!Number.isFinite(n) || n < 0 || n > 100) {
+                setAllocError(`${sym}: target must be between 0 and 100.`);
+                return;
+            }
+            payload.push({ symbol: sym, sector, target_percent: n });
+        }
+
+        setAllocSaving(true);
+        try {
+            const res = await saveStockAllocations(payload);
+            if (!res.ok) {
+                setAllocError(res.error);
+                return;
+            }
+            setAllocOk(true);
+            setAllocDirty(false);
+            setAllocDraft({});
+            setAllocEditorOpen(false);
+            await onAfterBookSave?.();
+        } catch (e) {
+            setAllocError(e instanceof Error ? e.message : "Save failed");
+        } finally {
+            setAllocSaving(false);
         }
     }
 
@@ -563,10 +711,19 @@ export function PortfolioHoldingsTable({
                         aria-label="Sort holdings"
                     />
                 </Space>
-                {enableBookEdit ? (
-                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-                        {!bookEditorOpen ? (
-                            <Button type="default" size="middle" className="w-full sm:w-auto" onClick={() => setBookEditorOpen(true)}>
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                    {enableBookEdit ? (
+                        !bookEditorOpen ? (
+                            <Button
+                                type="default"
+                                size="middle"
+                                className="w-full sm:w-auto"
+                                disabled={allocEditing}
+                                onClick={() => {
+                                    setBookEditorOpen(true);
+                                    setAllocEditorOpen(false);
+                                }}
+                            >
                                 Edit book
                             </Button>
                         ) : (
@@ -585,9 +742,41 @@ export function PortfolioHoldingsTable({
                             >
                                 Cancel
                             </Button>
-                        )}
-                    </div>
-                ) : null}
+                        )
+                    ) : null}
+                    {!allocEditorOpen ? (
+                        <Button
+                            type="default"
+                            size="middle"
+                            className="w-full sm:w-auto"
+                            disabled={bookEditing}
+                            onClick={() => {
+                                setAllocEditorOpen(true);
+                                setBookEditorOpen(false);
+                                setAllocOk(false);
+                                setAllocError(null);
+                            }}
+                        >
+                            Set allocations
+                        </Button>
+                    ) : (
+                        <Button
+                            type="default"
+                            size="middle"
+                            className="w-full sm:w-auto"
+                            disabled={allocSaving}
+                            onClick={() => {
+                                setAllocEditorOpen(false);
+                                setAllocDraft({});
+                                setAllocDirty(false);
+                                setAllocError(null);
+                                setAllocOk(false);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {data.length === 0 ? (
@@ -601,6 +790,9 @@ export function PortfolioHoldingsTable({
                             bookEditing={bookEditing}
                             draft={draft}
                             onDraftChange={patchDraft}
+                            allocEditing={allocEditing}
+                            allocDraft={allocDraft}
+                            onAllocChange={patchAllocDraft}
                             sellPlanSet={sellPlanSet}
                             onRemoveSymbol={bookEditing ? handleRemove : null}
                             removingSymbol={removingSymbol}
@@ -671,6 +863,36 @@ export function PortfolioHoldingsTable({
                     </div>
                 </div>
             ) : null}
+
+            {allocEditing ? (
+                <div className="space-y-3 border-t border-[var(--line)] pt-4">
+                    <p className="text-left text-[13px] leading-relaxed text-[var(--ink-muted)]">
+                        Set how your investment in each sector should be split across the stocks
+                        you hold in it — e.g. inside Bank, BRACBANK&nbsp;30%, EBL&nbsp;20%. The
+                        percentages are relative to the sector and should add up to 100% per
+                        sector (each sector header shows the running total). Leave a stock blank
+                        to clear its target.
+                    </p>
+                    {allocError ? (
+                        <Alert type="error" showIcon title={allocError} className="text-left" />
+                    ) : null}
+                    {allocOk ? (
+                        <Alert type="success" showIcon title="Stock allocation targets saved." className="text-left" />
+                    ) : null}
+                    <div className="flex flex-wrap justify-center gap-2">
+                        <Button
+                            type="primary"
+                            size="large"
+                            className="w-full sm:w-auto"
+                            loading={allocSaving}
+                            disabled={!allocDirty || allocSaving}
+                            onClick={() => void handleSaveAllocations()}
+                        >
+                            Save allocation targets
+                        </Button>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }
@@ -695,6 +917,9 @@ function SectorCard({
     bookEditing,
     draft,
     onDraftChange,
+    allocEditing,
+    allocDraft,
+    onAllocChange,
     sellPlanSet,
     onRemoveSymbol,
     removingSymbol,
@@ -703,6 +928,9 @@ function SectorCard({
     bookEditing: boolean;
     draft: Record<string, BookDraft>;
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
+    allocEditing: boolean;
+    allocDraft: Record<string, string>;
+    onAllocChange: (symbol: string, value: string) => void;
     sellPlanSet: ReadonlySet<string>;
     onRemoveSymbol: ((symbol: string) => void | Promise<void>) | null;
     removingSymbol: string | null;
@@ -711,6 +939,17 @@ function SectorCard({
     const sectorAccent = sectorPositive ? "bg-emerald-400" : "bg-rose-400";
     const sectorPlClass = sectorPositive ? "text-[var(--gain-700)]" : "text-[var(--loss-700)]";
     const stockWord = group.items.length === 1 ? "stock" : "stocks";
+
+    // Show the running total of per-stock targets in this sector while editing,
+    // or whenever the user has set any. Flag when it drifts from 100%.
+    const showAllocSum = allocEditing || group.hasAllocTargets;
+    const allocSum = group.allocTargetSumPct;
+    const allocSumClass =
+        allocSum > 100.01
+            ? "text-rose-300"
+            : allocSum < 99.99
+                ? "text-amber-300"
+                : "text-emerald-300";
 
     return (
         <section>
@@ -732,6 +971,13 @@ function SectorCard({
                             value={group.targetPct !== null ? `${group.targetPct.toFixed(2)}%` : "—"}
                             valueClass={group.targetPct === null ? "text-white/60" : undefined}
                         />
+                        {showAllocSum ? (
+                            <BannerStat
+                                label="Stock targets"
+                                value={`${allocSum.toFixed(2)}%`}
+                                valueClass={allocSumClass}
+                            />
+                        ) : null}
                         <BannerStat
                             label="Unrealized P/L"
                             value={group.hasQuote ? fmtSignedBdt(group.unrealizedPl) : "—"}
@@ -758,6 +1004,9 @@ function SectorCard({
                         bookEditing={bookEditing}
                         draft={draft[row.symbol]}
                         onDraftChange={onDraftChange}
+                        allocEditing={allocEditing}
+                        allocDraftValue={allocDraft[normalizeSymbol(row.symbol)]}
+                        onAllocChange={onAllocChange}
                         inSellPlan={sellPlanSet.has(normalizeSymbol(row.symbol))}
                         onRemove={onRemoveSymbol}
                         removing={removingSymbol === row.symbol}
@@ -794,6 +1043,9 @@ function HoldingRow({
     bookEditing,
     draft,
     onDraftChange,
+    allocEditing,
+    allocDraftValue,
+    onAllocChange,
     inSellPlan,
     onRemove,
     removing,
@@ -803,6 +1055,11 @@ function HoldingRow({
     bookEditing: boolean;
     draft: BookDraft | undefined;
     onDraftChange: (symbol: string, field: keyof BookDraft, value: string) => void;
+    /** True while the per-stock allocation editor is open. */
+    allocEditing: boolean;
+    /** Live draft value for this row's target %, if the user has typed one. */
+    allocDraftValue: string | undefined;
+    onAllocChange: (symbol: string, value: string) => void;
     /** True when this symbol is in the user's sell plan (Settings → Sell plan). */
     inSellPlan: boolean;
     /** Provided only while editing — clicking Remove drops this symbol from the portfolio. */
@@ -835,9 +1092,9 @@ function HoldingRow({
         <div
             className={`grid grid-cols-2 items-center gap-x-4 gap-y-2 px-4 py-3 md:grid-cols-[1.5fr_repeat(5,1fr)] md:gap-4 md:px-5 md:py-3.5 ${rowBorder}`}
         >
-            {/* Symbol + shares */}
+            {/* Symbol + shares + sector weight / target */}
             <div className="col-span-2 flex items-center gap-2.5 md:col-span-1">
-                <div className="flex flex-col">
+                <div className="flex w-full flex-col">
                     <span className="flex items-center gap-1.5 font-mono text-[14px] tracking-tight text-[var(--ink-strong)]">
                         {row.symbol}
                         {inSellPlan ? (
@@ -853,6 +1110,36 @@ function HoldingRow({
                     <span className="text-[11px] text-[var(--ink-muted)] tabular-nums">
                         {formatNumberMax2Decimals(row.shares)} shares
                     </span>
+                    {allocEditing ? (
+                        <div className="mt-1.5 flex items-center gap-2">
+                            <input
+                                aria-label={`${row.symbol} target % within sector`}
+                                inputMode="decimal"
+                                placeholder="—"
+                                className={`${bookInputClass} max-w-[5rem]`}
+                                value={
+                                    allocDraftValue ??
+                                    (row.allocTargetPct !== null ? String(row.allocTargetPct) : "")
+                                }
+                                onChange={(e) => onAllocChange(row.symbol, e.target.value)}
+                            />
+                            <span className="text-[10px] leading-tight text-[var(--ink-muted)] tabular-nums">
+                                % of sector
+                                <br />
+                                now {row.sectorWeightPct.toFixed(1)}%
+                            </span>
+                        </div>
+                    ) : (
+                        <span
+                            className="mt-0.5 text-[11px] text-[var(--ink-muted)] tabular-nums"
+                            title="This stock's share of the sector's investment — current vs. your target"
+                        >
+                            Sector wt {row.sectorWeightPct.toFixed(2)}% · tgt{" "}
+                            {row.allocTargetPct !== null
+                                ? `${row.allocTargetPct.toFixed(2)}%`
+                                : "—"}
+                        </span>
+                    )}
                 </div>
             </div>
 

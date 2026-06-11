@@ -1,7 +1,9 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { fetchPortfolioWithDseMarket } from "@/lib/market/portfolio-with-quotes";
 import { getSectorTargets } from "../sector-target-actions";
+import { getStockAllocations } from "../stock-allocation-actions";
 import { getSellPlans } from "../sell-plan-actions";
+import { normalizeSymbol } from "@/lib/sell-plans";
 import { sectorMatchKey } from "@/lib/sector-targets";
 import { siteTextLinkNeutralClass } from "@/lib/site-typography";
 import Link from "next/link";
@@ -10,10 +12,11 @@ import { PortfolioLiveShell } from "./portfolio-live-shell";
 
 
 export default async function PortfolioPage() {
-    const [portfolioRes, targetsRes, sellPlansRes] = await Promise.all([
+    const [portfolioRes, targetsRes, sellPlansRes, stockAllocRes] = await Promise.all([
         fetchPortfolioWithDseMarket(),
         getSectorTargets(),
         getSellPlans(),
+        getStockAllocations(),
     ]);
 
     const sellPlanSymbols = sellPlansRes.ok
@@ -36,6 +39,15 @@ export default async function PortfolioPage() {
         for (const r of targetsRes.data.rows) {
             if (r.target_percent !== null && Number.isFinite(r.target_percent)) {
                 sectorTargetsByKey[sectorMatchKey(r.sector)] = r.target_percent;
+            }
+        }
+    }
+
+    const stockTargetsBySymbol: Record<string, number> = {};
+    if (stockAllocRes.ok) {
+        for (const r of stockAllocRes.data.rows) {
+            if (Number.isFinite(r.target_percent)) {
+                stockTargetsBySymbol[normalizeSymbol(r.symbol)] = r.target_percent;
             }
         }
     }
@@ -122,6 +134,7 @@ export default async function PortfolioPage() {
                         initialTotalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
                         initialTotalCashDividendsBdt={totalCashDividendsBdt}
                         sectorTargetsByKey={sectorTargetsByKey}
+                        stockTargetsBySymbol={stockTargetsBySymbol}
                         sellPlanSymbols={sellPlanSymbols}
                     />
                 </div>

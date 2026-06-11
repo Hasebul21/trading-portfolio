@@ -33,6 +33,7 @@ export function PortfolioLiveShell({
     initialTotalCashAdjustmentsBdt,
     initialTotalCashDividendsBdt,
     sectorTargetsByKey,
+    stockTargetsBySymbol,
     sellPlanSymbols,
 }: {
     initialHoldings: PortfolioMarketRow[];
@@ -43,6 +44,7 @@ export function PortfolioLiveShell({
     initialTotalCashAdjustmentsBdt: number;
     initialTotalCashDividendsBdt: number;
     sectorTargetsByKey: Record<string, number>;
+    stockTargetsBySymbol: Record<string, number>;
     sellPlanSymbols: string[];
 }) {
     const [rows, setRows] = useState(initialHoldings);
@@ -213,6 +215,7 @@ export function PortfolioLiveShell({
                 totalCashAdjustmentsBdt={totalCashAdjustmentsBdt}
                 totalCashDividendsBdt={totalCashDividendsBdt}
                 sectorTargetsByKey={sectorTargetsByKey}
+                stockTargetsBySymbol={stockTargetsBySymbol}
                 sellPlanSymbols={sellPlanSymbols}
                 enableBookEdit
                 onAfterBookSave={refresh}
