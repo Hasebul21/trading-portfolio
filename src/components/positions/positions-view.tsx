@@ -5,10 +5,11 @@ import { formatBdt, formatShares } from "@/lib/format-bdt";
 import { planAmount, type PositionPlanRow, type PositionSide } from "@/lib/positions";
 import {
   addPositionPlan,
+  deletePositionPlan,
   markPositionPlan,
   updatePositionPlan,
 } from "@/app/(app)/positions-actions";
-import { Alert, Button, Card, InputNumber, Table } from "antd";
+import { Alert, Button, Card, InputNumber, Popconfirm, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo, useState } from "react";
 
@@ -67,6 +68,16 @@ export function PositionsView({
     [setRowsFor],
   );
 
+  const handleDelete = useCallback(
+    async (side: PositionSide, id: string) => {
+      const res = await deletePositionPlan(id);
+      if (!res.ok) return;
+      setBalance(res.balance);
+      setRowsFor(side)((prev) => prev.filter((r) => r.id !== id));
+    },
+    [setRowsFor],
+  );
+
   const handleUpdate = useCallback(
     async (
       side: PositionSide,
@@ -117,6 +128,7 @@ export function PositionsView({
         onAdd={handleAdd}
         onMark={handleMark}
         onUpdate={handleUpdate}
+        onDelete={handleDelete}
       />
 
       <PlanSection
@@ -130,6 +142,7 @@ export function PositionsView({
         onAdd={handleAdd}
         onMark={handleMark}
         onUpdate={handleUpdate}
+        onDelete={handleDelete}
       />
     </div>
   );
@@ -145,6 +158,7 @@ function PlanSection({
   onAdd,
   onMark,
   onUpdate,
+  onDelete,
 }: {
   side: PositionSide;
   title: string;
@@ -167,6 +181,7 @@ function PlanSection({
     quantity: number,
     price: number,
   ) => Promise<{ ok: boolean; error?: string }>;
+  onDelete: (side: PositionSide, id: string) => void;
 }) {
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState<number | null>(null);
@@ -378,7 +393,7 @@ function PlanSection({
     {
       title: "",
       key: "actions",
-      width: 180,
+      width: 250,
       align: "right",
       render: (_, row) => {
         if (row.executed) {
@@ -404,6 +419,18 @@ function PlanSection({
             <Button size="small" type="default" disabled={editId !== null} onClick={() => onMark(side, row.id)}>
               Mark as done
             </Button>
+            <Popconfirm
+              title="Remove this row?"
+              description={`Its ${isBuy ? "cost" : "proceeds"} will be reversed from the total.`}
+              okText="Remove"
+              okButtonProps={{ danger: true }}
+              cancelText="Cancel"
+              onConfirm={() => onDelete(side, row.id)}
+            >
+              <Button size="small" type="text" danger disabled={editId !== null}>
+                Remove
+              </Button>
+            </Popconfirm>
           </div>
         );
       },
