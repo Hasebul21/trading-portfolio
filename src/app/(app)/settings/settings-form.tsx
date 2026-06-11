@@ -9,6 +9,7 @@ import type { SectorInvestmentRow } from "@/lib/sector-investments";
 import type { SellPlanRow } from "@/lib/sell-plans";
 import type { SymbolFieldInstrument } from "@/components/symbol-field";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
+import { PositionsCashForm } from "./positions-cash-form";
 import { SectorInvestmentsForm } from "./sector-investments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
 import { SellPlansForm } from "./sell-plans-form";
@@ -24,7 +25,8 @@ type TabKey =
     | "monthly-investment"
     | "sell-plan"
     | "top-sectors"
-    | "cash";
+    | "cash"
+    | "positions-cash";
 
 export function SettingsForm({
     initialSettings,
@@ -458,6 +460,15 @@ export function SettingsForm({
                                 initialRows={initialCashAdjustments}
                                 initialTotal={initialCashAdjustmentsTotal}
                                 initialError={cashAdjustmentsError}
+                            />
+                        ),
+                    },
+                    {
+                        key: "positions-cash",
+                        label: "Positions cash",
+                        children: (
+                            <PositionsCashForm
+                                initialBalance={initialSettings.positions_balance_bdt ?? 0}
                             />
                         ),
                     },

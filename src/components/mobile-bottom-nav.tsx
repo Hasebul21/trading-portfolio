@@ -17,6 +17,11 @@ const TABS: MobileTab[] = [
         icon: <PortfolioIcon />,
     },
     {
+        href: "/positions",
+        label: "Positions",
+        icon: <PositionsIcon />,
+    },
+    {
         href: "/record",
         label: "Transaction",
         icon: <TransactionsIcon />,
@@ -45,9 +50,9 @@ const TABS: MobileTab[] = [
 
 /**
  * Fixed bottom navigation shown only on `< md` viewports (iPhone 12/13/14/15
- * widths 375–414px). Tabs: Portfolio, Transaction (record), History (trade
- * history), Allocation, Dividend, Settings — and respect the iOS safe-area
- * inset so the bar never sits under the home gesture.
+ * widths 375–414px). Tabs: Portfolio, Positions, Transaction (record), History
+ * (trade history), Allocation, Dividend, Settings — and respect the iOS
+ * safe-area inset so the bar never sits under the home gesture.
  */
 export function MobileBottomNav() {
     const pathname = usePathname() ?? "";
@@ -112,6 +117,25 @@ function PortfolioIcon() {
             <path d="M4 19V9.5l8-5 8 5V19" />
             <path d="M4 19h16" />
             <path d="M9 19v-5h6v5" />
+        </svg>
+    );
+}
+
+function PositionsIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-full w-full"
+        >
+            <path d="M4 19V5" />
+            <path d="M4 19h16" />
+            <rect x="7" y="11" width="3" height="5" />
+            <rect x="13" y="7" width="3" height="9" />
         </svg>
     );
 }

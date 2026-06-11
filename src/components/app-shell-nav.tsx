@@ -13,16 +13,17 @@ type NavItem =
   | { type: "divider" };
 
 const NAV_ITEMS: NavItem[] = [
-  // ── Portfolio group ────────────────────────────
+  // ── Primary: the sections used most, kept side by side ──
   { type: "link", href: "/portfolio", label: "Portfolio" },
   { type: "link", href: "/record", label: "Transaction" },
+  { type: "link", href: "/positions", label: "Positions" },
+  { type: "link", href: "/trade-history", label: "History" },
   { type: "link", href: "/long-term", label: "Watchlist" },
+  { type: "divider" },
+  // ── Secondary: tools & misc ──
   { type: "link", href: "/allocation", label: "Allocation" },
   { type: "link", href: "/calculator", label: "Calculator" },
   { type: "link", href: "/dividend", label: "Dividend" },
-  { type: "divider" },
-  // ── Records / misc ────────────────────────────
-  { type: "link", href: "/trade-history", label: "History" },
   { type: "link", href: "/knowledge", label: "Knowledge" },
   { type: "link", href: "/settings", label: "Settings" },
 ];

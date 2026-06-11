@@ -19,6 +19,7 @@ export type UserSettings = {
   trade_commission_rate: number | null;
   currency: string;
   top_sectors: string[];
+  positions_balance_bdt: number;
   updated_at: string;
 };
 
@@ -57,7 +58,7 @@ export async function getUserSettings(): Promise<{
 
   const { data, error } = await supabase
     .from("user_settings")
-    .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, updated_at")
+    .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, positions_balance_bdt, updated_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -72,7 +73,7 @@ export async function getUserSettings(): Promise<{
         portfolio_report_email: "hasebulhassan21@gmail.com",
         currency: "BDT",
       })
-      .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, updated_at")
+      .select("id, user_id, portfolio_report_email, full_name, trade_commission_rate, currency, top_sectors, positions_balance_bdt, updated_at")
       .single();
 
     if (createError) return { ok: false, error: createError.message };
@@ -319,6 +320,48 @@ export async function createCashAdjustment(input: {
   revalidatePath("/portfolio");
   revalidatePath("/settings");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Positions cash — standalone "available amount" for the Positions page. Only
+// manual top-ups (here) and buy/sell marks (positions-actions) move it; it does
+// NOT flow into the portfolio Net Gain/Loss.
+// ---------------------------------------------------------------------------
+
+export async function adjustPositionsBalance(input: {
+  amount: string | number;
+  kind: "add" | "deduct";
+}): Promise<{ ok: true; balance: number } | { ok: false; error: string }> {
+  const magnitude = parseAmount(input.amount);
+  if (magnitude === null || magnitude < 0) {
+    return { ok: false, error: "Enter a positive amount." };
+  }
+  const delta = input.kind === "deduct" ? -Math.abs(magnitude) : Math.abs(magnitude);
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data: current, error: readErr } = await supabase
+    .from("user_settings")
+    .select("positions_balance_bdt")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (readErr) return { ok: false, error: readErr.message };
+
+  const newBalance = Math.round((Number(current?.positions_balance_bdt ?? 0) + delta) * 100) / 100;
+
+  const { error } = await supabase
+    .from("user_settings")
+    .update({ positions_balance_bdt: newBalance, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/positions");
+  revalidatePath("/settings");
+  return { ok: true, balance: newBalance };
 }
 
 export async function deleteCashAdjustment(
