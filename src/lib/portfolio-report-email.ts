@@ -34,12 +34,19 @@ type SectorSlice = {
   targetPercent: number | null;
 };
 
+type DividendSummarySlice = {
+  symbol: string;
+  cashBdt: number;
+  bonusShares: number;
+};
+
 type ReportPayload = {
   rows: ReturnType<typeof holdingsToMarketRows>;
   totalRealizedBdt: number;
   totalCashAdjustmentsBdt: number;
   watchlist: WatchlistItem[];
   sectorAllocation: SectorSlice[];
+  dividendSummary: DividendSummarySlice[];
 };
 
 type ReportTrigger = "manual" | "daily";
@@ -52,10 +59,6 @@ function reportRecipient(): string {
 
 function fmt2(n: number): string {
   return Number.isFinite(n) ? n.toFixed(2) : "0.00";
-}
-
-function fmtPct(n: number): string {
-  return `${n.toFixed(2)}%`;
 }
 
 // ─── PDF builder ──────────────────────────────────────────────────────────────
@@ -158,42 +161,56 @@ async function buildPdf(payload: ReportPayload, trigger: ReportTrigger): Promise
     y -= rowH;
   });
 
-  // ── Sector Allocation section ──
-  if (payload.sectorAllocation.length > 0) {
+  // ── Dividend Summary section ──
+  if (payload.dividendSummary.length > 0) {
     y -= 20;
     ensureSpace(60);
 
     page.drawLine({ start: { x: margin, y }, end: { x: PW - margin, y }, thickness: 0.6, color: rgb(0.82, 0.86, 0.9) });
     y -= 20;
-    drawText("Sector Allocation", margin, y, 16, true, rgb(0.02, 0.35, 0.45));
+    drawText("Dividend Summary", margin, y, 16, true, rgb(0.02, 0.35, 0.45));
     y -= 24;
 
-    const sectorCols = [
-      { title: "Sector", w: 0.40 },
-      { title: "Invested (BDT)", w: 0.25 },
-      { title: "% Portfolio", w: 0.18 },
-      { title: "Target %", w: 0.17 },
+    const divCols = [
+      { title: "Symbol", w: 0.34 },
+      { title: "Cash dividend (BDT)", w: 0.33 },
+      { title: "Bonus shares", w: 0.33 },
     ];
-    const sectorWidths = sectorCols.map((c) => c.w * tableWidth);
-    drawTableHeader(sectorCols, sectorWidths);
+    const divWidths = divCols.map((c) => c.w * tableWidth);
+    drawTableHeader(divCols, divWidths);
 
-    payload.sectorAllocation.forEach((slice, rIdx) => {
+    let totalCash = 0;
+    let totalShares = 0;
+    payload.dividendSummary.forEach((d, rIdx) => {
       ensureSpace(20);
       if (rIdx % 2 === 0) {
         page.drawRectangle({ x: margin, y: y - 6, width: tableWidth, height: rowH, color: rgb(0.97, 0.98, 0.99) });
       }
       let x = margin + 10;
       [
-        slice.sector.slice(0, 40),
-        fmt2(slice.investedBdt),
-        fmtPct(slice.percentOfPortfolio),
-        slice.targetPercent !== null ? fmtPct(slice.targetPercent) : "—",
+        d.symbol.slice(0, 24),
+        fmt2(d.cashBdt),
+        d.bonusShares > 0 ? fmt2(d.bonusShares) : "—",
       ].forEach((v, idx) => {
         drawText(v, x, y, fontSize, idx === 0, rgb(0.14, 0.14, 0.14));
-        x += sectorWidths[idx]!;
+        x += divWidths[idx]!;
       });
       y -= rowH;
+      totalCash += d.cashBdt;
+      totalShares += d.bonusShares;
     });
+
+    y -= 4;
+    ensureSpace(20);
+    drawText(
+      `Total cash dividend: BDT ${fmt2(totalCash)}${totalShares > 0 ? `   ·   Total bonus shares: ${fmt2(totalShares)}` : ""}`,
+      margin + 10,
+      y,
+      12,
+      true,
+      rgb(0.1, 0.1, 0.1),
+    );
+    y -= rowH;
   }
 
   // Footer
@@ -252,22 +269,20 @@ export async function sendPortfolioReportEmail(
   const subjectPrefix = trigger === "daily" ? "Daily" : "Manual";
   const subject = `${subjectPrefix} portfolio report (${stamp})`;
 
-  // Build allocation rows HTML
-  const allocationHtml = payload.sectorAllocation.length > 0
-    ? `<h3 style="margin-top:24px">Sector Allocation</h3>
+  // Build dividend-summary rows HTML
+  const dividendHtml = payload.dividendSummary.length > 0
+    ? `<h3 style="margin-top:24px">Dividend Summary</h3>
        <table style="border-collapse:collapse;width:100%;font-size:13px">
          <thead><tr style="background:#1e596e;color:#fff">
-           <th style="padding:6px 10px;text-align:left">Sector</th>
-           <th style="padding:6px 10px;text-align:right">Invested (BDT)</th>
-           <th style="padding:6px 10px;text-align:right">% Portfolio</th>
-           <th style="padding:6px 10px;text-align:right">Target %</th>
+           <th style="padding:6px 10px;text-align:left">Symbol</th>
+           <th style="padding:6px 10px;text-align:right">Cash dividend (BDT)</th>
+           <th style="padding:6px 10px;text-align:right">Bonus shares</th>
          </tr></thead>
-         <tbody>${payload.sectorAllocation.map((s, i) => `
+         <tbody>${payload.dividendSummary.map((d, i) => `
            <tr style="${i % 2 === 0 ? "background:#f5f8fa" : ""}">
-             <td style="padding:5px 10px">${s.sector}</td>
-             <td style="padding:5px 10px;text-align:right">${fmt2(s.investedBdt)}</td>
-             <td style="padding:5px 10px;text-align:right">${fmtPct(s.percentOfPortfolio)}</td>
-             <td style="padding:5px 10px;text-align:right">${s.targetPercent !== null ? fmtPct(s.targetPercent) : "—"}</td>
+             <td style="padding:5px 10px">${d.symbol}</td>
+             <td style="padding:5px 10px;text-align:right">${fmt2(d.cashBdt)}</td>
+             <td style="padding:5px 10px;text-align:right">${d.bonusShares > 0 ? fmt2(d.bonusShares) : "—"}</td>
            </tr>`).join("")}
          </tbody>
        </table>`
@@ -291,7 +306,7 @@ export async function sendPortfolioReportEmail(
       `Open positions: ${summary.totalRows}`,
       `Positions with market price: ${summary.quotedCount}`,
       "",
-      "A PDF report is attached with holdings and sector allocation.",
+      "A PDF report is attached with holdings and dividend summary.",
     ].join("\n"),
     html: `
       <div style="font-family:sans-serif;max-width:900px;margin:0 auto">
@@ -308,7 +323,7 @@ export async function sendPortfolioReportEmail(
           <li><strong>Positions with market price:</strong> ${summary.quotedCount}</li>
         </ul>
 
-        ${allocationHtml}
+        ${dividendHtml}
 
         <p style="margin-top:24px;color:#888;font-size:12px">
           Full PDF attached with all details.
@@ -334,7 +349,7 @@ export async function buildReportForUser(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<ReportPayload> {
-  const [txRes, ovRes, hiddenRes, lspRes, ltRes, targetsRes, caRes] = await Promise.all([
+  const [txRes, ovRes, hiddenRes, lspRes, ltRes, targetsRes, caRes, divRes] = await Promise.all([
     supabase
       .from("transactions")
       .select("id, created_at, symbol, side, quantity, price_per_share, category, fees_bdt")
@@ -360,6 +375,10 @@ export async function buildReportForUser(
       .select("sector, target_percent")
       .eq("user_id", userId),
     supabase.from("cash_adjustments").select("amount_bdt").eq("user_id", userId),
+    supabase
+      .from("dividends")
+      .select("symbol, cash_dividend_bdt, stock_dividend_shares")
+      .eq("user_id", userId),
   ]);
 
   if (txRes.error) throw new Error(txRes.error.message);
@@ -454,9 +473,39 @@ export async function buildReportForUser(
     totalCashAdjustmentsBdt = Math.round(totalCashAdjustmentsBdt * 100) / 100;
   }
 
+  // Dividend summary — cash + bonus shares per stock from recorded dividends.
+  const dividendBySymbol = new Map<string, DividendSummarySlice>();
+  if (!divRes.error) {
+    for (const r of (divRes.data ?? []) as {
+      symbol: string;
+      cash_dividend_bdt: number | string | null;
+      stock_dividend_shares: number | string | null;
+    }[]) {
+      const sym = String(r.symbol ?? "").trim().toUpperCase();
+      if (!sym) continue;
+      const cash =
+        typeof r.cash_dividend_bdt === "number" ? r.cash_dividend_bdt : Number(r.cash_dividend_bdt ?? 0);
+      const shares =
+        typeof r.stock_dividend_shares === "number"
+          ? r.stock_dividend_shares
+          : Number(r.stock_dividend_shares ?? 0);
+      const e = dividendBySymbol.get(sym) ?? { symbol: sym, cashBdt: 0, bonusShares: 0 };
+      if (Number.isFinite(cash)) e.cashBdt += cash;
+      if (Number.isFinite(shares)) e.bonusShares += shares;
+      dividendBySymbol.set(sym, e);
+    }
+  }
+  const dividendSummary: DividendSummarySlice[] = [...dividendBySymbol.values()]
+    .map((e) => ({
+      symbol: e.symbol,
+      cashBdt: Math.round(e.cashBdt * 100) / 100,
+      bonusShares: Math.round(e.bonusShares * 10000) / 10000,
+    }))
+    .sort((a, b) => b.cashBdt - a.cashBdt || b.bonusShares - a.bonusShares || a.symbol.localeCompare(b.symbol));
+
   const totalRealizedBdt = totalRealizedProfitLossBdt(txRows);
 
-  return { rows, totalRealizedBdt, totalCashAdjustmentsBdt, watchlist, sectorAllocation };
+  return { rows, totalRealizedBdt, totalCashAdjustmentsBdt, watchlist, sectorAllocation, dividendSummary };
 }
 
 // ─── Entrypoints ──────────────────────────────────────────────────────────────
