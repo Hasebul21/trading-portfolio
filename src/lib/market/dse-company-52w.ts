@@ -4,7 +4,20 @@
  */
 import { cacheLife, cacheTag } from "next/cache";
 
-const DEFAULT_COMPANY_BASE = "https://dsebd.org/displayCompany.php";
+/** Apex host first, www mirror tried when the apex fails to connect. */
+const COMPANY_BASE_MIRRORS = [
+  "https://dsebd.org/displayCompany.php",
+  "https://www.dsebd.org/displayCompany.php",
+] as const;
+
+const FETCH_TIMEOUT_MS = 22_000;
+
+/** DSE rejects the default undici User-Agent on some endpoints; mimic a browser. */
+const COMPANY_FETCH_HEADERS = {
+  Accept: "text/html,*/*",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+} as const;
 
 function parseRangeCell(raw: string): { low: number; high: number } | null {
   const t = raw.replace(/,/g, "").trim();
@@ -369,25 +382,32 @@ export async function fetchDseCompanyExtras(
   };
   if (!sym) return nullResult;
 
-  const base = process.env.DSE_COMPANY_URL_BASE?.trim() || DEFAULT_COMPANY_BASE;
-  const url = `${base}?name=${encodeURIComponent(sym)}`;
+  const customBase = process.env.DSE_COMPANY_URL_BASE?.trim();
+  const bases = customBase ? [customBase] : [...COMPANY_BASE_MIRRORS];
 
-  try {
-    const res = await fetch(url, { headers: { Accept: "text/html,*/*" } });
-    if (!res.ok) return nullResult;
-    const html = await res.text();
-    const w52 = parseDseCompany52WeekRange(html);
-    const sector = parseDseCompanySector(html);
-    const fundamentals = parseDseCompanyFundamentals(html);
-    return {
-      week52Low: w52?.low ?? null,
-      week52High: w52?.high ?? null,
-      sector,
-      ...fundamentals,
-    };
-  } catch {
-    return nullResult;
+  for (const base of bases) {
+    const url = `${base}?name=${encodeURIComponent(sym)}`;
+    try {
+      const res = await fetch(url, {
+        headers: COMPANY_FETCH_HEADERS,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const w52 = parseDseCompany52WeekRange(html);
+      const sector = parseDseCompanySector(html);
+      const fundamentals = parseDseCompanyFundamentals(html);
+      return {
+        week52Low: w52?.low ?? null,
+        week52High: w52?.high ?? null,
+        sector,
+        ...fundamentals,
+      };
+    } catch {
+      // Connection failed on this mirror — try the next one.
+    }
   }
+  return nullResult;
 }
 
 export async function fetchDseCompanyExtrasMap(
