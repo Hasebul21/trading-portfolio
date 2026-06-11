@@ -364,6 +364,27 @@ export async function adjustPositionsBalance(input: {
   return { ok: true, balance: newBalance };
 }
 
+/** Reset the Positions available amount back to zero. */
+export async function resetPositionsBalance(): Promise<
+  { ok: true; balance: number } | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("user_settings")
+    .update({ positions_balance_bdt: 0, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/positions");
+  revalidatePath("/settings");
+  return { ok: true, balance: 0 };
+}
+
 export async function deleteCashAdjustment(
   id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {

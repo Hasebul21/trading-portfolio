@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBdt } from "@/lib/format-bdt";
-import { adjustPositionsBalance } from "../settings-actions";
+import { adjustPositionsBalance, resetPositionsBalance } from "../settings-actions";
 import { useCallback, useState } from "react";
 import { Icons, SCard, SCardBody, SCardHead, SErr, SOk } from "./settings-ui";
 
@@ -12,6 +12,7 @@ export function PositionsCashForm({ initialBalance }: { initialBalance: number }
   const [kind, setKind] = useState<Kind>("add");
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
@@ -42,6 +43,27 @@ export function PositionsCashForm({ initialBalance }: { initialBalance: number }
       setSaving(false);
     }
   }, [amountValid, amountNum, kind]);
+
+  const handleReset = useCallback(async () => {
+    setError(null);
+    setOk(false);
+    setResetting(true);
+    try {
+      const res = await resetPositionsBalance();
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setBalance(res.balance);
+      setAmount("");
+      setOk(true);
+      setTimeout(() => setOk(false), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Reset failed");
+    } finally {
+      setResetting(false);
+    }
+  }, []);
 
   return (
     <SCard>
@@ -89,10 +111,17 @@ export function PositionsCashForm({ initialBalance }: { initialBalance: number }
         <div className="btn-row">
           <button
             className={`btn ${kind === "add" ? "btn-gain" : "btn-danger"}`}
-            disabled={saving || !amountValid}
+            disabled={saving || resetting || !amountValid}
             onClick={() => void handleSave()}
           >
             {saving ? "Saving…" : kind === "add" ? "Add to total" : "Deduct from total"}
+          </button>
+          <button
+            className="btn btn-default"
+            disabled={saving || resetting || balance === 0}
+            onClick={() => void handleReset()}
+          >
+            {resetting ? "Resetting…" : "Reset to ৳0"}
           </button>
         </div>
 

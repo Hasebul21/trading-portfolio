@@ -3,12 +3,8 @@
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import { formatBdt, formatShares } from "@/lib/format-bdt";
 import { planAmount, type PositionPlanRow, type PositionSide } from "@/lib/positions";
-import {
-  addPositionPlan,
-  deletePositionPlan,
-  markPositionPlan,
-} from "@/app/(app)/positions-actions";
-import { Alert, Button, Card, InputNumber, Popconfirm, Table } from "antd";
+import { addPositionPlan, markPositionPlan } from "@/app/(app)/positions-actions";
+import { Alert, Button, Card, InputNumber, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo, useState } from "react";
 
@@ -56,21 +52,10 @@ export function PositionsView({
     [setRowsFor],
   );
 
-  const handleDelete = useCallback(
-    async (side: PositionSide, id: string) => {
-      const res = await deletePositionPlan(id);
-      if (!res.ok) return;
-      setBalance(res.balance);
-      setRowsFor(side)((prev) => prev.filter((r) => r.id !== id));
-    },
-    [setRowsFor],
-  );
-
   const handleMark = useCallback(
     async (side: PositionSide, id: string) => {
       const res = await markPositionPlan(id);
       if (!res.ok) return;
-      setBalance(res.balance);
       setRowsFor(side)((prev) =>
         prev.map((r) => (r.id === id ? { ...r, executed: true } : r)),
       );
@@ -78,29 +63,19 @@ export function PositionsView({
     [setRowsFor],
   );
 
-  const commissionPct = commissionRate ? (commissionRate * 100).toFixed(3).replace(/\.?0+$/, "") : null;
-
   return (
     <div className="space-y-4 sm:space-y-5">
       <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "18px 24px" } }}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="text-[12px] uppercase tracking-wide text-[var(--ink-muted)]">
-              Total available amount
-            </p>
-            <p
-              className={`mt-1 text-[24px] tabular-nums ${
-                balance >= 0 ? "text-[var(--ink-strong)]" : "text-[var(--loss-700)]"
-              }`}
-            >
-              ৳ {formatBdt(balance)}
-            </p>
-          </div>
-          <p className="max-w-[320px] text-[12px] leading-snug text-[var(--ink-muted)]">
-            Adding a sell adds its proceeds to the total; adding a buy deducts its cost
-            {commissionPct ? ` (incl. ${commissionPct}% commission)` : ""}. Removing a row reverses
-            it. Top up from <span className="text-[var(--ink-strong)]">Settings → Positions cash</span>.
-            Mark a done row to clear it on refresh.
+        <div>
+          <p className="text-[12px] uppercase tracking-wide text-[var(--ink-muted)]">
+            Total available amount
+          </p>
+          <p
+            className={`mt-1 text-[24px] tabular-nums ${
+              balance >= 0 ? "text-[var(--ink-strong)]" : "text-[var(--loss-700)]"
+            }`}
+          >
+            ৳ {formatBdt(balance)}
           </p>
         </div>
       </Card>
@@ -114,7 +89,6 @@ export function PositionsView({
         instruments={instruments}
         instrumentsError={instrumentsError}
         onAdd={handleAdd}
-        onDelete={handleDelete}
         onMark={handleMark}
       />
 
@@ -127,7 +101,6 @@ export function PositionsView({
         instruments={instruments}
         instrumentsError={instrumentsError}
         onAdd={handleAdd}
-        onDelete={handleDelete}
         onMark={handleMark}
       />
     </div>
@@ -142,7 +115,6 @@ function PlanSection({
   instruments,
   instrumentsError,
   onAdd,
-  onDelete,
   onMark,
 }: {
   side: PositionSide;
@@ -158,7 +130,6 @@ function PlanSection({
     quantity: number,
     price: number,
   ) => Promise<{ ok: boolean; error?: string }>;
-  onDelete: (side: PositionSide, id: string) => void;
   onMark: (side: PositionSide, id: string) => void;
 }) {
   const [symbol, setSymbol] = useState("");
@@ -168,7 +139,6 @@ function PlanSection({
   const [error, setError] = useState<string | null>(null);
 
   const isBuy = side === "buy";
-  const markLabel = isBuy ? "Bought" : "Sold";
 
   const commissionPct = commissionRate ? (commissionRate * 100).toFixed(3).replace(/\.?0+$/, "") : null;
 
@@ -292,30 +262,11 @@ function PlanSection({
       align: "right",
       render: (_, row) =>
         row.executed ? (
-          <span className="text-[12px] text-[var(--ink-muted)]">Marked — clears on refresh</span>
+          <span className="text-[12px] text-[var(--ink-muted)]">Done — clears on refresh</span>
         ) : (
-          <div className="flex items-center justify-end gap-1">
-            <Button
-              size="small"
-              type="primary"
-              ghost={!isBuy}
-              danger={isBuy}
-              onClick={() => onMark(side, row.id)}
-            >
-              {markLabel}
-            </Button>
-            <Popconfirm
-              title="Remove this row?"
-              okText="Remove"
-              okButtonProps={{ danger: true }}
-              cancelText="Cancel"
-              onConfirm={() => onDelete(side, row.id)}
-            >
-              <Button size="small" type="text" danger>
-                Delete
-              </Button>
-            </Popconfirm>
-          </div>
+          <Button size="small" type="default" onClick={() => onMark(side, row.id)}>
+            Mark as done
+          </Button>
         ),
     },
   ];

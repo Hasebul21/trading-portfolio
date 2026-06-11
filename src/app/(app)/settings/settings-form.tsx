@@ -9,14 +9,9 @@ import {
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
-import type { SectorInvestmentRow } from "@/lib/sector-investments";
-import type { SellPlanRow } from "@/lib/sell-plans";
-import type { SymbolFieldInstrument } from "@/components/symbol-field";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { PositionsCashForm } from "./positions-cash-form";
-import { SectorInvestmentsForm } from "./sector-investments-form";
 import { SectorTargetsForm } from "./sector-targets-form";
-import { SellPlansForm } from "./sell-plans-form";
 import { TopSectorsForm } from "./top-sectors-form";
 import {
     Icons,
@@ -34,8 +29,6 @@ type TabKey =
     | "profile"
     | "password"
     | "targets"
-    | "monthly"
-    | "sell"
     | "topsectors"
     | "cash"
     | "positions-cash"
@@ -48,12 +41,6 @@ export function SettingsForm({
     initialSettings,
     initialSectorTargets,
     sectorTargetsError,
-    initialSectorInvestments,
-    sectorInvestmentsError,
-    initialSellPlans,
-    sellPlansError,
-    sellPlanInstruments,
-    sellPlanInstrumentsError,
     initialCashAdjustments,
     initialCashAdjustmentsTotal,
     cashAdjustmentsError,
@@ -61,12 +48,6 @@ export function SettingsForm({
     initialSettings: UserSettings;
     initialSectorTargets: SectorTargetWithCurrent[];
     sectorTargetsError: string | null;
-    initialSectorInvestments: SectorInvestmentRow[];
-    sectorInvestmentsError: string | null;
-    initialSellPlans: SellPlanRow[];
-    sellPlansError: string | null;
-    sellPlanInstruments: SymbolFieldInstrument[];
-    sellPlanInstrumentsError: string | null;
     initialCashAdjustments: CashAdjustmentRow[];
     initialCashAdjustmentsTotal: number;
     cashAdjustmentsError: string | null;
@@ -87,8 +68,6 @@ export function SettingsForm({
                 label: "Portfolio strategy",
                 items: [
                     { key: "targets", label: "Sector targets", icon: Icons.targets(18), badge: initialSectorTargets.length || undefined },
-                    { key: "monthly", label: "Monthly investment", icon: Icons.monthly(18) },
-                    { key: "sell", label: "Sell plan", icon: Icons.sell(18), badge: initialSellPlans.length || undefined },
                     { key: "topsectors", label: "Top sectors", icon: Icons.topsectors(18) },
                     { key: "cash", label: "Cash adjustments", icon: Icons.cash(18) },
                     { key: "positions-cash", label: "Positions cash", icon: Icons.positions(18) },
@@ -99,7 +78,7 @@ export function SettingsForm({
                 items: [{ key: "email", label: "Email & reports", icon: Icons.email(18) }],
             },
         ],
-        [initialSectorTargets.length, initialSellPlans.length],
+        [initialSectorTargets.length],
     );
 
     const q = query.trim().toLowerCase();
@@ -187,36 +166,6 @@ export function SettingsForm({
                             </SCard>
                         ) : (
                             <SectorTargetsForm initialRows={initialSectorTargets} />
-                        )}
-                    </Panel>
-
-                    <Panel active={activeTab === "monthly"}>
-                        {sectorInvestmentsError ? (
-                            <SCard>
-                                <SCardHead tone="loss" icon={Icons.monthly()} title="Could not load monthly investments" />
-                                <SCardBody>
-                                    <SErr>{sectorInvestmentsError}</SErr>
-                                </SCardBody>
-                            </SCard>
-                        ) : (
-                            <SectorInvestmentsForm initialRows={initialSectorInvestments} />
-                        )}
-                    </Panel>
-
-                    <Panel active={activeTab === "sell"}>
-                        {sellPlansError ? (
-                            <SCard>
-                                <SCardHead tone="loss" icon={Icons.sell()} title="Could not load sell plan" />
-                                <SCardBody>
-                                    <SErr>{sellPlansError}</SErr>
-                                </SCardBody>
-                            </SCard>
-                        ) : (
-                            <SellPlansForm
-                                initialRows={initialSellPlans}
-                                instruments={sellPlanInstruments}
-                                instrumentsLoadError={sellPlanInstrumentsError}
-                            />
                         )}
                     </Panel>
 
