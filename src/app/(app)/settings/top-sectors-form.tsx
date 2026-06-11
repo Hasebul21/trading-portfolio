@@ -2,8 +2,8 @@
 
 import { updateTopSectors } from "../settings-actions";
 import { DSE_SECTORS } from "@/lib/sector-targets";
-import { Alert, Button, Card, Select } from "antd";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { Icons, SCard, SCardBody, SCardHead, SErr, SOk } from "./settings-ui";
 
 const MAX_SECTORS = 8;
 
@@ -14,7 +14,9 @@ export function TopSectorsForm({
     initialSectors: string[];
     suggestions: string[];
 }) {
+    const listId = useId().replace(/:/g, "");
     const [draft, setDraft] = useState<string[]>(() => normalize(initialSectors));
+    const [input, setInput] = useState("");
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [ok, setOk] = useState(false);
@@ -22,24 +24,51 @@ export function TopSectorsForm({
     const options = useMemo(() => {
         const seen = new Set<string>();
         const merged: string[] = [];
-        for (const s of [...DSE_SECTORS, ...suggestions, ...draft]) {
+        for (const s of [...DSE_SECTORS, ...suggestions]) {
             const label = String(s ?? "").trim();
             if (!label) continue;
             const key = label.toLowerCase();
-            if (seen.has(key)) continue;
+            if (seen.has(key) || draft.some((d) => d.toLowerCase() === key)) continue;
             seen.add(key);
             merged.push(label);
         }
         merged.sort((a, b) => a.localeCompare(b));
-        return merged.map((s) => ({ value: s, label: s }));
+        return merged;
     }, [suggestions, draft]);
 
-    const handleChange = useCallback((next: string[]) => {
+    const addTag = useCallback(
+        (raw: string) => {
+            const label = raw.trim().replace(/\s+/g, " ");
+            if (!label) return;
+            setError(null);
+            setOk(false);
+            setDraft((prev) => {
+                if (prev.length >= MAX_SECTORS) return prev;
+                if (prev.some((d) => d.toLowerCase() === label.toLowerCase())) return prev;
+                return [...prev, label];
+            });
+            setInput("");
+        },
+        [],
+    );
+
+    const removeTag = useCallback((label: string) => {
         setError(null);
         setOk(false);
-        const cleaned = normalize(next).slice(0, MAX_SECTORS);
-        setDraft(cleaned);
+        setDraft((prev) => prev.filter((d) => d !== label));
     }, []);
+
+    const onKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addTag(input);
+            } else if (e.key === "Backspace" && input === "" && draft.length > 0) {
+                removeTag(draft[draft.length - 1]);
+            }
+        },
+        [addTag, removeTag, input, draft],
+    );
 
     const handleSave = useCallback(async () => {
         setError(null);
@@ -64,75 +93,82 @@ export function TopSectorsForm({
     const handleReset = useCallback(() => {
         setError(null);
         setOk(false);
+        setInput("");
         setDraft(normalize(initialSectors));
     }, [initialSectors]);
 
+    const full = draft.length >= MAX_SECTORS;
+
     return (
-        <Card
-            variant="outlined"
-            className="rounded-xl"
-            styles={{ body: { padding: "20px 24px" } }}
-        >
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-[14px] text-[var(--ink-strong)]">Top trending sectors</h3>
-                    <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-                        Pick up to {MAX_SECTORS} sectors you want to keep an eye on. They
-                        appear as a small reminder strip just below the navbar on every
-                        page. Type to add a new one, or pick from your existing sector
-                        targets.
+        <SCard>
+            <SCardHead
+                tone="warn"
+                icon={Icons.topsectors()}
+                title="Top trending sectors"
+                desc={`Pick up to ${MAX_SECTORS} sectors you want to keep an eye on. They appear as a reminder strip just below the navbar on every page.`}
+            />
+            <SCardBody>
+                <div className="field">
+                    <label className="lbl">Tracked sectors</label>
+                    <div className="tagbox">
+                        {draft.map((tag) => (
+                            <span className="tag" key={tag}>
+                                {tag}
+                                <button title="Remove" onClick={() => removeTag(tag)}>
+                                    ×
+                                </button>
+                            </span>
+                        ))}
+                        <input
+                            className="tag-input"
+                            list={`topsectors-${listId}`}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={onKeyDown}
+                            onBlur={() => addTag(input)}
+                            placeholder={full ? "Maximum reached" : "Type to add a sector…"}
+                            disabled={full}
+                            autoComplete="off"
+                        />
+                        <datalist id={`topsectors-${listId}`}>
+                            {options.map((s) => (
+                                <option key={s} value={s} />
+                            ))}
+                        </datalist>
+                    </div>
+                    <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+                        {draft.length} of {MAX_SECTORS} selected.
                     </p>
                 </div>
 
-                <Select
-                    mode="tags"
-                    size="large"
-                    value={draft}
-                    onChange={handleChange}
-                    options={options}
-                    placeholder="e.g. Bank, Pharma & Chemicals"
-                    tokenSeparators={[","]}
-                    maxTagCount={MAX_SECTORS}
-                    className="w-full"
-                />
-
-                <div className="text-[12px] text-[var(--ink-muted)]">
-                    {draft.length} of {MAX_SECTORS} selected.
+                <div className="preview-strip">
+                    <p className="pl">Preview · reminder strip</p>
+                    <div className="pr">
+                        {draft.length === 0 ? (
+                            <span style={{ fontSize: 12, color: "var(--ink-faint)" }}>Nothing tracked yet.</span>
+                        ) : (
+                            draft.map((s) => (
+                                <span className="chip" key={s}>
+                                    {s}
+                                </span>
+                            ))
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                    <Button
-                        type="primary"
-                        size="large"
-                        loading={saving}
-                        disabled={saving}
-                        onClick={() => void handleSave()}
-                    >
-                        Save top sectors
-                    </Button>
-                    <Button
-                        type="default"
-                        size="large"
-                        disabled={saving}
-                        onClick={handleReset}
-                    >
+                <div className="btn-row">
+                    <button className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}>
+                        {saving ? "Saving…" : "Save top sectors"}
+                    </button>
+                    <button className="btn btn-default" disabled={saving} onClick={handleReset}>
                         Reset
-                    </Button>
+                    </button>
                 </div>
 
-                {error ? (
-                    <Alert type="error" showIcon message="Could not save" description={error} />
-                ) : null}
-                {ok ? (
-                    <Alert
-                        type="success"
-                        showIcon
-                        message="Saved"
-                        description="Top sectors updated. The reminder strip will refresh on next page load."
-                    />
-                ) : null}
-            </div>
-        </Card>
+                {error ? <SErr>{error}</SErr> : null}
+                {ok ? <SOk>Top sectors updated. The reminder strip will refresh on next page load.</SOk> : null}
+            </SCardBody>
+        </SCard>
     );
 }
 

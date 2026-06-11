@@ -50,6 +50,7 @@ export function PositionsView({
       });
       if (!res.ok) return { ok: false, error: res.error };
       setRowsFor(side)((prev) => [...prev, res.row]);
+      setBalance(res.balance);
       return { ok: true };
     },
     [setRowsFor],
@@ -59,6 +60,7 @@ export function PositionsView({
     async (side: PositionSide, id: string) => {
       const res = await deletePositionPlan(id);
       if (!res.ok) return;
+      setBalance(res.balance);
       setRowsFor(side)((prev) => prev.filter((r) => r.id !== id));
     },
     [setRowsFor],
@@ -94,11 +96,11 @@ export function PositionsView({
               ৳ {formatBdt(balance)}
             </p>
           </div>
-          <p className="max-w-[280px] text-[12px] leading-snug text-[var(--ink-muted)]">
-            Mark a sell to add its proceeds, a buy to deduct its cost
-            {commissionPct ? ` (incl. ${commissionPct}% commission)` : ""}. Top up from{" "}
-            <span className="text-[var(--ink-strong)]">Settings → Positions cash</span>. Marked rows
-            clear on refresh.
+          <p className="max-w-[320px] text-[12px] leading-snug text-[var(--ink-muted)]">
+            Adding a sell adds its proceeds to the total; adding a buy deducts its cost
+            {commissionPct ? ` (incl. ${commissionPct}% commission)` : ""}. Removing a row reverses
+            it. Top up from <span className="text-[var(--ink-strong)]">Settings → Positions cash</span>.
+            Mark a done row to clear it on refresh.
           </p>
         </div>
       </Card>
@@ -167,6 +169,14 @@ function PlanSection({
 
   const isBuy = side === "buy";
   const markLabel = isBuy ? "Bought" : "Sold";
+
+  const commissionPct = commissionRate ? (commissionRate * 100).toFixed(3).replace(/\.?0+$/, "") : null;
+
+  // Live amount that will move the balance once this row is added.
+  const previewAmount =
+    quantity !== null && quantity > 0 && price !== null && price > 0
+      ? planAmount(side, quantity, price, commissionRate)
+      : null;
 
   const submit = useCallback(async () => {
     setError(null);
@@ -379,6 +389,25 @@ function PlanSection({
           >
             Add
           </Button>
+        </div>
+
+        <div className="flex min-h-[20px] flex-wrap items-center gap-x-2 text-[13px]">
+          <span className="text-[var(--ink-muted)]">{isBuy ? "Cost to deduct:" : "Proceeds to add:"}</span>
+          {previewAmount !== null ? (
+            <span
+              className={`tabular-nums ${isBuy ? "text-[var(--loss-700)]" : "text-[var(--gain-700)]"}`}
+            >
+              {isBuy ? "−" : "+"}৳{formatBdt(previewAmount)}
+            </span>
+          ) : (
+            <span className="text-[var(--ink-faint)]">— enter quantity &amp; target price</span>
+          )}
+          {previewAmount !== null && commissionPct ? (
+            <span className="text-[var(--ink-faint)]">
+              (gross ৳{formatBdt(Math.round((quantity as number) * (price as number) * 100) / 100)} ·
+              {" "}{commissionPct}% fee)
+            </span>
+          ) : null}
         </div>
 
         {error ? <Alert type="error" showIcon message={error} /> : null}

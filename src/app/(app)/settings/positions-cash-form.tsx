@@ -2,35 +2,38 @@
 
 import { formatBdt } from "@/lib/format-bdt";
 import { adjustPositionsBalance } from "../settings-actions";
-import { Alert, Button, Card, InputNumber, Radio } from "antd";
 import { useCallback, useState } from "react";
+import { Icons, SCard, SCardBody, SCardHead, SErr, SOk } from "./settings-ui";
 
 type Kind = "add" | "deduct";
 
 export function PositionsCashForm({ initialBalance }: { initialBalance: number }) {
   const [balance, setBalance] = useState<number>(initialBalance);
   const [kind, setKind] = useState<Kind>("add");
-  const [amount, setAmount] = useState<number | null>(null);
+  const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
+  const amountNum = Number(amount.replace(/,/g, ""));
+  const amountValid = Number.isFinite(amountNum) && amountNum > 0;
+
   const handleSave = useCallback(async () => {
     setError(null);
     setOk(false);
-    if (amount === null || !(amount > 0)) {
+    if (!amountValid) {
       setError("Enter a positive amount.");
       return;
     }
     setSaving(true);
     try {
-      const res = await adjustPositionsBalance({ amount, kind });
+      const res = await adjustPositionsBalance({ amount: amountNum, kind });
       if (!res.ok) {
         setError(res.error);
         return;
       }
       setBalance(res.balance);
-      setAmount(null);
+      setAmount("");
       setOk(true);
       setTimeout(() => setOk(false), 3000);
     } catch (e) {
@@ -38,69 +41,64 @@ export function PositionsCashForm({ initialBalance }: { initialBalance: number }
     } finally {
       setSaving(false);
     }
-  }, [amount, kind]);
+  }, [amountValid, amountNum, kind]);
 
   return (
-    <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "20px 24px" } }}>
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-[14px] text-[var(--ink-strong)]">Positions available amount</h3>
-            <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-              The cash pool shown on the Positions page. Top up here; buy/sell marks move it
-              automatically. Independent of Cash adjustments and Net Gain/Loss.
-            </p>
-          </div>
-          <span className="text-[18px] tabular-nums text-[var(--ink-strong)]">
-            ৳ {formatBdt(balance)}
+    <SCard>
+      <SCardHead
+        tone="gain"
+        icon={Icons.positions()}
+        title="Positions available amount"
+        desc="The cash pool shown on the Positions page. Top up here; buy/sell marks move it automatically. Independent of Cash adjustments and Net Gain/Loss."
+        right={
+          <span className="total">
+            Balance: <b style={{ color: "var(--ink-strong)" }}>৳{formatBdt(balance)}</b>
           </span>
+        }
+      />
+      <SCardBody>
+        <div className="field">
+          <label className="lbl">Type</label>
+          <div className="seg">
+            <button data-on="add" className={kind === "add" ? "active" : ""} onClick={() => setKind("add")}>
+              Add
+            </button>
+            <button data-on="deduct" className={kind === "deduct" ? "active" : ""} onClick={() => setKind("deduct")}>
+              Deduct
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label className="block text-[14px] text-[var(--ink-strong)]">Type</label>
-          <Radio.Group
-            className="mt-2"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as Kind)}
-            optionType="button"
-            buttonStyle="solid"
-            options={[
-              { label: "Add", value: "add" },
-              { label: "Deduct", value: "deduct" },
-            ]}
-          />
+        <div className="field" style={{ marginBottom: 0, maxWidth: 320 }}>
+          <label className="lbl">Amount (BDT)</label>
+          <div className="inp-affix">
+            <span className="affix">৳</span>
+            <input
+              inputMode="decimal"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setError(null);
+                setOk(false);
+              }}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-[14px] text-[var(--ink-strong)]">Amount (BDT)</label>
-          <InputNumber
-            value={amount}
-            onChange={(v) => {
-              setAmount(typeof v === "number" ? v : null);
-              setError(null);
-              setOk(false);
-            }}
-            placeholder="0.00"
-            min={0}
-            step={100}
-            size="large"
-            className="mt-2 w-full rounded-md"
-          />
+        <div className="btn-row">
+          <button
+            className={`btn ${kind === "add" ? "btn-gain" : "btn-danger"}`}
+            disabled={saving || !amountValid}
+            onClick={() => void handleSave()}
+          >
+            {saving ? "Saving…" : kind === "add" ? "Add to total" : "Deduct from total"}
+          </button>
         </div>
 
-        <Button
-          type="primary"
-          size="large"
-          loading={saving}
-          disabled={saving || amount === null || !(amount > 0)}
-          onClick={() => void handleSave()}
-        >
-          {kind === "add" ? "Add to total" : "Deduct from total"}
-        </Button>
-
-        {error ? <Alert type="error" showIcon message="Error" description={error} /> : null}
-        {ok ? <Alert type="success" showIcon message="Saved" description="Balance updated." /> : null}
-      </div>
-    </Card>
+        {error ? <SErr>{error}</SErr> : null}
+        {ok ? <SOk>Balance updated.</SOk> : null}
+      </SCardBody>
+    </SCard>
   );
 }

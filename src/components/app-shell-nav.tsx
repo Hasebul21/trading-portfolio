@@ -22,7 +22,6 @@ const NAV_ITEMS: NavItem[] = [
   { type: "divider" },
   // ── Secondary: tools & misc ──
   { type: "link", href: "/allocation", label: "Allocation" },
-  { type: "link", href: "/calculator", label: "Calculator" },
   { type: "link", href: "/dividend", label: "Dividend" },
   { type: "link", href: "/knowledge", label: "Knowledge" },
   { type: "link", href: "/settings", label: "Settings" },

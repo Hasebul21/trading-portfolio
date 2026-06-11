@@ -1,4 +1,5 @@
 import { AppShellNav } from "@/components/app-shell-nav";
+import { FloatingCalculator } from "@/components/floating-calculator";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TopSectorsStrip } from "@/components/top-sectors-strip";
@@ -63,6 +64,7 @@ export default function AppLayout({
         </footer>
 
         <MobileBottomNav />
+        <FloatingCalculator />
       </div>
     </AntdAppProvider>
   );

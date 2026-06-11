@@ -9,16 +9,10 @@ import {
   rowProceeds,
   type SellPlanRow,
 } from "@/lib/sell-plans";
-import { Alert, Button, Card, InputNumber } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Icons, SCard, SCardBody, SCardHead, SErr, SOk, SStat, SStats, SWarn } from "./settings-ui";
 
-type DraftRow = {
-  /** Stable key for React; preserves identity across edits. */
-  key: string;
-  symbol: string;
-  /** Empty string = "no quantity" (row dropped on save). */
-  quantity: string;
-};
+type DraftRow = { key: string; symbol: string; quantity: string };
 
 function fromServer(rows: SellPlanRow[]): DraftRow[] {
   return rows.map((r, i) => ({
@@ -43,16 +37,12 @@ export function SellPlansForm({
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  // Live last-traded prices keyed by upper-cased symbol. Merged on each fetch
-  // so a symbol that briefly has no published price keeps its prior value.
   const [ltpBySymbol, setLtpBySymbol] = useState<Record<string, number>>({});
   const [ltpLoading, setLtpLoading] = useState(false);
   const [ltpError, setLtpError] = useState<string | null>(null);
 
   const loadLtps = useCallback(async (symbols: ReadonlyArray<string>) => {
-    const unique = Array.from(
-      new Set(symbols.map((s) => normalizeSymbol(s)).filter(Boolean)),
-    );
+    const unique = Array.from(new Set(symbols.map((s) => normalizeSymbol(s)).filter(Boolean)));
     if (unique.length === 0) return;
     setLtpLoading(true);
     setLtpError(null);
@@ -67,14 +57,11 @@ export function SellPlansForm({
     }
   }, []);
 
-  // Fetch prices for the saved symbols once on mount. Deferred through a timer
-  // so we don't call setState synchronously inside the effect body.
   useEffect(() => {
     const symbols = initialRows.map((r) => r.symbol).filter(Boolean);
     if (symbols.length === 0) return;
     const t = window.setTimeout(() => void loadLtps(symbols), 0);
     return () => window.clearTimeout(t);
-    // Run once for the initial set; refreshes afterwards are user-driven.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -89,30 +76,27 @@ export function SellPlansForm({
   const totalProceeds = useMemo(() => {
     let s = 0;
     for (const row of draft) {
-      const qty = Number(row.quantity);
-      const proceeds = rowProceeds(qty, ltpFor(row.symbol));
+      const proceeds = rowProceeds(Number(row.quantity), ltpFor(row.symbol));
       if (proceeds !== null) s += proceeds;
     }
     return Math.round(s * 100) / 100;
   }, [draft, ltpFor]);
 
+  const stagedCount = useMemo(() => draft.filter((r) => normalizeSymbol(r.symbol)).length, [draft]);
+  const pricedCount = useMemo(() => draft.filter((r) => ltpFor(r.symbol) !== null).length, [draft, ltpFor]);
+
   const setQuantity = useCallback((key: string, value: string) => {
     setError(null);
     setOk(false);
-    setDraft((prev) =>
-      prev.map((row) => (row.key === key ? { ...row, quantity: value } : row)),
-    );
+    setDraft((prev) => prev.map((row) => (row.key === key ? { ...row, quantity: value } : row)));
   }, []);
 
   const setSymbol = useCallback((key: string, value: string) => {
     setError(null);
     setOk(false);
-    setDraft((prev) =>
-      prev.map((row) => (row.key === key ? { ...row, symbol: value } : row)),
-    );
+    setDraft((prev) => prev.map((row) => (row.key === key ? { ...row, symbol: value } : row)));
   }, []);
 
-  // When a symbol field loses focus, pull its price if we don't have one yet.
   const fetchIfMissing = useCallback(
     (symbol: string) => {
       const key = normalizeSymbol(symbol);
@@ -169,9 +153,8 @@ export function SellPlansForm({
     setSaving(true);
     try {
       const res = await saveSellPlans(payload);
-      if (!res.ok) {
-        setError(res.error);
-      } else {
+      if (!res.ok) setError(res.error);
+      else {
         setOk(true);
         setTimeout(() => setOk(false), 3000);
       }
@@ -189,35 +172,36 @@ export function SellPlansForm({
   }, [initialRows]);
 
   return (
-    <Card
-      variant="outlined"
-      className="rounded-xl"
-      styles={{ body: { padding: "20px 24px" } }}
-    >
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-[14px] text-[var(--ink-strong)]">Sell plan</h3>
-        </div>
+    <>
+      <SStats>
+        <SStat k="Stocks staged" v={stagedCount} />
+        <SStat k="Est. proceeds" v={`৳${formatBdt(totalProceeds)}`} tone="gain" d="at last traded price" />
+        <SStat k="Priced" v={`${pricedCount}/${stagedCount}`} d="DSE live feed" small />
+      </SStats>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-left text-[13px]">
+      <SCard>
+        <SCardHead
+          tone="gain"
+          icon={Icons.sell()}
+          title="Sell plan"
+          desc="Stage the shares you intend to sell. Picked stocks are flagged in your portfolio, and estimated proceeds use the latest traded price."
+        />
+        <SCardBody>
+          <table className="tbl">
             <thead>
-              <tr className="text-[10px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                <th className="py-2 font-normal">Stock</th>
-                <th className="py-2 text-right font-normal">Shares</th>
-                <th className="py-2 text-right font-normal">LTP&nbsp;(BDT)</th>
-                <th className="py-2 text-right font-normal">Proceeds&nbsp;(BDT)</th>
-                <th className="py-2" />
+              <tr>
+                <th>Stock</th>
+                <th className="r">Shares</th>
+                <th className="r">LTP&nbsp;(BDT)</th>
+                <th className="r">Proceeds&nbsp;(BDT)</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {draft.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="py-4 text-center text-[13px] text-[var(--ink-muted)]"
-                  >
-                    No stocks yet. Add one below to plan a sell.
+                  <td colSpan={5}>
+                    <div className="empty-row">No stocks yet. Add one below to plan a sell.</div>
                   </td>
                 </tr>
               ) : null}
@@ -225,8 +209,8 @@ export function SellPlansForm({
                 const ltp = ltpFor(row.symbol);
                 const proceeds = rowProceeds(Number(row.quantity), ltp);
                 return (
-                  <tr key={row.key} className="border-t border-[var(--line)]">
-                    <td className="py-1.5 pr-2 align-middle">
+                  <tr key={row.key}>
+                    <td style={{ maxWidth: 220 }}>
                       <SymbolField
                         instruments={instruments}
                         loadError={instrumentsLoadError}
@@ -236,116 +220,69 @@ export function SellPlansForm({
                         onValueChange={(value) => setSymbol(row.key, value)}
                         onBlur={() => fetchIfMissing(row.symbol)}
                         placeholder="e.g. GP"
-                        size="sm"
+                        className="inp mono"
                       />
                     </td>
-                    <td className="py-1.5 pr-2 align-middle text-right">
-                      <InputNumber
-                        value={row.quantity === "" ? null : Number(row.quantity)}
-                        onChange={(val) =>
-                          setQuantity(
-                            row.key,
-                            val === null || val === undefined ? "" : String(val),
-                          )
-                        }
-                        placeholder="—"
-                        min={0}
-                        step={1}
-                        size="middle"
-                        className="w-full max-w-[8rem] rounded-md"
-                        controls
-                      />
+                    <td className="td-r">
+                      <div className="inp-affix num-inp" style={{ display: "inline-flex" }}>
+                        <input
+                          inputMode="numeric"
+                          value={row.quantity}
+                          onChange={(e) => setQuantity(row.key, e.target.value)}
+                          placeholder="—"
+                        />
+                      </div>
                     </td>
-                    <td className="py-1.5 pr-2 align-middle text-right tabular-nums text-[var(--ink-strong)]">
+                    <td className="td-r mono" style={{ color: "var(--ink-default)" }}>
                       {ltp !== null ? formatBdt(ltp) : "—"}
                     </td>
-                    <td className="py-1.5 pr-2 align-middle text-right tabular-nums text-[var(--ink-strong)]">
+                    <td className="td-r mono" style={{ color: "var(--ink-strong)" }}>
                       {proceeds !== null ? `৳${formatBdt(proceeds)}` : "—"}
                     </td>
-                    <td className="py-1.5 align-middle text-right">
-                      <Button
-                        type="link"
-                        size="small"
-                        danger
-                        onClick={() => removeRow(row.key)}
-                      >
+                    <td className="td-r">
+                      <button className="btn-link" onClick={() => removeRow(row.key)}>
                         Remove
-                      </Button>
+                      </button>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              type="dashed"
-              size="middle"
-              onClick={addRow}
-              disabled={draft.length >= SELL_PLAN_MAX_ROWS}
-            >
-              + Add stock
-            </Button>
-            <Button
-              type="default"
-              size="middle"
-              onClick={refreshPrices}
-              loading={ltpLoading}
-              disabled={ltpLoading || draft.length === 0}
-            >
-              Refresh prices
-            </Button>
-          </div>
-          <div className="text-right">
-            <div className="text-[13px] tabular-nums text-[var(--ink-strong)]">
-              ৳{formatBdt(totalProceeds)}
+          <div className="foot-row">
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button className="btn-dashed" onClick={addRow} disabled={draft.length >= SELL_PLAN_MAX_ROWS}>
+                + Add stock
+              </button>
+              <button
+                className="btn-dashed"
+                style={{ borderStyle: "solid" }}
+                onClick={refreshPrices}
+                disabled={ltpLoading || draft.length === 0}
+              >
+                {ltpLoading ? "Refreshing…" : "↻ Refresh prices"}
+              </button>
+            </div>
+            <div className="total">
+              Total proceeds: <b className="ok">৳{formatBdt(totalProceeds)}</b>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="primary"
-            size="large"
-            loading={saving}
-            disabled={saving}
-            onClick={() => void handleSave()}
-          >
-            Save sell plan
-          </Button>
-          <Button
-            type="default"
-            size="large"
-            disabled={saving}
-            onClick={handleReset}
-          >
-            Reset
-          </Button>
-        </div>
+          <div className="btn-row">
+            <button className="btn btn-primary" disabled={saving} onClick={() => void handleSave()}>
+              {saving ? "Saving…" : "Save sell plan"}
+            </button>
+            <button className="btn btn-default" disabled={saving} onClick={handleReset}>
+              Reset
+            </button>
+          </div>
 
-        {ltpError ? (
-          <Alert
-            type="warning"
-            showIcon
-            message="Could not refresh some prices"
-            description={ltpError}
-          />
-        ) : null}
-        {error ? (
-          <Alert type="error" showIcon message="Could not save" description={error} />
-        ) : null}
-        {ok ? (
-          <Alert
-            type="success"
-            showIcon
-            message="Saved"
-            description="Sell plan updated. The picked stocks are flagged in your portfolio."
-          />
-        ) : null}
-      </div>
-    </Card>
+          {ltpError ? <SWarn title="Could not refresh some prices">{ltpError}</SWarn> : null}
+          {error ? <SErr>{error}</SErr> : null}
+          {ok ? <SOk>Sell plan updated. The picked stocks are flagged in your portfolio.</SOk> : null}
+        </SCardBody>
+      </SCard>
+    </>
   );
 }

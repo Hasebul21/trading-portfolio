@@ -22,7 +22,7 @@ export default async function SettingsPage() {
         ]);
 
     return (
-        <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-2xl text-left text-[var(--ink-strong)]">
+        <AppPageStack gapClass="gap-4 sm:gap-5" className="mx-auto w-full min-w-0 max-w-[1400px] text-left text-[var(--ink-strong)]">
             {settingsRes.ok ? (
                 <SettingsForm
                     initialSettings={settingsRes.settings}

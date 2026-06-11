@@ -1,6 +1,6 @@
 /**
  * Oracle — professional 5-pillar scoring engine. Powers the per-row Signal
- * column on the portfolio table and the advanced metrics on the calculator.
+ * column on the portfolio table.
  *
  * Pillar A — Valuation   (30 pts): P/E, Graham Number MoS, Earnings Yield
  * Pillar B — Quality     (25 pts): ROE, Dividend Yield, Payout Sustainability

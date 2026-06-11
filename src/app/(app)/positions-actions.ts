@@ -31,7 +31,7 @@ function mapRow(r: Record<string, unknown>): PositionPlanRow {
 /**
  * Load the open buy/sell plans plus the standalone balance. Executed rows from
  * a previous session are purged here first, so a marked row disappears on the
- * next page load (the balance was already moved when it was marked).
+ * next page load (the balance was already moved when the row was added).
  */
 export async function getPositions(): Promise<
   { ok: true; data: PositionsState } | { ok: false; error: string }
@@ -82,13 +82,51 @@ export async function getPositions(): Promise<
   };
 }
 
-/** Add a buy or sell plan row. Returns the created row for optimistic insert. */
+/** Read the balance + commission rate for the signed-in user. */
+async function readBalanceAndRate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<{ balance: number; rate: number | null; error?: string }> {
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("positions_balance_bdt, trade_commission_rate")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) return { balance: 0, rate: null, error: error.message };
+  return {
+    balance: Number(data?.positions_balance_bdt ?? 0),
+    rate:
+      data?.trade_commission_rate === null || data?.trade_commission_rate === undefined
+        ? null
+        : Number(data.trade_commission_rate),
+  };
+}
+
+async function writeBalance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  balance: number,
+): Promise<string | null> {
+  const { error } = await supabase
+    .from("user_settings")
+    .update({ positions_balance_bdt: balance, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+  return error ? error.message : null;
+}
+
+/**
+ * Add a buy or sell plan row and apply its commission-adjusted amount to the
+ * balance right away: a sell adds its proceeds, a buy deducts its cost. Returns
+ * the created row and the new balance.
+ */
 export async function addPositionPlan(input: {
   side: PositionSide;
   symbol: string;
   quantity_shares: number | string;
   target_price: number | string;
-}): Promise<{ ok: true; row: PositionPlanRow } | { ok: false; error: string }> {
+}): Promise<
+  { ok: true; row: PositionPlanRow; balance: number } | { ok: false; error: string }
+> {
   const validated = validatePositionPlan(input);
   if (!validated.ok) return validated;
 
@@ -98,46 +136,35 @@ export async function addPositionPlan(input: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
 
+  const settings = await readBalanceAndRate(supabase, user.id);
+  if (settings.error) return { ok: false, error: settings.error };
+
   const { data, error } = await supabase
     .from("position_plans")
     .insert({ user_id: user.id, ...validated.row })
     .select("id, side, symbol, quantity_shares, target_price, executed, created_at")
     .single();
-
   if (error) return { ok: false, error: error.message };
-  return { ok: true, row: mapRow(data as Record<string, unknown>) };
-}
 
-/** Remove a plan row without touching the balance. */
-export async function deletePositionPlan(
-  id: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const trimmed = id.trim();
-  if (!trimmed) return { ok: false, error: "Missing id." };
+  const delta = planBalanceDelta(
+    validated.row.side,
+    validated.row.quantity_shares,
+    validated.row.target_price,
+    settings.rate,
+  );
+  const newBalance = Math.round((settings.balance + delta) * 100) / 100;
+  const writeErr = await writeBalance(supabase, user.id, newBalance);
+  if (writeErr) return { ok: false, error: writeErr };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Not signed in." };
-
-  const { error } = await supabase
-    .from("position_plans")
-    .delete()
-    .eq("id", trimmed)
-    .eq("user_id", user.id);
-
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return { ok: true, row: mapRow(data as Record<string, unknown>), balance: newBalance };
 }
 
 /**
- * Mark a plan executed: apply its commission-adjusted amount to the balance
- * immediately (buy deducts, sell adds) and flag the row. The row is left in
- * place so the UI can show it struck-through; it is purged on the next load.
- * Returns the new balance. Idempotent — already-executed rows are a no-op.
+ * Remove a plan row and reverse its effect on the balance (cancel the plan): a
+ * removed sell takes its proceeds back out, a removed buy refunds its cost.
+ * Returns the new balance.
  */
-export async function markPositionPlan(
+export async function deletePositionPlan(
   id: string,
 ): Promise<{ ok: true; balance: number } | { ok: false; error: string }> {
   const trimmed = id.trim();
@@ -151,50 +178,63 @@ export async function markPositionPlan(
 
   const { data: plan, error: planErr } = await supabase
     .from("position_plans")
-    .select("side, quantity_shares, target_price, executed")
+    .select("side, quantity_shares, target_price")
     .eq("id", trimmed)
     .eq("user_id", user.id)
     .maybeSingle();
-
   if (planErr) return { ok: false, error: planErr.message };
-  if (!plan) return { ok: false, error: "Plan not found." };
 
-  const { data: settings, error: setErr } = await supabase
-    .from("user_settings")
-    .select("positions_balance_bdt, trade_commission_rate")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (setErr) return { ok: false, error: setErr.message };
+  const settings = await readBalanceAndRate(supabase, user.id);
+  if (settings.error) return { ok: false, error: settings.error };
 
-  const currentBalance = Number(settings?.positions_balance_bdt ?? 0);
+  const { error: delErr } = await supabase
+    .from("position_plans")
+    .delete()
+    .eq("id", trimmed)
+    .eq("user_id", user.id);
+  if (delErr) return { ok: false, error: delErr.message };
 
-  // Already executed → balance unchanged, just report current.
-  if ((plan as { executed?: unknown }).executed) {
-    return { ok: true, balance: currentBalance };
-  }
-
+  // Reverse the amount this row had applied when it was added.
+  if (!plan) return { ok: true, balance: settings.balance };
   const delta = planBalanceDelta(
     (plan as { side: PositionSide }).side,
     Number((plan as { quantity_shares: unknown }).quantity_shares),
     Number((plan as { target_price: unknown }).target_price),
-    settings?.trade_commission_rate === null || settings?.trade_commission_rate === undefined
-      ? null
-      : Number(settings.trade_commission_rate),
+    settings.rate,
   );
-  const newBalance = Math.round((currentBalance + delta) * 100) / 100;
+  const newBalance = Math.round((settings.balance - delta) * 100) / 100;
+  const writeErr = await writeBalance(supabase, user.id, newBalance);
+  if (writeErr) return { ok: false, error: writeErr };
 
-  const { error: updErr } = await supabase
-    .from("user_settings")
-    .update({ positions_balance_bdt: newBalance, updated_at: new Date().toISOString() })
-    .eq("user_id", user.id);
-  if (updErr) return { ok: false, error: updErr.message };
+  return { ok: true, balance: newBalance };
+}
 
-  const { error: flagErr } = await supabase
+/**
+ * Mark a plan as executed. The balance was already moved when the row was
+ * added, so this only flags the row (shown struck-through) — it is purged on
+ * the next page load. Returns the unchanged balance to keep the client in sync.
+ */
+export async function markPositionPlan(
+  id: string,
+): Promise<{ ok: true; balance: number } | { ok: false; error: string }> {
+  const trimmed = id.trim();
+  if (!trimmed) return { ok: false, error: "Missing id." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const settings = await readBalanceAndRate(supabase, user.id);
+  if (settings.error) return { ok: false, error: settings.error };
+
+  const { error } = await supabase
     .from("position_plans")
     .update({ executed: true })
     .eq("id", trimmed)
     .eq("user_id", user.id);
-  if (flagErr) return { ok: false, error: flagErr.message };
+  if (error) return { ok: false, error: error.message };
 
-  return { ok: true, balance: newBalance };
+  return { ok: true, balance: settings.balance };
 }
