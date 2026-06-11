@@ -160,6 +160,83 @@ export async function addPositionPlan(input: {
 }
 
 /**
+ * Edit a plan row (symbol / quantity / target price) and adjust the balance by
+ * the difference between the row's new and old commission-adjusted amounts, so
+ * the total reflects the updated values. The side is preserved. Returns the
+ * updated row and the new balance.
+ */
+export async function updatePositionPlan(input: {
+  id: string;
+  symbol: string;
+  quantity_shares: number | string;
+  target_price: number | string;
+}): Promise<
+  { ok: true; row: PositionPlanRow; balance: number } | { ok: false; error: string }
+> {
+  const id = input.id.trim();
+  if (!id) return { ok: false, error: "Missing id." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from("position_plans")
+    .select("side, quantity_shares, target_price")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (fetchErr) return { ok: false, error: fetchErr.message };
+  if (!existing) return { ok: false, error: "Plan not found." };
+
+  const side = (existing as { side: PositionSide }).side;
+  const validated = validatePositionPlan({
+    side,
+    symbol: input.symbol,
+    quantity_shares: input.quantity_shares,
+    target_price: input.target_price,
+  });
+  if (!validated.ok) return validated;
+
+  const settings = await readBalanceAndRate(supabase, user.id);
+  if (settings.error) return { ok: false, error: settings.error };
+
+  const oldDelta = planBalanceDelta(
+    side,
+    Number((existing as { quantity_shares: unknown }).quantity_shares),
+    Number((existing as { target_price: unknown }).target_price),
+    settings.rate,
+  );
+  const newDelta = planBalanceDelta(
+    side,
+    validated.row.quantity_shares,
+    validated.row.target_price,
+    settings.rate,
+  );
+
+  const { data, error } = await supabase
+    .from("position_plans")
+    .update({
+      symbol: validated.row.symbol,
+      quantity_shares: validated.row.quantity_shares,
+      target_price: validated.row.target_price,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select("id, side, symbol, quantity_shares, target_price, executed, created_at")
+    .single();
+  if (error) return { ok: false, error: error.message };
+
+  const newBalance = Math.round((settings.balance + (newDelta - oldDelta)) * 100) / 100;
+  const writeErr = await writeBalance(supabase, user.id, newBalance);
+  if (writeErr) return { ok: false, error: writeErr };
+
+  return { ok: true, row: mapRow(data as Record<string, unknown>), balance: newBalance };
+}
+
+/**
  * Remove a plan row and reverse its effect on the balance (cancel the plan): a
  * removed sell takes its proceeds back out, a removed buy refunds its cost.
  * Returns the new balance.

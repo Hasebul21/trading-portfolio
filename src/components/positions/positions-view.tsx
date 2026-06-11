@@ -3,7 +3,11 @@
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import { formatBdt, formatShares } from "@/lib/format-bdt";
 import { planAmount, type PositionPlanRow, type PositionSide } from "@/lib/positions";
-import { addPositionPlan, markPositionPlan } from "@/app/(app)/positions-actions";
+import {
+  addPositionPlan,
+  markPositionPlan,
+  updatePositionPlan,
+} from "@/app/(app)/positions-actions";
 import { Alert, Button, Card, InputNumber, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo, useState } from "react";
@@ -63,6 +67,28 @@ export function PositionsView({
     [setRowsFor],
   );
 
+  const handleUpdate = useCallback(
+    async (
+      side: PositionSide,
+      id: string,
+      symbol: string,
+      quantity: number,
+      price: number,
+    ): Promise<{ ok: boolean; error?: string }> => {
+      const res = await updatePositionPlan({
+        id,
+        symbol,
+        quantity_shares: quantity,
+        target_price: price,
+      });
+      if (!res.ok) return { ok: false, error: res.error };
+      setRowsFor(side)((prev) => prev.map((r) => (r.id === id ? res.row : r)));
+      setBalance(res.balance);
+      return { ok: true };
+    },
+    [setRowsFor],
+  );
+
   return (
     <div className="space-y-4 sm:space-y-5">
       <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "18px 24px" } }}>
@@ -90,6 +116,7 @@ export function PositionsView({
         instrumentsError={instrumentsError}
         onAdd={handleAdd}
         onMark={handleMark}
+        onUpdate={handleUpdate}
       />
 
       <PlanSection
@@ -102,6 +129,7 @@ export function PositionsView({
         instrumentsError={instrumentsError}
         onAdd={handleAdd}
         onMark={handleMark}
+        onUpdate={handleUpdate}
       />
     </div>
   );
@@ -116,6 +144,7 @@ function PlanSection({
   instrumentsError,
   onAdd,
   onMark,
+  onUpdate,
 }: {
   side: PositionSide;
   title: string;
@@ -131,6 +160,13 @@ function PlanSection({
     price: number,
   ) => Promise<{ ok: boolean; error?: string }>;
   onMark: (side: PositionSide, id: string) => void;
+  onUpdate: (
+    side: PositionSide,
+    id: string,
+    symbol: string,
+    quantity: number,
+    price: number,
+  ) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState<number | null>(null);
@@ -138,7 +174,56 @@ function PlanSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Inline row editing.
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editSymbol, setEditSymbol] = useState("");
+  const [editQty, setEditQty] = useState<number | null>(null);
+  const [editPrice, setEditPrice] = useState<number | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const isBuy = side === "buy";
+
+  const startEdit = useCallback((row: PositionPlanRow) => {
+    setEditError(null);
+    setEditId(row.id);
+    setEditSymbol(row.symbol);
+    setEditQty(row.quantity_shares);
+    setEditPrice(row.target_price);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditId(null);
+    setEditError(null);
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (editId === null) return;
+    setEditError(null);
+    if (!editSymbol.trim()) {
+      setEditError("Choose a stock.");
+      return;
+    }
+    if (editQty === null || !(editQty > 0)) {
+      setEditError("Enter a quantity.");
+      return;
+    }
+    if (editPrice === null || !(editPrice > 0)) {
+      setEditError("Enter a target price.");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const res = await onUpdate(side, editId, editSymbol, editQty, editPrice);
+      if (!res.ok) {
+        setEditError(res.error ?? "Could not update plan.");
+        return;
+      }
+      setEditId(null);
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editId, editSymbol, editQty, editPrice, onUpdate, side]);
 
   const commissionPct = commissionRate ? (commissionRate * 100).toFixed(3).replace(/\.?0+$/, "") : null;
 
@@ -192,45 +277,76 @@ function PlanSection({
     {
       title: "Stock",
       dataIndex: "symbol",
-      render: (v: string, row) => (
-        <span
-          className={`font-mono text-[14px] ${
-            row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
-          }`}
-        >
-          {v}
-        </span>
-      ),
+      render: (v: string, row) =>
+        editId === row.id ? (
+          <SymbolField
+            instruments={instruments}
+            loadError={instrumentsError}
+            value={editSymbol}
+            onValueChange={setEditSymbol}
+            placeholder="Trading code"
+            aria-label="Edit stock"
+            size="sm"
+          />
+        ) : (
+          <span
+            className={`font-mono text-[14px] ${
+              row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
+            }`}
+          >
+            {v}
+          </span>
+        ),
     },
     {
       title: "Qty",
       dataIndex: "quantity_shares",
       align: "right",
-      width: 90,
-      render: (v: number, row) => (
-        <span
-          className={`tabular-nums text-[14px] ${
-            row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
-          }`}
-        >
-          {formatShares(v)}
-        </span>
-      ),
+      width: 110,
+      render: (v: number, row) =>
+        editId === row.id ? (
+          <InputNumber
+            value={editQty}
+            onChange={(val) => setEditQty(typeof val === "number" ? val : null)}
+            min={0}
+            step={1}
+            size="small"
+            className="w-full"
+          />
+        ) : (
+          <span
+            className={`tabular-nums text-[14px] ${
+              row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
+            }`}
+          >
+            {formatShares(v)}
+          </span>
+        ),
     },
     {
       title: "Target price",
       dataIndex: "target_price",
       align: "right",
-      width: 120,
-      render: (v: number, row) => (
-        <span
-          className={`tabular-nums text-[14px] ${
-            row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
-          }`}
-        >
-          {formatBdt(v)}
-        </span>
-      ),
+      width: 130,
+      render: (v: number, row) =>
+        editId === row.id ? (
+          <InputNumber
+            value={editPrice}
+            onChange={(val) => setEditPrice(typeof val === "number" ? val : null)}
+            min={0}
+            step={0.1}
+            size="small"
+            className="w-full"
+          />
+        ) : (
+          <span
+            className={`tabular-nums text-[14px] ${
+              row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
+            }`}
+          >
+            {formatBdt(v)}
+          </span>
+        ),
     },
     {
       title: isBuy ? "Cost" : "Proceeds",
@@ -238,7 +354,12 @@ function PlanSection({
       align: "right",
       width: 130,
       render: (_, row) => {
-        const amt = planAmount(side, row.quantity_shares, row.target_price, commissionRate);
+        const editing = editId === row.id;
+        const amt = editing
+          ? editQty !== null && editQty > 0 && editPrice !== null && editPrice > 0
+            ? planAmount(side, editQty, editPrice, commissionRate)
+            : null
+          : planAmount(side, row.quantity_shares, row.target_price, commissionRate);
         return (
           <span
             className={`tabular-nums text-[14px] ${
@@ -249,8 +370,7 @@ function PlanSection({
                   : "text-[var(--gain-700)]"
             }`}
           >
-            {isBuy ? "−" : "+"}
-            {formatBdt(amt)}
+            {amt === null ? "—" : `${isBuy ? "−" : "+"}${formatBdt(amt)}`}
           </span>
         );
       },
@@ -258,16 +378,35 @@ function PlanSection({
     {
       title: "",
       key: "actions",
-      width: 160,
+      width: 180,
       align: "right",
-      render: (_, row) =>
-        row.executed ? (
-          <span className="text-[12px] text-[var(--ink-muted)]">Done — clears on refresh</span>
-        ) : (
-          <Button size="small" type="default" onClick={() => onMark(side, row.id)}>
-            Mark as done
-          </Button>
-        ),
+      render: (_, row) => {
+        if (row.executed) {
+          return <span className="text-[12px] text-[var(--ink-muted)]">Done — clears on refresh</span>;
+        }
+        if (editId === row.id) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button size="small" type="primary" loading={editSaving} onClick={() => void saveEdit()}>
+                Save
+              </Button>
+              <Button size="small" type="text" disabled={editSaving} onClick={cancelEdit}>
+                Cancel
+              </Button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <Button size="small" type="default" disabled={editId !== null} onClick={() => startEdit(row)}>
+              Edit
+            </Button>
+            <Button size="small" type="default" disabled={editId !== null} onClick={() => onMark(side, row.id)}>
+              Mark as done
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -362,6 +501,7 @@ function PlanSection({
         </div>
 
         {error ? <Alert type="error" showIcon message={error} /> : null}
+        {editError ? <Alert type="error" showIcon message={editError} /> : null}
 
         <Table<PositionPlanRow>
           rowKey="id"
