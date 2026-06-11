@@ -3,6 +3,7 @@
  * @see https://dsebd.org/datafile/quotes.txt
  */
 import { cache } from "react";
+import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
 
 export type DseInstrument = {
   /** DSE trading / scrip code (e.g. GP, BRACBANK, AMCL(PRAN)). */
@@ -94,10 +95,40 @@ async function fetchQuotesFromUrls(): Promise<{ instruments: DseInstrument[]; er
   return { instruments: [], error: lastErr };
 }
 
+/**
+ * Fallback symbol source: the DSE latest-share-price feed lists every trading
+ * code and tends to stay reachable even when `quotes.txt` is down. We only need
+ * the codes here, so we discard the price data.
+ */
+async function fetchInstrumentsFromLsp(): Promise<DseInstrument[]> {
+  const { bySymbol } = await fetchDseLspQuoteMap();
+  const out = [...bySymbol.keys()]
+    .map((symbol) => symbol.trim())
+    .filter(Boolean)
+    .map((symbol) => ({ symbol }));
+  out.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  return out;
+}
+
 export const getCachedDseInstruments = cache(async (): Promise<{
   instruments: DseInstrument[];
   error: string | null;
 }> => {
   const { instruments, error } = await fetchQuotesFromUrls();
+  if (instruments.length >= MIN_INSTRUMENTS) {
+    return { instruments, error: null };
+  }
+
+  // `quotes.txt` failed — derive codes from the latest-share-price feed so the
+  // symbol picker stays usable instead of dropping to "type code manually".
+  try {
+    const fromLsp = await fetchInstrumentsFromLsp();
+    if (fromLsp.length >= MIN_INSTRUMENTS) {
+      return { instruments: fromLsp, error: null };
+    }
+  } catch {
+    // Ignore and surface the original quotes.txt error below.
+  }
+
   return { instruments, error };
 });
