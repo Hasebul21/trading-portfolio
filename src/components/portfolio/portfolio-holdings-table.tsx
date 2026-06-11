@@ -345,18 +345,18 @@ export function PortfolioHoldingsTable({
     // we honour any rounding/aggregation done server-side; while editing, fall
     // back to the rows-derived total which reflects the draft.
     const totalInvestedDisplay = bookEditing ? summary.totalInvested : totalInvestedBdt;
-    // Cash adjustments (Settings → Cash adjustments) flow directly into the
-    // Unrealized P/L card so deposits/dividends/withdrawals visibly nudge the
-    // headline number on the portfolio page. Per-position rows and the sector
-    // banner keep using mark-to-market only.
+    // Unrealized P/L is mark-to-market on open positions only — it mirrors the
+    // per-position rows and the sector banner.
     const positionsUnrealized = summary.unrealizedGainLoss;
-    const totalUnrealized = positionsUnrealized + summary.cashAdjustments;
+    const totalUnrealized = positionsUnrealized;
     const totalUnrealizedPct =
         totalInvestedDisplay > 0 ? (totalUnrealized / totalInvestedDisplay) * 100 : 0;
-    // Net P/L = cumulative realized G/L from every sell in the ledger plus the
-    // cash dividends recorded under /dividend. Both are realized cash flows;
-    // the sell-side number mirrors the per-row P/L on the Trade History page.
-    const netRealizedPl = summary.realizedGainLoss + totalCashDividendsBdt;
+    // Net P/L = realized G/L from every sell in the ledger, plus cash dividends
+    // recorded under /dividend, plus manual cash adjustments (Settings → Cash
+    // adjustments). All three are realized cash flows, so deposits / dividends /
+    // withdrawals / fees always show up here.
+    const netRealizedPl =
+        summary.realizedGainLoss + totalCashDividendsBdt + summary.cashAdjustments;
     const positionCount = displayHoldings.length;
 
     // Expected upcoming-year cash dividend across the book. Each row's
@@ -651,7 +651,7 @@ export function PortfolioHoldingsTable({
                                 ? "text-[var(--loss-700)]"
                                 : ""
                             }`}
-                        title="Realized P/L from every sell in your trade history plus cash dividends from /dividend"
+                        title="Realized P/L from every sell in your trade history, plus cash dividends from /dividend and manual cash adjustments from Settings"
                     >
                         {fmtSignedBdt(netRealizedPl)}
                     </span>

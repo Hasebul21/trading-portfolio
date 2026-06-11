@@ -69,7 +69,7 @@ export function SettingsForm({
                 items: [
                     { key: "targets", label: "Sector targets", icon: Icons.targets(18), badge: initialSectorTargets.length || undefined },
                     { key: "topsectors", label: "Top sectors", icon: Icons.topsectors(18) },
-                    { key: "cash", label: "Cash adjustments", icon: Icons.cash(18) },
+                    { key: "cash", label: "Cash deductions", icon: Icons.cash(18) },
                     { key: "positions-cash", label: "Positions cash", icon: Icons.positions(18) },
                 ],
             },

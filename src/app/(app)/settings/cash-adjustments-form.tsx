@@ -10,8 +10,6 @@ import {
 } from "../settings-actions";
 import { Icons, SCard, SCardBody, SCardHead, SErr, SOk } from "./settings-ui";
 
-type Kind = "add" | "deduct";
-
 function fmtSigned(n: number): string {
   const s = `৳${formatBdt(Math.abs(n))}`;
   if (n > 0) return `+${s}`;
@@ -32,7 +30,6 @@ export function CashAdjustmentsForm({
   const [total, setTotal] = useState<number>(initialTotal);
   const [loadError, setLoadError] = useState<string | null>(initialError);
 
-  const [kind, setKind] = useState<Kind>("add");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   // Default to today. toISOString is UTC on both server and client, so the
@@ -55,7 +52,9 @@ export function CashAdjustmentsForm({
     }
   }, []);
 
-  const amountNum = Number(amount.replace(/,/g, ""));
+  // Deductions are always money out — use the magnitude; the entry is recorded
+  // as a negative amount on the server.
+  const amountNum = Math.abs(Number(amount.replace(/,/g, "")));
   const amountValid = Number.isFinite(amountNum) && amountNum > 0;
 
   const handleSave = useCallback(async () => {
@@ -69,7 +68,7 @@ export function CashAdjustmentsForm({
     try {
       const res = await createCashAdjustment({
         amount: amountNum,
-        kind,
+        kind: "deduct",
         note,
         occurredOn: occurredOn || null,
       });
@@ -87,7 +86,7 @@ export function CashAdjustmentsForm({
     } finally {
       setSaving(false);
     }
-  }, [amountValid, amountNum, kind, note, occurredOn, refresh]);
+  }, [amountValid, amountNum, note, occurredOn, refresh]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -105,24 +104,12 @@ export function CashAdjustmentsForm({
     <>
       <SCard>
         <SCardHead
-          tone="acc"
+          tone="loss"
           icon={Icons.cash()}
-          title="Add or deduct money"
-          desc="Positive entries add to the Unrealized P/L on the Portfolio page (e.g. dividends, refunds). Negative entries deduct (e.g. withdrawals). Each entry flows into your Net Gain/Loss."
+          title="Record a deduction"
+          desc="Money out — fees, charges, withdrawals. Each entry is deducted from your Net P/L on the Portfolio page (always reflected in Net Gain/Loss)."
         />
         <SCardBody>
-          <div className="field">
-            <label className="lbl">Type</label>
-            <div className="seg">
-              <button data-on="add" className={kind === "add" ? "active" : ""} onClick={() => setKind("add")}>
-                Add
-              </button>
-              <button data-on="deduct" className={kind === "deduct" ? "active" : ""} onClick={() => setKind("deduct")}>
-                Deduct
-              </button>
-            </div>
-          </div>
-
           <div className="grid2">
             <div className="field" style={{ marginBottom: 0 }}>
               <label className="lbl">Amount (BDT)</label>
@@ -156,7 +143,7 @@ export function CashAdjustmentsForm({
             <input
               className="inp"
               type="text"
-              placeholder="e.g. Cash dividend from GP"
+              placeholder="e.g. BO account renewal fee"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               maxLength={200}
@@ -165,28 +152,27 @@ export function CashAdjustmentsForm({
 
           <div className="btn-row">
             <button
-              className={`btn ${kind === "add" ? "btn-gain" : "btn-danger"}`}
+              className="btn btn-danger"
               disabled={saving || !amountValid}
               onClick={() => void handleSave()}
             >
-              {saving ? "Saving…" : kind === "add" ? "Add to Unrealized P/L" : "Deduct from Unrealized P/L"}
+              {saving ? "Saving…" : "Deduct from Net P/L"}
             </button>
           </div>
 
           {saveError ? <SErr>{saveError}</SErr> : null}
-          {saveOk ? <SOk>Entry recorded.</SOk> : null}
+          {saveOk ? <SOk>Deduction recorded.</SOk> : null}
         </SCardBody>
       </SCard>
 
       <SCard>
         <SCardHead
-          tone="acc"
+          tone="loss"
           icon={Icons.history()}
           title="History"
           right={
             <span className="total">
-              Net adjustments:{" "}
-              <b className={total >= 0 ? "ok" : "over"}>{fmtSigned(total)}</b>
+              Total deducted: <b className="over">{fmtSigned(total)}</b>
             </span>
           }
         />
@@ -205,7 +191,7 @@ export function CashAdjustmentsForm({
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={4}>
-                    <div className="empty-row">No adjustments yet.</div>
+                    <div className="empty-row">No deductions yet.</div>
                   </td>
                 </tr>
               ) : null}
