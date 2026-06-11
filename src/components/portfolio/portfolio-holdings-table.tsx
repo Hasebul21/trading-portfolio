@@ -9,8 +9,8 @@ import {
 import { saveStockAllocations } from "@/app/(app)/stock-allocation-actions";
 import {
     formatBdt,
-    formatNumberMax2Decimals,
     formatPlainNumberMax2Decimals,
+    formatShares,
 } from "@/lib/format-bdt";
 import { calculateBreakEvenPrice, computePortfolioSummary } from "@/lib/portfolio";
 import type { PortfolioMarketRow } from "@/lib/market/portfolio-with-quotes";
@@ -1114,7 +1114,7 @@ function HoldingRow({
                         ) : null}
                     </span>
                     <span className="text-[11px] text-[var(--ink-muted)] tabular-nums">
-                        {formatNumberMax2Decimals(row.shares)} shares
+                        {formatShares(row.shares)} shares
                     </span>
                     {allocEditing ? (
                         <div className="mt-1.5 flex items-center gap-2">

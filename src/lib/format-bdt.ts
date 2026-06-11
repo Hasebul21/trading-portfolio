@@ -18,6 +18,18 @@ export function formatBdt(n: number): string {
 }
 
 /**
+ * Share counts: locale grouping, no forced decimals. Whole numbers render
+ * without a fraction ("5"), fractional lots keep up to two digits ("5.5").
+ */
+export function formatShares(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
  * Same numeric rule as {@link formatNumberMax2Decimals} but no thousands separators (safe for inputs).
  */
 export function formatPlainNumberMax2Decimals(n: number): string {
