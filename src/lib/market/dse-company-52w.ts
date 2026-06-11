@@ -138,9 +138,58 @@ export type DseCompanyExtras = {
    * portfolio's Unrealized Dividend KPI. Null when no usable data is found.
    */
   dividendYieldAvg5YPct: number | null;
+  /**
+   * Most recently declared annual *cash* dividend as a % of face value, parsed
+   * from the company page's "Cash Dividend" row (interim + final for that year
+   * summed). e.g. 215 → 215% of the ৳10 face value = ৳21.50 per share. This is
+   * the price-independent basis for the portfolio's Unrealized Dividend KPI.
+   * Null when the company publishes no cash dividend.
+   */
+  cashDividendPct: number | null;
+  /** Fiscal year the {@link cashDividendPct} was declared for; null if unknown. */
+  cashDividendYear: number | null;
   /** Months since last AGM; null if unknown */
   lastAgmMonthsAgo: number | null;
 };
+
+/**
+ * Latest declared annual *cash* dividend from the company page's "Cash Dividend"
+ * row, e.g. `215% 2025, 330% 2024, …` (newest first). Returns the most recent
+ * year and the sum of that year's cash percentages, so interim + final splits
+ * are combined. Cash-only — the separate "Bonus Issue (Stock Dividend)" row is
+ * deliberately ignored. Returns null when there is no cash dividend.
+ */
+export function parseLatestCashDividend(
+  html: string,
+): { year: number; pct: number } | null {
+  const m = html.match(/Cash\s*Dividend\s*<\/th>\s*<td[^>]*>([\s\S]*?)<\/td>/i);
+  if (!m) return null;
+  const text = cellText(m[1]);
+  if (!text || /^[-—–\s]*$/.test(text)) return null;
+
+  const pairs = [...text.matchAll(/([\d.]+)\s*%\s*(\d{4})/g)];
+  if (pairs.length === 0) return null;
+
+  let maxYear = -1;
+  for (const p of pairs) {
+    const y = Number(p[2]);
+    if (Number.isInteger(y) && y > maxYear) maxYear = y;
+  }
+  if (maxYear < 0) return null;
+
+  let sum = 0;
+  let found = false;
+  for (const p of pairs) {
+    if (Number(p[2]) === maxYear) {
+      const v = Number(p[1]);
+      if (Number.isFinite(v) && v > 0) {
+        sum += v;
+        found = true;
+      }
+    }
+  }
+  return found ? { year: maxYear, pct: Math.round(sum * 100) / 100 } : null;
+}
 
 /**
  * Parse DSE's Financial Performance / Year-End tables on the company page.
@@ -307,6 +356,10 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   const dividendYieldPct = fin.dividendYieldPct;
   const dividendYieldAvg5YPct = fin.dividendYieldAvg5YPct;
 
+  // Declared cash dividend (cash-only) — the accurate, price-independent basis
+  // for expected dividends.
+  const cashDiv = parseLatestCashDividend(html);
+
   // Market Capitalization (mn) — convert mn BDT → crore BDT (1 crore = 10 mn)
   const mcapMn = parseNumericField(
     html,
@@ -362,6 +415,8 @@ function parseDseCompanyFundamentals(html: string): Omit<DseCompanyExtras, "week
   return {
     pe, eps, nav, category, freeFloat, betaFloat: null,
     dividendYieldPct, dividendYieldAvg5YPct,
+    cashDividendPct: cashDiv?.pct ?? null,
+    cashDividendYear: cashDiv?.year ?? null,
     marketCapCr, listedYears, lastAgmMonthsAgo,
   };
 }
@@ -380,6 +435,7 @@ export async function fetchDseCompanyExtras(
     pe: null, eps: null, nav: null, marketCapCr: null, listedYears: null,
     betaFloat: null, freeFloat: null,
     dividendYieldPct: null, dividendYieldAvg5YPct: null,
+    cashDividendPct: null, cashDividendYear: null,
     lastAgmMonthsAgo: null,
   };
   if (!sym) return nullResult;

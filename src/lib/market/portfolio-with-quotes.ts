@@ -22,9 +22,18 @@ export type PortfolioMarketRow = HoldingRow & {
   signalReason: string;
   /** Latest declared dividend yield % from DSE; null when not available. */
   divYieldPct: number | null;
-  /** Expected annual cash dividend in BDT — shares × (divYieldPct/100) × LTP. */
+  /** Most recent declared annual cash dividend % of face value; null if none. */
+  cashDividendPct: number | null;
+  /**
+   * Expected annual cash dividend in BDT. Prefers the declared cash dividend:
+   * shares × (faceValue × cashDividendPct/100) — price-independent. Falls back
+   * to shares × (divYieldPct/100) × LTP when no cash dividend is published.
+   */
   expectedAnnualDividendBdt: number | null;
 };
+
+/** DSE-listed equities trade at a ৳10 face (par) value; DSE doesn't publish it. */
+const FACE_VALUE_BDT = 10;
 
 /** Merge ledger/override holdings with DSE market and company metadata. */
 export function holdingsToMarketRows(
@@ -69,15 +78,27 @@ export function holdingsToMarketRows(
       signalReason = "Missing fundamentals";
     }
 
-    // Unrealized Dividend on the portfolio uses the 5-year average yield to
-    // smooth one-off skip years. Falls back to the latest published yield only
-    // when no 5y data is available (e.g. newly listed shares).
+    // Expected annual dividend. Most accurate: the actual declared cash dividend
+    // per share (face value × cash %), which is what you'll receive regardless
+    // of today's price. When a company hasn't published a cash dividend, fall
+    // back to the 5y-average yield × LTP estimate (newly listed shares, etc.).
+    const cashDividendPct = extras?.cashDividendPct ?? null;
     const divYieldPct =
       extras?.dividendYieldAvg5YPct ?? extras?.dividendYieldPct ?? null;
-    const expectedAnnualDividendBdt =
-      divYieldPct !== null && divYieldPct > 0 && marketLtp !== null && Number.isFinite(marketLtp)
-        ? Math.round((divYieldPct / 100) * marketLtp * h.shares * 100) / 100
-        : null;
+
+    let expectedAnnualDividendBdt: number | null = null;
+    if (cashDividendPct !== null && cashDividendPct > 0) {
+      const dps = (FACE_VALUE_BDT * cashDividendPct) / 100;
+      expectedAnnualDividendBdt = Math.round(dps * h.shares * 100) / 100;
+    } else if (
+      divYieldPct !== null &&
+      divYieldPct > 0 &&
+      marketLtp !== null &&
+      Number.isFinite(marketLtp)
+    ) {
+      expectedAnnualDividendBdt =
+        Math.round((divYieldPct / 100) * marketLtp * h.shares * 100) / 100;
+    }
 
     return {
       ...h,
@@ -90,6 +111,7 @@ export function holdingsToMarketRows(
       signal,
       signalReason,
       divYieldPct,
+      cashDividendPct,
       expectedAnnualDividendBdt,
     };
   });

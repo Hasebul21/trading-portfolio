@@ -21,6 +21,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SECTOR_FILTER_ALL = "__all__";
 
+/** DSE-listed equities trade at a ৳10 face (par) value — basis for cash DPS. */
+const DIVIDEND_FACE_VALUE_BDT = 10;
+
 type DataRow = PortfolioMarketRow & {
     key: string;
     /** This stock's share of its sector's invested cost basis, 0–100. */
@@ -359,11 +362,15 @@ export function PortfolioHoldingsTable({
         summary.realizedGainLoss + totalCashDividendsBdt + summary.cashAdjustments;
     const positionCount = displayHoldings.length;
 
-    // Expected upcoming-year cash dividend across the book. Each row's
-    // expectedAnnualDividendBdt is shares × (5y-avg yield %) × LTP from DSE; we
-    // re-multiply by `h.shares` here so the figure tracks any draft edits made
+    // Expected upcoming-year cash dividend across the book. Prefer the declared
+    // cash dividend per share (face value × cash %) — price-independent — and
+    // fall back to the 5y-avg yield × LTP estimate when none is published. We
+    // recompute from `h.shares` here so the figure tracks any draft edits made
     // in the book editor (where `displayHoldings` already reflects the draft).
     const expectedAnnualDividendTotal = displayHoldings.reduce((sum, h) => {
+        if (h.cashDividendPct !== null && h.cashDividendPct > 0) {
+            return sum + ((DIVIDEND_FACE_VALUE_BDT * h.cashDividendPct) / 100) * h.shares;
+        }
         if (h.divYieldPct !== null && h.divYieldPct > 0 && h.marketLtp !== null && Number.isFinite(h.marketLtp)) {
             return sum + (h.divYieldPct / 100) * h.marketLtp * h.shares;
         }
@@ -662,7 +669,7 @@ export function PortfolioHoldingsTable({
                             ? "text-[var(--gain-700)]"
                             : ""
                             }`}
-                        title="Expected upcoming-year cash dividend based on the 5-year average DSE dividend yield × LTP × shares"
+                        title="Expected upcoming-year cash dividend — declared cash dividend per share (৳10 face value × cash %) × shares, or the 5y-average yield × LTP when no cash dividend is published"
                     >
                         {formatBdt(expectedAnnualDividendTotal)}
                         <span className="ml-2 text-[12px] font-normal opacity-80">
@@ -1216,8 +1223,8 @@ function HoldingRow({
                 ) : null}
             </RowCell>
 
-            {/* Unrealized dividend — shares × (DSE-declared yield) × LTP. Null
-                when either the yield or live price is unavailable. */}
+            {/* Unrealized dividend — declared cash DPS (৳10 face × cash %) ×
+                shares, or 5y-avg yield × LTP when no cash dividend is published. */}
             <RowCell label="Unrealized Div">
                 <div
                     className={`text-[14px] tabular-nums ${divKnown && (row.expectedAnnualDividendBdt as number) > 0
@@ -1225,9 +1232,11 @@ function HoldingRow({
                         : "text-[var(--ink-strong)]"
                         }`}
                     title={
-                        row.divYieldPct !== null && row.divYieldPct > 0
-                            ? `5-year average DSE dividend yield ${row.divYieldPct.toFixed(2)}%`
-                            : "No dividend yield published"
+                        row.cashDividendPct !== null && row.cashDividendPct > 0
+                            ? `Declared cash dividend ${row.cashDividendPct.toFixed(0)}% of ৳10 = ৳${((DIVIDEND_FACE_VALUE_BDT * row.cashDividendPct) / 100).toFixed(2)}/share`
+                            : row.divYieldPct !== null && row.divYieldPct > 0
+                                ? `5-year average DSE dividend yield ${row.divYieldPct.toFixed(2)}% (no cash dividend published)`
+                                : "No dividend published"
                     }
                 >
                     {divKnown ? formatBdt(row.expectedAnnualDividendBdt as number) : "—"}
