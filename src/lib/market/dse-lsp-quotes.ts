@@ -6,8 +6,18 @@ import { cacheLife, cacheTag } from "next/cache";
 
 const DEFAULT_LSP_URLS = [
   "https://dsebd.org/latest_share_price_scroll_l.php",
+  "https://www.dsebd.org/latest_share_price_scroll_l.php",
   "https://dsebd.com.bd/latest_share_price_scroll_l.php",
 ] as const;
+
+const FETCH_TIMEOUT_MS = 22_000;
+
+/** DSE rejects the default undici User-Agent on some endpoints; mimic a browser. */
+const LSP_FETCH_HEADERS = {
+  Accept: "text/html,*/*",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+} as const;
 
 export type DseLspQuote = {
   ltp: number;
@@ -89,7 +99,10 @@ async function _fetchLspRaw(): Promise<{
 
   for (const url of urls) {
     try {
-      const res = await fetch(url, { headers: { Accept: "text/html,*/*" } });
+      const res = await fetch(url, {
+        headers: LSP_FETCH_HEADERS,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
       if (!res.ok) { lastErr = `DSE LSP HTTP ${res.status}`; continue; }
       const html = await res.text();
       const bySymbol = parseLspHtml(html);
@@ -125,8 +138,9 @@ export async function fetchDseLspQuoteMapFresh(): Promise<{
   for (const url of urls) {
     try {
       const res = await fetch(url, {
-        headers: { Accept: "text/html,*/*" },
+        headers: LSP_FETCH_HEADERS,
         cache: "no-store",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!res.ok) {
         lastErr = `DSE LSP HTTP ${res.status}`;

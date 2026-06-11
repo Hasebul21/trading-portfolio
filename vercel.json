@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm run migrate && npm run build",
+  "regions": ["bom1"],
   "crons": [
     {
       "path": "/api/portfolio-report",
