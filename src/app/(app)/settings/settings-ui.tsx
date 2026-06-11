@@ -220,6 +220,17 @@ export const Icons = {
     ),
   history: (s?: number) =>
     svg(<path d="M5 7h14M5 12h14M5 17h9" />, s),
+  dividend: (s?: number) =>
+    svg(
+      <>
+        <circle cx="9" cy="11" r="6" />
+        <path d="M9 8v6" />
+        <path d="M11 9.5c-.5-.7-1.5-1-2.5-1-1.5 0-2.5.7-2.5 1.7 0 2.3 5 1.3 5 3.6 0 1-.9 1.7-2.5 1.7-1 0-2-.3-2.5-1" />
+        <path d="M16.5 7.5a6 6 0 0 1 0 7" />
+        <path d="M19 5a9 9 0 0 1 0 12" />
+      </>,
+      s,
+    ),
   search: (s?: number) =>
     svg(
       <>

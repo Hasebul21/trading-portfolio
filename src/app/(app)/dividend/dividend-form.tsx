@@ -13,8 +13,6 @@ import {
   type DividendRow,
 } from "../dividend-actions";
 
-type SummaryRow = { symbol: string; cash: number; shares: number; payouts: number };
-
 export function DividendForm({
   instruments,
   instrumentsError,
@@ -50,26 +48,6 @@ export function DividendForm({
     () => instruments.map((i) => ({ value: i.symbol })),
     [instruments],
   );
-
-  // Per-stock totals from every recorded dividend — drives the summary table.
-  const summary = useMemo<SummaryRow[]>(() => {
-    const map = new Map<string, SummaryRow>();
-    for (const r of rows) {
-      const e =
-        map.get(r.symbol) ?? { symbol: r.symbol, cash: 0, shares: 0, payouts: 0 };
-      e.cash += r.cash_dividend_bdt;
-      e.shares += r.stock_dividend_shares;
-      e.payouts += 1;
-      map.set(r.symbol, e);
-    }
-    return [...map.values()]
-      .map((e) => ({
-        ...e,
-        cash: Math.round(e.cash * 100) / 100,
-        shares: Math.round(e.shares * 10000) / 10000,
-      }))
-      .sort((a, b) => b.cash - a.cash || b.shares - a.shares || a.symbol.localeCompare(b.symbol));
-  }, [rows]);
 
   const refresh = useCallback(async () => {
     const res = await listDividends();
@@ -223,49 +201,6 @@ export function DividendForm({
     },
   ];
 
-  const summaryColumns: ColumnsType<SummaryRow> = [
-    {
-      title: "Stock",
-      dataIndex: "symbol",
-      render: (v: string) => (
-        <span className="font-mono text-[14px] text-[var(--ink-strong)]">{v}</span>
-      ),
-    },
-    {
-      title: "Cash dividend",
-      dataIndex: "cash",
-      align: "right",
-      render: (v: number) =>
-        v > 0 ? (
-          <span className="text-[14px] tabular-nums text-[var(--gain-700)]">+{formatBdt(v)}</span>
-        ) : (
-          <span className="text-[14px] text-[var(--ink-muted)]">—</span>
-        ),
-    },
-    {
-      title: "Stock dividend (shares)",
-      dataIndex: "shares",
-      align: "right",
-      render: (v: number) =>
-        v > 0 ? (
-          <span className="text-[14px] tabular-nums text-[var(--ink-strong)]">
-            +{formatPlainNumberMax2Decimals(v)}
-          </span>
-        ) : (
-          <span className="text-[14px] text-[var(--ink-muted)]">—</span>
-        ),
-    },
-    {
-      title: "Payouts",
-      dataIndex: "payouts",
-      align: "right",
-      width: 90,
-      render: (v: number) => (
-        <span className="text-[14px] tabular-nums text-[var(--ink-muted)]">{v}</span>
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-5">
       <AppSectionTitle>Dividends</AppSectionTitle>
@@ -393,39 +328,6 @@ export function DividendForm({
           {saveOk && (
             <Alert type="success" showIcon message="Saved" description="Dividend recorded." />
           )}
-        </div>
-      </Card>
-
-      <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "20px 24px" } }}>
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[14px] text-[var(--ink-strong)]">Dividend summary</h3>
-            <span className="text-[13px] text-[var(--ink-muted)]">
-              Total cash:{" "}
-              <span className="tabular-nums text-[var(--gain-700)]">+{formatBdt(totalCash)}</span>
-              {totalStockShares > 0 ? (
-                <>
-                  {" · "}Bonus shares:{" "}
-                  <span className="tabular-nums text-[var(--ink-strong)]">
-                    +{formatPlainNumberMax2Decimals(totalStockShares)}
-                  </span>
-                </>
-              ) : null}
-            </span>
-          </div>
-          <p className="text-[12px] text-[var(--ink-muted)]">
-            Cash and stock (bonus share) dividends you&apos;ve recorded, totalled per stock.
-          </p>
-
-          <Table<SummaryRow>
-            rowKey="symbol"
-            columns={summaryColumns}
-            dataSource={summary}
-            pagination={false}
-            size="small"
-            scroll={{ x: "max-content" }}
-            locale={{ emptyText: "No dividends recorded yet." }}
-          />
         </div>
       </Card>
 

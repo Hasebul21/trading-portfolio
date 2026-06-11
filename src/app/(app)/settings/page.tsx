@@ -1,6 +1,7 @@
 import { AppPageStack } from "@/components/app-page-stack";
 import { getUserSettings, listCashAdjustments } from "../settings-actions";
 import { getSectorTargets } from "../sector-target-actions";
+import { listDividends } from "../dividend-actions";
 import { SettingsForm } from "./settings-form";
 
 export const metadata = {
@@ -8,10 +9,11 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-    const [settingsRes, targetsRes, adjustmentsRes] = await Promise.all([
+    const [settingsRes, targetsRes, adjustmentsRes, dividendsRes] = await Promise.all([
         getUserSettings(),
         getSectorTargets(),
         listCashAdjustments(),
+        listDividends(),
     ]);
 
     return (
@@ -24,6 +26,10 @@ export default async function SettingsPage() {
                     initialCashAdjustments={adjustmentsRes.ok ? adjustmentsRes.rows : []}
                     initialCashAdjustmentsTotal={adjustmentsRes.ok ? adjustmentsRes.total : 0}
                     cashAdjustmentsError={adjustmentsRes.ok ? null : adjustmentsRes.error}
+                    initialDividends={dividendsRes.ok ? dividendsRes.rows : []}
+                    initialDividendTotalCash={dividendsRes.ok ? dividendsRes.totalCash : 0}
+                    initialDividendTotalStockShares={dividendsRes.ok ? dividendsRes.totalStockShares : 0}
+                    dividendsError={dividendsRes.ok ? null : dividendsRes.error}
                 />
             ) : (
                 <div className="rounded-lg border border-[var(--loss-200)] bg-[var(--loss-50)] px-4 py-3 text-[var(--loss-700)]">

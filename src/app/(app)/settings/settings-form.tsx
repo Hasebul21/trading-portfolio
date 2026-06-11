@@ -9,7 +9,9 @@ import {
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
 import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
+import type { DividendRow } from "../dividend-actions";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
+import { DividendSummary } from "./dividend-summary";
 import { PositionsCashForm } from "./positions-cash-form";
 import { SectorTargetsForm } from "./sector-targets-form";
 import { TopSectorsForm } from "./top-sectors-form";
@@ -32,6 +34,7 @@ type TabKey =
     | "topsectors"
     | "cash"
     | "positions-cash"
+    | "dividend-summary"
     | "email";
 
 type NavItem = { key: TabKey; label: string; icon: ReactNode; badge?: number };
@@ -44,6 +47,10 @@ export function SettingsForm({
     initialCashAdjustments,
     initialCashAdjustmentsTotal,
     cashAdjustmentsError,
+    initialDividends,
+    initialDividendTotalCash,
+    initialDividendTotalStockShares,
+    dividendsError,
 }: {
     initialSettings: UserSettings;
     initialSectorTargets: SectorTargetWithCurrent[];
@@ -51,6 +58,10 @@ export function SettingsForm({
     initialCashAdjustments: CashAdjustmentRow[];
     initialCashAdjustmentsTotal: number;
     cashAdjustmentsError: string | null;
+    initialDividends: DividendRow[];
+    initialDividendTotalCash: number;
+    initialDividendTotalStockShares: number;
+    dividendsError: string | null;
 }) {
     const [activeTab, setActiveTab] = useState<TabKey>("profile");
     const [query, setQuery] = useState("");
@@ -71,6 +82,7 @@ export function SettingsForm({
                     { key: "topsectors", label: "Top sectors", icon: Icons.topsectors(18) },
                     { key: "cash", label: "Cash deductions", icon: Icons.cash(18) },
                     { key: "positions-cash", label: "Positions cash", icon: Icons.positions(18) },
+                    { key: "dividend-summary", label: "Dividend summary", icon: Icons.dividend(18) },
                 ],
             },
             {
@@ -186,6 +198,15 @@ export function SettingsForm({
 
                     <Panel active={activeTab === "positions-cash"}>
                         <PositionsCashForm initialBalance={initialSettings.positions_balance_bdt ?? 0} />
+                    </Panel>
+
+                    <Panel active={activeTab === "dividend-summary"}>
+                        <DividendSummary
+                            rows={initialDividends}
+                            totalCash={initialDividendTotalCash}
+                            totalStockShares={initialDividendTotalStockShares}
+                            error={dividendsError}
+                        />
                     </Panel>
 
                     <Panel active={activeTab === "email"}>
