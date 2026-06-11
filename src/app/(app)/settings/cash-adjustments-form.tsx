@@ -107,7 +107,6 @@ export function CashAdjustmentsForm({
           tone="loss"
           icon={Icons.cash()}
           title="Record a deduction"
-          desc="Money out — fees, charges, withdrawals. Each entry is deducted from your Net P/L on the Portfolio page (always reflected in Net Gain/Loss)."
         />
         <SCardBody>
           <div className="grid2">

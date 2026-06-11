@@ -71,7 +71,6 @@ export function PositionsCashForm({ initialBalance }: { initialBalance: number }
         tone="gain"
         icon={Icons.positions()}
         title="Positions available amount"
-        desc="The cash pool shown on the Positions page. Top up here; buy/sell marks move it automatically. Independent of Cash adjustments and Net Gain/Loss."
         right={
           <span className="total">
             Balance: <b style={{ color: "var(--ink-strong)" }}>৳{formatBdt(balance)}</b>

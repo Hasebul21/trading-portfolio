@@ -42,7 +42,6 @@ export function DividendSummary({
         tone="gain"
         icon={Icons.dividend()}
         title="Dividend summary"
-        desc="Cash and stock (bonus share) dividends you've recorded under Dividends, totalled per stock."
         right={
           <span className="total">
             Total cash: <b className="ok">+৳{formatBdt(totalCash)}</b>

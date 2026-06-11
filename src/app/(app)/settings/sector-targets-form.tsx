@@ -199,12 +199,7 @@ export function SectorTargetsForm({
             </SStats>
 
             <SCard>
-                <SCardHead
-                    tone="gain"
-                    icon={Icons.targets()}
-                    title="Sector target allocation"
-                    desc="Set the % of your portfolio you want in each sector. The Allocation page shows these targets next to your current weights so you can see drift at a glance. Leave a target blank to remove it."
-                />
+                <SCardHead tone="gain" icon={Icons.targets()} title="Sector target allocation" />
                 <SCardBody>
                     <datalist id={`sectors-${listId}`}>
                         {sectorOptions.map((s) => (

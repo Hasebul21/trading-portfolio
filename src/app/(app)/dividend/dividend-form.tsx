@@ -1,38 +1,18 @@
 "use client";
 
 import { AppSectionTitle } from "@/components/app-page-header";
-import { formatBdt, formatPlainNumberMax2Decimals } from "@/lib/format-bdt";
-import { Alert, AutoComplete, Button, Card, DatePicker, Input, InputNumber, Popconfirm, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Alert, AutoComplete, Button, Card, DatePicker, Input, InputNumber } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { useCallback, useMemo, useState, useTransition } from "react";
-import {
-  createDividend,
-  deleteDividend,
-  listDividends,
-  type DividendRow,
-} from "../dividend-actions";
+import { useCallback, useMemo, useState } from "react";
+import { createDividend } from "../dividend-actions";
 
 export function DividendForm({
   instruments,
   instrumentsError,
-  initialRows,
-  initialTotalCash,
-  initialTotalStockShares,
-  initialError,
 }: {
   instruments: { symbol: string }[];
   instrumentsError: string | null;
-  initialRows: DividendRow[];
-  initialTotalCash: number;
-  initialTotalStockShares: number;
-  initialError: string | null;
 }) {
-  const [rows, setRows] = useState<DividendRow[]>(initialRows);
-  const [totalCash, setTotalCash] = useState(initialTotalCash);
-  const [totalStockShares, setTotalStockShares] = useState(initialTotalStockShares);
-  const [loadError, setLoadError] = useState<string | null>(initialError);
-
   const [symbol, setSymbol] = useState("");
   const [cash, setCash] = useState<number | null>(null);
   const [stockShares, setStockShares] = useState<number | null>(null);
@@ -42,24 +22,11 @@ export function DividendForm({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
-  const [, startTransition] = useTransition();
 
   const symbolOptions = useMemo(
     () => instruments.map((i) => ({ value: i.symbol })),
     [instruments],
   );
-
-  const refresh = useCallback(async () => {
-    const res = await listDividends();
-    if (res.ok) {
-      setRows(res.rows);
-      setTotalCash(res.totalCash);
-      setTotalStockShares(res.totalStockShares);
-      setLoadError(null);
-    } else {
-      setLoadError(res.error);
-    }
-  }, []);
 
   const resetForm = useCallback(() => {
     setSymbol("");
@@ -100,106 +67,13 @@ export function DividendForm({
       }
       setSaveOk(true);
       resetForm();
-      startTransition(() => {
-        void refresh();
-      });
       setTimeout(() => setSaveOk(false), 3000);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSaving(false);
     }
-  }, [symbol, cash, stockShares, note, occurredOn, refresh, resetForm]);
-
-  const handleDelete = useCallback(
-    async (id: string) => {
-      const res = await deleteDividend(id);
-      if (!res.ok) {
-        setLoadError(res.error);
-        return;
-      }
-      await refresh();
-    },
-    [refresh],
-  );
-
-  const columns: ColumnsType<DividendRow> = [
-    {
-      title: "Date",
-      dataIndex: "occurred_on",
-      width: 116,
-      render: (v: string) => (
-        <span className="text-[14px] tabular-nums text-[var(--ink-strong)]">{v}</span>
-      ),
-    },
-    {
-      title: "Stock",
-      dataIndex: "symbol",
-      width: 110,
-      render: (v: string) => (
-        <span className="font-mono text-[14px] text-[var(--ink-strong)]">{v}</span>
-      ),
-    },
-    {
-      title: "Cash",
-      dataIndex: "cash_dividend_bdt",
-      width: 130,
-      align: "right",
-      render: (v: number) =>
-        v > 0 ? (
-          <span className="text-[14px] tabular-nums text-[var(--gain-700)]">
-            +{formatBdt(v)}
-          </span>
-        ) : (
-          <span className="text-[14px] text-[var(--ink-muted)]">—</span>
-        ),
-    },
-    {
-      title: "Bonus shares",
-      dataIndex: "stock_dividend_shares",
-      width: 120,
-      align: "right",
-      render: (v: number) =>
-        v > 0 ? (
-          <span className="text-[14px] tabular-nums text-[var(--ink-strong)]">
-            +{formatPlainNumberMax2Decimals(v)}
-          </span>
-        ) : (
-          <span className="text-[14px] text-[var(--ink-muted)]">—</span>
-        ),
-    },
-    {
-      title: "Note",
-      dataIndex: "note",
-      render: (v: string | null) => (
-        <span className="text-[14px] text-[var(--ink-strong)]">{v ?? "—"}</span>
-      ),
-    },
-    {
-      title: "",
-      key: "actions",
-      width: 72,
-      align: "right",
-      render: (_, row) => (
-        <Popconfirm
-          title="Delete this dividend?"
-          description={
-            row.bonus_tx_id
-              ? "The cash will be removed from your Net P/L and the bonus shares removed from your position."
-              : "The cash will be removed from your Net P/L."
-          }
-          okText="Delete"
-          okButtonProps={{ danger: true }}
-          cancelText="Cancel"
-          onConfirm={() => void handleDelete(row.id)}
-        >
-          <Button danger size="small" type="text">
-            Delete
-          </Button>
-        </Popconfirm>
-      ),
-    },
-  ];
+  }, [symbol, cash, stockShares, note, occurredOn, resetForm]);
 
   return (
     <div className="space-y-5">
@@ -207,17 +81,6 @@ export function DividendForm({
 
       <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "20px 24px" } }}>
         <div className="space-y-4">
-          <div>
-            <h3 className="text-[14px] text-[var(--ink-strong)]">Record a dividend</h3>
-            <p className="mt-1 text-[12px] text-[var(--ink-muted)]">
-              Pick the stock, then enter the cash and/or stock (bonus share)
-              dividend you received. The cash amount rolls into your{" "}
-              <span className="text-[var(--ink-strong)]">Net P/L</span> on the
-              Portfolio page alongside realized sell P/L. Bonus shares are added
-              to that position, which lowers its average cost.
-            </p>
-          </div>
-
           <div>
             <label className="block text-[14px] text-[var(--ink-strong)]">Stock</label>
             {instrumentsError ? (
@@ -328,42 +191,6 @@ export function DividendForm({
           {saveOk && (
             <Alert type="success" showIcon message="Saved" description="Dividend recorded." />
           )}
-        </div>
-      </Card>
-
-      <Card variant="outlined" className="rounded-xl" styles={{ body: { padding: "20px 24px" } }}>
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[14px] text-[var(--ink-strong)]">History</h3>
-            <span className="text-[13px] text-[var(--ink-muted)]">
-              Total cash:{" "}
-              <span className="tabular-nums text-[var(--gain-700)]">
-                +{formatBdt(totalCash)}
-              </span>
-              {totalStockShares > 0 ? (
-                <>
-                  {" · "}Bonus shares:{" "}
-                  <span className="tabular-nums text-[var(--ink-strong)]">
-                    +{formatPlainNumberMax2Decimals(totalStockShares)}
-                  </span>
-                </>
-              ) : null}
-            </span>
-          </div>
-
-          {loadError ? (
-            <Alert type="error" showIcon message="Could not load dividends" description={loadError} />
-          ) : null}
-
-          <Table<DividendRow>
-            rowKey="id"
-            columns={columns}
-            dataSource={rows}
-            pagination={{ pageSize: 10, hideOnSinglePage: true }}
-            size="small"
-            scroll={{ x: "max-content" }}
-            locale={{ emptyText: "No dividends recorded yet." }}
-          />
         </div>
       </Card>
     </div>
