@@ -166,6 +166,12 @@ function fmtPct(n: number) {
     return `${sign}${Math.abs(n).toFixed(2)}%`;
 }
 
+/** Compact percent: 1 decimal, trailing ".0" dropped (e.g. "30%", "39.3%"). */
+function fmtPctShort(n: number) {
+    const r = Math.round(n * 10) / 10;
+    return Number.isInteger(r) ? `${r}%` : `${r.toFixed(1)}%`;
+}
+
 /** Build the four KPI cards for the top strip from currently displayed rows. */
 function summaryFromRows(
     rows: PortfolioMarketRow[],
@@ -1129,15 +1135,32 @@ function HoldingRow({
                                 now {row.sectorWeightPct.toFixed(1)}%
                             </span>
                         </div>
+                    ) : row.allocTargetPct !== null ? (
+                        <span
+                            className="mt-0.5 inline-flex items-center gap-1 text-[11px] tabular-nums"
+                            title={`Sector weight ${row.sectorWeightPct.toFixed(2)}% vs target ${row.allocTargetPct.toFixed(2)}%`}
+                        >
+                            <span
+                                className={
+                                    row.sectorWeightPct > row.allocTargetPct + 0.05
+                                        ? "text-[var(--loss-700)]"
+                                        : row.sectorWeightPct < row.allocTargetPct - 0.05
+                                            ? "text-[var(--accent-700)]"
+                                            : "text-[var(--gain-700)]"
+                                }
+                            >
+                                {fmtPctShort(row.sectorWeightPct)}
+                            </span>
+                            <span className="text-[var(--ink-muted)]">
+                                / {fmtPctShort(row.allocTargetPct)}
+                            </span>
+                        </span>
                     ) : (
                         <span
                             className="mt-0.5 text-[11px] text-[var(--ink-muted)] tabular-nums"
-                            title="This stock's share of the sector's investment — current vs. your target"
+                            title="Share of sector investment"
                         >
-                            Sector wt {row.sectorWeightPct.toFixed(2)}% · tgt{" "}
-                            {row.allocTargetPct !== null
-                                ? `${row.allocTargetPct.toFixed(2)}%`
-                                : "—"}
+                            {fmtPctShort(row.sectorWeightPct)}
                         </span>
                     )}
                 </div>
