@@ -4,6 +4,7 @@
  */
 import { cache } from "react";
 import { fetchDseLspQuoteMap } from "@/lib/market/dse-lsp-quotes";
+import { ensureDseTlsTrust } from "@/lib/market/dse-tls";
 
 export type DseInstrument = {
   /** DSE trading / scrip code (e.g. GP, BRACBANK, AMCL(PRAN)). */
@@ -61,6 +62,7 @@ function parseQuotesTxt(text: string): DseInstrument[] {
 }
 
 async function fetchQuotesFromUrls(): Promise<{ instruments: DseInstrument[]; error: string | null }> {
+  ensureDseTlsTrust();
   const urls = quotesTxtUrlList();
   let lastErr = "No response";
 

@@ -3,6 +3,7 @@
  * Unofficial HTML parse; layout may change.
  */
 import { cacheLife, cacheTag } from "next/cache";
+import { ensureDseTlsTrust } from "@/lib/market/dse-tls";
 
 const DEFAULT_LSP_URLS = [
   "https://dsebd.org/latest_share_price_scroll_l.php",
@@ -91,6 +92,7 @@ async function _fetchLspRaw(): Promise<{
   cacheLife({ stale: 30, revalidate: 60, expire: 120 });
   cacheTag("dse-lsp-quotes");
 
+  ensureDseTlsTrust();
   const urls = process.env.DSE_LSP_URL?.trim()
     ? [process.env.DSE_LSP_URL.trim()]
     : [...DEFAULT_LSP_URLS];
@@ -129,6 +131,7 @@ export async function fetchDseLspQuoteMapFresh(): Promise<{
   bySymbol: Map<string, DseLspQuote>;
   error: string | null;
 }> {
+  ensureDseTlsTrust();
   const urls = process.env.DSE_LSP_URL?.trim()
     ? [process.env.DSE_LSP_URL.trim()]
     : [...DEFAULT_LSP_URLS];

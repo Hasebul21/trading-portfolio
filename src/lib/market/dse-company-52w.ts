@@ -3,6 +3,7 @@
  * Unofficial HTML parse; layout may change.
  */
 import { cacheLife, cacheTag } from "next/cache";
+import { ensureDseTlsTrust } from "@/lib/market/dse-tls";
 
 /** Apex host first, www mirror tried when the apex fails to connect. */
 const COMPANY_BASE_MIRRORS = [
@@ -372,6 +373,7 @@ export async function fetchDseCompanyExtras(
   cacheLife({ stale: 3600, revalidate: 86400, expire: 90000 });
   cacheTag(`dse-company-${symbol.trim().toLowerCase()}`);
 
+  ensureDseTlsTrust();
   const sym = symbol.trim();
   const nullResult: DseCompanyExtras = {
     week52Low: null, week52High: null, sector: null, category: null,
