@@ -131,3 +131,23 @@ body {
   background: var(--loss-600) !important;
   color: #fff !important;
 }
+
+/*
+ * Trade-history page — day-grouped table rows.
+ * A "day header" row spans all columns and acts as a hairline-divided
+ * label between groups of trades on the same Asia/Dhaka calendar day.
+ */
+.trade-history-table .trade-day-header-row > .ant-table-cell {
+  background: var(--bg-surface-soft);
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.trade-history-table .trade-day-header-row:hover > .ant-table-cell {
+  background: var(--bg-surface-soft) !important;
+}
+
+.trade-history-table .trade-day-header-row:first-child > .ant-table-cell {
+  border-top: 0;
+}
