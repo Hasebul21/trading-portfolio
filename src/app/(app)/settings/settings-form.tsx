@@ -7,9 +7,14 @@ import {
     updateUserProfile,
 } from "../settings-actions";
 import { sendPortfolioEmailWithUserSettings } from "./settings-actions";
-import type { CashAdjustmentRow, UserSettings } from "../settings-actions";
+import type {
+    BrokerageAccountRow,
+    CashAdjustmentRow,
+    UserSettings,
+} from "../settings-actions";
 import type { SectorTargetWithCurrent } from "../sector-target-actions";
 import type { DividendRow } from "../dividend-actions";
+import { BrokerageAccountsForm } from "./brokerage-accounts-form";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { DividendSummary } from "./dividend-summary";
 import { PositionsCashForm } from "./positions-cash-form";
@@ -35,6 +40,7 @@ type TabKey =
     | "cash"
     | "positions-cash"
     | "dividend-summary"
+    | "brokerages"
     | "email";
 
 type NavItem = { key: TabKey; label: string; icon: ReactNode; badge?: number };
@@ -51,6 +57,8 @@ export function SettingsForm({
     initialDividendTotalCash,
     initialDividendTotalStockShares,
     dividendsError,
+    initialBrokerageAccounts,
+    brokerageAccountsError,
 }: {
     initialSettings: UserSettings;
     initialSectorTargets: SectorTargetWithCurrent[];
@@ -62,6 +70,8 @@ export function SettingsForm({
     initialDividendTotalCash: number;
     initialDividendTotalStockShares: number;
     dividendsError: string | null;
+    initialBrokerageAccounts: BrokerageAccountRow[];
+    brokerageAccountsError: string | null;
 }) {
     const [activeTab, setActiveTab] = useState<TabKey>("profile");
     const [query, setQuery] = useState("");
@@ -86,11 +96,22 @@ export function SettingsForm({
                 ],
             },
             {
+                label: "Brokerage",
+                items: [
+                    {
+                        key: "brokerages",
+                        label: "Brokerage accounts",
+                        icon: Icons.cash(18),
+                        badge: initialBrokerageAccounts.length || undefined,
+                    },
+                ],
+            },
+            {
                 label: "Notifications",
                 items: [{ key: "email", label: "Email & reports", icon: Icons.email(18) }],
             },
         ],
-        [initialSectorTargets.length],
+        [initialSectorTargets.length, initialBrokerageAccounts.length],
     );
 
     const q = query.trim().toLowerCase();
@@ -206,6 +227,13 @@ export function SettingsForm({
                             totalCash={initialDividendTotalCash}
                             totalStockShares={initialDividendTotalStockShares}
                             error={dividendsError}
+                        />
+                    </Panel>
+
+                    <Panel active={activeTab === "brokerages"}>
+                        <BrokerageAccountsForm
+                            initialRows={initialBrokerageAccounts}
+                            initialError={brokerageAccountsError}
                         />
                     </Panel>
 

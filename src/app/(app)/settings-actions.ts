@@ -385,6 +385,232 @@ export async function resetPositionsBalance(): Promise<
   return { ok: true, balance: 0 };
 }
 
+// ---------------------------------------------------------------------------
+// Brokerage accounts — per-user brokerage house records (BO info, deposit
+// bank, relation manager). Edited from the Settings page.
+// ---------------------------------------------------------------------------
+
+export type BrokerageAccountRow = {
+  id: string;
+  broker_name: string;
+  account_type: string | null;
+  bo_id: string | null;
+  bo_name: string | null;
+  client_code: string | null;
+  bank_name: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_routing_number: string | null;
+  bank_branch: string | null;
+  bank_address: string | null;
+  rm_name: string | null;
+  rm_phone: string | null;
+  rm_email: string | null;
+  notes: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BrokerageAccountInput = {
+  broker_name: string;
+  account_type?: string | null;
+  bo_id?: string | null;
+  bo_name?: string | null;
+  client_code?: string | null;
+  bank_name?: string | null;
+  bank_account_name?: string | null;
+  bank_account_number?: string | null;
+  bank_routing_number?: string | null;
+  bank_branch?: string | null;
+  bank_address?: string | null;
+  rm_name?: string | null;
+  rm_phone?: string | null;
+  rm_email?: string | null;
+  notes?: string | null;
+};
+
+const BROKERAGE_TEXT_FIELDS = [
+  "account_type",
+  "bo_id",
+  "bo_name",
+  "client_code",
+  "bank_name",
+  "bank_account_name",
+  "bank_account_number",
+  "bank_routing_number",
+  "bank_branch",
+  "bank_address",
+  "rm_name",
+  "rm_phone",
+  "rm_email",
+  "notes",
+] as const;
+
+function cleanBrokerageInput(input: BrokerageAccountInput): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const name = input.broker_name?.trim() ?? "";
+  if (!name) throw new Error("Broker name is required.");
+  out.broker_name = name.slice(0, 120);
+  for (const key of BROKERAGE_TEXT_FIELDS) {
+    const raw = (input as Record<string, unknown>)[key];
+    if (raw == null) {
+      out[key] = null;
+      continue;
+    }
+    const trimmed = String(raw).trim();
+    out[key] = trimmed === "" ? null : trimmed.slice(0, 500);
+  }
+  return out;
+}
+
+function mapBrokerageRow(row: Record<string, unknown>): BrokerageAccountRow {
+  const str = (v: unknown) => (v == null ? null : String(v));
+  return {
+    id: String(row.id),
+    broker_name: String(row.broker_name ?? ""),
+    account_type: str(row.account_type),
+    bo_id: str(row.bo_id),
+    bo_name: str(row.bo_name),
+    client_code: str(row.client_code),
+    bank_name: str(row.bank_name),
+    bank_account_name: str(row.bank_account_name),
+    bank_account_number: str(row.bank_account_number),
+    bank_routing_number: str(row.bank_routing_number),
+    bank_branch: str(row.bank_branch),
+    bank_address: str(row.bank_address),
+    rm_name: str(row.rm_name),
+    rm_phone: str(row.rm_phone),
+    rm_email: str(row.rm_email),
+    notes: str(row.notes),
+    position: Number.isFinite(Number(row.position)) ? Number(row.position) : 0,
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
+}
+
+const BROKERAGE_SELECT =
+  "id, broker_name, account_type, bo_id, bo_name, client_code, bank_name, bank_account_name, bank_account_number, bank_routing_number, bank_branch, bank_address, rm_name, rm_phone, rm_email, notes, position, created_at, updated_at";
+
+export async function listBrokerageAccounts(): Promise<
+  { ok: true; rows: BrokerageAccountRow[] } | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { data, error } = await supabase
+    .from("brokerage_accounts")
+    .select(BROKERAGE_SELECT)
+    .eq("user_id", user.id)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) return { ok: false, error: error.message };
+
+  const rows = (data ?? []).map((r) => mapBrokerageRow(r as Record<string, unknown>));
+  return { ok: true, rows };
+}
+
+export async function createBrokerageAccount(
+  input: BrokerageAccountInput,
+): Promise<{ ok: true; row: BrokerageAccountRow } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = cleanBrokerageInput(input);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Invalid input" };
+  }
+  payload.user_id = user.id;
+
+  const { data: maxRow } = await supabase
+    .from("brokerage_accounts")
+    .select("position")
+    .eq("user_id", user.id)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  payload.position = Number(maxRow?.position ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from("brokerage_accounts")
+    .insert(payload)
+    .select(BROKERAGE_SELECT)
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true, row: mapBrokerageRow(data as Record<string, unknown>) };
+}
+
+export async function updateBrokerageAccount(
+  id: string,
+  input: BrokerageAccountInput,
+): Promise<{ ok: true; row: BrokerageAccountRow } | { ok: false; error: string }> {
+  const trimmedId = id.trim();
+  if (!trimmedId) return { ok: false, error: "Missing id" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = cleanBrokerageInput(input);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Invalid input" };
+  }
+  payload.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("brokerage_accounts")
+    .update(payload)
+    .eq("id", trimmedId)
+    .eq("user_id", user.id)
+    .select(BROKERAGE_SELECT)
+    .single();
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true, row: mapBrokerageRow(data as Record<string, unknown>) };
+}
+
+export async function deleteBrokerageAccount(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const trimmed = id.trim();
+  if (!trimmed) return { ok: false, error: "Missing id" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+
+  const { error } = await supabase
+    .from("brokerage_accounts")
+    .delete()
+    .eq("id", trimmed)
+    .eq("user_id", user.id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 export async function deleteCashAdjustment(
   id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
