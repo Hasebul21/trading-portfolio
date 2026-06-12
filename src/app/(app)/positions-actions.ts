@@ -151,7 +151,7 @@ export async function addPositionPlan(input: {
   const { data, error } = await supabase
     .from("position_plans")
     .insert({ user_id: user.id, ...validated.row })
-    .select("id, side, symbol, quantity_shares, target_price, executed, created_at")
+    .select("id, side, symbol, quantity_shares, target_price, brokerage, executed, created_at")
     .single();
   if (error) return { ok: false, error: error.message };
 
@@ -237,7 +237,7 @@ export async function updatePositionPlan(input: {
     })
     .eq("id", id)
     .eq("user_id", user.id)
-    .select("id, side, symbol, quantity_shares, target_price, executed, created_at")
+    .select("id, side, symbol, quantity_shares, target_price, brokerage, executed, created_at")
     .single();
   if (error) return { ok: false, error: error.message };
 
