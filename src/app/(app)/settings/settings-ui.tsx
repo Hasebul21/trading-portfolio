@@ -239,4 +239,30 @@ export const Icons = {
       </>,
       s,
     ),
+  fund: (s?: number) =>
+    svg(
+      <>
+        <path d="M4 9.5 12 4l8 5.5" />
+        <path d="M5 9.5v9M9 9.5v9M15 9.5v9M19 9.5v9" />
+        <path d="M3.5 18.5h17" />
+      </>,
+      s,
+    ),
+  app: (s?: number) =>
+    svg(
+      <>
+        <rect x="6.5" y="3" width="11" height="18" rx="2.5" />
+        <path d="M11 18h2" />
+      </>,
+      s,
+    ),
+  copy: (s?: number) =>
+    svg(
+      <>
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <path d="M5 15V6a2 2 0 0 1 2-2h8" />
+      </>,
+      s,
+    ),
+  check: (s?: number) => svg(<path d="m5 12.5 4.5 4.5L19 7" />, s),
 };

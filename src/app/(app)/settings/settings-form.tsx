@@ -17,6 +17,7 @@ import type { DividendRow } from "../dividend-actions";
 import { BrokerageAccountsForm } from "./brokerage-accounts-form";
 import { CashAdjustmentsForm } from "./cash-adjustments-form";
 import { DividendSummary } from "./dividend-summary";
+import { MutualFunds } from "./mutual-funds";
 import { PositionsCashForm } from "./positions-cash-form";
 import { SectorTargetsForm } from "./sector-targets-form";
 import { TopSectorsForm } from "./top-sectors-form";
@@ -41,6 +42,7 @@ type TabKey =
     | "positions-cash"
     | "dividend-summary"
     | "brokerages"
+    | "mutual-funds"
     | "email";
 
 type NavItem = { key: TabKey; label: string; icon: ReactNode; badge?: number };
@@ -105,6 +107,10 @@ export function SettingsForm({
                         badge: initialBrokerageAccounts.length || undefined,
                     },
                 ],
+            },
+            {
+                label: "Mutual fund",
+                items: [{ key: "mutual-funds", label: "Fund accounts", icon: Icons.fund(18) }],
             },
             {
                 label: "Notifications",
@@ -235,6 +241,10 @@ export function SettingsForm({
                             initialRows={initialBrokerageAccounts}
                             initialError={brokerageAccountsError}
                         />
+                    </Panel>
+
+                    <Panel active={activeTab === "mutual-funds"}>
+                        <MutualFunds />
                     </Panel>
 
                     <Panel active={activeTab === "email"}>

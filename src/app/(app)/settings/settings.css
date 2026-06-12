@@ -169,6 +169,16 @@
 .settings-rd .preview-strip .pr { display: flex; flex-wrap: wrap; gap: 6px; }
 .settings-rd .chip { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--bg-surface); border-radius: var(--radius-pill); padding: 1px 10px; font-size: 12px; color: var(--ink-strong); white-space: nowrap; }
 
+/* Info rows (mutual fund accounts) */
+.settings-rd .info-list { display: flex; flex-direction: column; }
+.settings-rd .info-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.settings-rd .info-row:first-child { border-top: 0; }
+.settings-rd .info-row .ik { font-size: 13px; color: var(--ink-muted); flex-shrink: 0; }
+.settings-rd .info-row .iv { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--ink-strong); text-align: right; min-width: 0; word-break: break-word; }
+.settings-rd .copy-btn { flex-shrink: 0; height: 28px; width: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: var(--bg-surface-soft); border-radius: var(--radius-md); color: var(--accent-200); cursor: pointer; transition: color var(--dur), border-color var(--dur), background var(--dur); }
+.settings-rd .copy-btn:hover { border-color: var(--accent-500); background: var(--accent-50); }
+.settings-rd .copy-btn.copied { color: var(--gain-700); border-color: var(--gain-200); background: var(--gain-50); }
+
 /* Responsive */
 @media (max-width: 880px) {
   .settings-rd .settings { grid-template-columns: 1fr; gap: 20px; }
