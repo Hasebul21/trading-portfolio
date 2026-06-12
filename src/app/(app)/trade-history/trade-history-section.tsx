@@ -3,7 +3,6 @@
 import { deleteTransaction } from "@/app/(app)/actions";
 import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import type { TransactionRow } from "@/lib/portfolio";
-import { BROKERAGE_COMMISSION_RATE, roundToTickSize } from "@/lib/portfolio";
 import { Button, Pagination, Popconfirm, Segmented, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
@@ -40,7 +39,6 @@ type DayHeaderRow = {
   dateKey: string;
   label: string;
   count: number;
-  netPnl: number | null;
 };
 
 type TableRow = Row | DayHeaderRow;
@@ -79,23 +77,13 @@ function groupByDay(rows: Row[], nowMs: number): TableRow[] {
   while (i < rows.length) {
     const dayKey = dhakaDayKey(rows[i].created_at);
     let j = i;
-    let netPnl = 0;
-    let hasPnl = false;
-    while (j < rows.length && dhakaDayKey(rows[j].created_at) === dayKey) {
-      const pnl = rows[j].realizedPnl;
-      if (typeof pnl === "number") {
-        netPnl += pnl;
-        hasPnl = true;
-      }
-      j++;
-    }
+    while (j < rows.length && dhakaDayKey(rows[j].created_at) === dayKey) j++;
     out.push({
       __dayHeader: true,
       key: `day-${dayKey}-${i}`,
       dateKey: dayKey,
       label: friendlyDay(dayKey, nowMs),
       count: j - i,
-      netPnl: hasPnl ? netPnl : null,
     });
     for (let k = i; k < j; k++) out.push(rows[k]);
     i = j;
@@ -103,7 +91,7 @@ function groupByDay(rows: Row[], nowMs: number): TableRow[] {
   return out;
 }
 
-const DESKTOP_COLSPAN = 9;
+const DESKTOP_COLSPAN = 7;
 
 export function TradeHistorySection({
   rows,
@@ -195,10 +183,9 @@ export function TradeHistorySection({
   const columns: ColumnsType<TableRow> = useMemo(
     () => [
       {
-        title: "Time",
-        dataIndex: "created_at",
+        title: "Symbol",
+        dataIndex: "symbol",
         align: "left",
-        responsive: ["sm"],
         render: (v: string, record) => {
           if (isDayHeader(record)) {
             return {
@@ -206,24 +193,6 @@ export function TradeHistorySection({
               props: { colSpan: DESKTOP_COLSPAN },
             };
           }
-          return (
-            <span className="text-[var(--ink-muted)] tabular-nums">
-              {new Date(v).toLocaleTimeString("en-GB", {
-                timeZone: "Asia/Dhaka",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          );
-        },
-      },
-      {
-        title: "Symbol",
-        dataIndex: "symbol",
-        align: "left",
-        render: (v: string, record) => {
-          if (isDayHeader(record))
-            return { children: null, props: { colSpan: 0 } };
           return (
             <Typography.Text strong className="font-mono">
               {String(v).toUpperCase()}
@@ -268,21 +237,6 @@ export function TradeHistorySection({
         },
       },
       {
-        title: "Break-even",
-        dataIndex: "avgCostAtSell",
-        align: "right",
-        responsive: ["md"],
-        render: (v: number | null, record) => {
-          if (isDayHeader(record))
-            return { children: null, props: { colSpan: 0 } };
-          if (v === null)
-            return <span className="text-[var(--ink-muted)]">—</span>;
-          // avgCost already includes buy fees; divide out sell commission only
-          const breakEven = roundToTickSize(v / (1 - BROKERAGE_COMMISSION_RATE));
-          return <span className="tabular-nums">{formatBdt(breakEven)}</span>;
-        },
-      },
-      {
         title: "Price",
         dataIndex: "price_per_share",
         align: "right",
@@ -295,8 +249,8 @@ export function TradeHistorySection({
         },
       },
       {
-        title: "Value",
-        key: "value",
+        title: "Total Invested",
+        key: "totalInvested",
         align: "right",
         responsive: ["md"],
         render: (_: unknown, record) => {
@@ -483,27 +437,14 @@ export function TradeHistorySection({
 }
 
 function DayHeaderCell({ row }: { row: DayHeaderRow }) {
-  const pnlCls =
-    row.netPnl === null || row.netPnl === 0
-      ? "text-[var(--ink-muted)]"
-      : row.netPnl > 0
-        ? "text-[var(--gain-700)]"
-        : "text-[var(--loss-700)]";
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <div className="flex items-baseline gap-3">
-        <span className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--ink-strong)]">
-          {row.label}
-        </span>
-        <span className="text-[11px] text-[var(--ink-muted)] tabular-nums">
-          {row.count} {row.count === 1 ? "trade" : "trades"}
-        </span>
-      </div>
-      {row.netPnl !== null ? (
-        <span className={`text-[12px] tabular-nums ${pnlCls}`}>
-          Net {formatBdt(row.netPnl)}
-        </span>
-      ) : null}
+    <div className="flex items-baseline gap-3">
+      <span className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--ink-strong)]">
+        {row.label}
+      </span>
+      <span className="text-[11px] text-[var(--ink-muted)] tabular-nums">
+        {row.count} {row.count === 1 ? "trade" : "trades"}
+      </span>
     </div>
   );
 }
