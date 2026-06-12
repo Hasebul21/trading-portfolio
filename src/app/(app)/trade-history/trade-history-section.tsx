@@ -1,7 +1,7 @@
 "use client";
 
 import { deleteTransaction } from "@/app/(app)/actions";
-import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
+import { formatBdt, formatShares } from "@/lib/format-bdt";
 import type { TransactionRow } from "@/lib/portfolio";
 import {
   Button,
@@ -265,9 +265,7 @@ export function TradeHistorySection({
           if (isDayHeader(record))
             return { children: null, props: { colSpan: 0 } };
           return (
-            <span className="tabular-nums">
-              {formatNumberMax2Decimals(Number(v))}
-            </span>
+            <span className="tabular-nums">{formatShares(Number(v))}</span>
           );
         },
       },
@@ -559,7 +557,7 @@ function MobileTradeCard({
           <div className="flex items-center justify-between gap-2">
             <dt className="text-[var(--ink-muted)] ">Qty × Price</dt>
             <dd className="font-mono tabular-nums text-[var(--ink-strong)] ">
-              {formatNumberMax2Decimals(Number(row.quantity))} ×{" "}
+              {formatShares(Number(row.quantity))} ×{" "}
               {formatBdt(Number(row.price_per_share))}
             </dd>
           </div>

@@ -5,7 +5,7 @@ import {
   listUserSymbols,
   type AvgBuyPriceRow,
 } from "@/app/(app)/avg-buy-actions";
-import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
+import { formatBdt, formatShares } from "@/lib/format-bdt";
 import { Button, DatePicker, Modal, Select, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
@@ -71,7 +71,7 @@ export function AvgBuyPriceButton() {
       dataIndex: "totalQty",
       align: "right",
       render: (v: number) => (
-        <span className="tabular-nums">{formatNumberMax2Decimals(v)}</span>
+        <span className="tabular-nums">{formatShares(v)}</span>
       ),
     },
     {

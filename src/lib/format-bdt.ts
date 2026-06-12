@@ -18,14 +18,13 @@ export function formatBdt(n: number): string {
 }
 
 /**
- * Share counts: locale grouping, no forced decimals. Whole numbers render
- * without a fraction ("5"), fractional lots keep up to two digits ("5.5").
+ * Share counts: locale grouping, always rendered as integers (DSE doesn't
+ * trade fractional lots). Any fractional input is rounded to the nearest whole.
  */
 export function formatShares(n: number): string {
   if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+  return Math.round(n).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
   });
 }
 
