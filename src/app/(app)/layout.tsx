@@ -1,4 +1,5 @@
 import { AppShellNav } from "@/components/app-shell-nav";
+import { AvgBuyPriceButton } from "@/components/avg-buy-price-button";
 import { FloatingCalculator } from "@/components/floating-calculator";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -35,6 +36,7 @@ export default function AppLayout({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <AvgBuyPriceButton />
               <ThemeToggle />
 
               {/* Desktop log-out (mobile uses Settings) */}
