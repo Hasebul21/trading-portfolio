@@ -67,7 +67,7 @@ export function AvgBuyPriceButton() {
       ),
     },
     {
-      title: "Qty",
+      title: "Total Qty",
       dataIndex: "totalQty",
       align: "right",
       render: (v: number) => (

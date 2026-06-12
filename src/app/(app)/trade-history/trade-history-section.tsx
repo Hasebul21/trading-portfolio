@@ -3,7 +3,15 @@
 import { deleteTransaction } from "@/app/(app)/actions";
 import { formatBdt, formatNumberMax2Decimals } from "@/lib/format-bdt";
 import type { TransactionRow } from "@/lib/portfolio";
-import { Button, Pagination, Popconfirm, Segmented, Table, Typography } from "antd";
+import {
+  Button,
+  Pagination,
+  Popconfirm,
+  Segmented,
+  Select,
+  Table,
+  Typography,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -116,6 +124,9 @@ export function TradeHistorySection({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [sideFilter, setSideFilter] = useState<SideFilter>("all");
+  const [symbolFilter, setSymbolFilter] = useState<string | undefined>(
+    undefined,
+  );
   const [rangeFilter, setRangeFilter] = useState<RangeFilter>(
     rangePicker ? "30d" : "all",
   );
@@ -132,22 +143,46 @@ export function TradeHistorySection({
     return allData.filter((r) => new Date(r.created_at).getTime() >= cutoff);
   }, [allData, rangeFilter, nowMs]);
 
+  // Distinct symbols across the whole ledger — keeps the dropdown stable as
+  // range/side filters change so the user can always pick any symbol they've
+  // traded.
+  const allSymbols = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allData) {
+      const sym = String(r.symbol).trim().toUpperCase();
+      if (sym) s.add(sym);
+    }
+    return Array.from(s).sort();
+  }, [allData]);
+
+  const symbolScoped = useMemo(
+    () =>
+      symbolFilter
+        ? rangedData.filter(
+            (r) => String(r.symbol).trim().toUpperCase() === symbolFilter,
+          )
+        : rangedData,
+    [rangedData, symbolFilter],
+  );
+
   const { buyCount, sellCount } = useMemo(() => {
     let buys = 0;
     let sells = 0;
-    for (const r of rangedData) {
+    for (const r of symbolScoped) {
       if (String(r.side).toLowerCase() === "sell") sells += 1;
       else buys += 1;
     }
     return { buyCount: buys, sellCount: sells };
-  }, [rangedData]);
+  }, [symbolScoped]);
 
   const data = useMemo(
     () =>
       sideFilter === "all"
-        ? rangedData
-        : rangedData.filter((r) => String(r.side).toLowerCase() === sideFilter),
-    [rangedData, sideFilter],
+        ? symbolScoped
+        : symbolScoped.filter(
+            (r) => String(r.side).toLowerCase() === sideFilter,
+          ),
+    [symbolScoped, sideFilter],
   );
 
   const totalRows = data.length;
@@ -362,11 +397,21 @@ export function TradeHistorySection({
                   size="middle"
                 />
               ) : null}
+              <Select
+                value={symbolFilter}
+                onChange={(v) => setSymbolFilter(v)}
+                placeholder="All stocks"
+                allowClear
+                showSearch
+                size="middle"
+                style={{ minWidth: 160 }}
+                options={allSymbols.map((s) => ({ value: s, label: s }))}
+              />
               <Segmented<SideFilter>
                 value={sideFilter}
                 onChange={(v) => setSideFilter(v)}
                 options={[
-                  { label: `All (${rangedData.length})`, value: "all" },
+                  { label: `All (${symbolScoped.length})`, value: "all" },
                   { label: `Buy (${buyCount})`, value: "buy" },
                   { label: `Sell (${sellCount})`, value: "sell" },
                 ]}
@@ -381,7 +426,8 @@ export function TradeHistorySection({
 
           {data.length === 0 ? (
             <Typography.Paragraph type="secondary">
-              No {sideFilter} trades in this range.
+              No {sideFilter !== "all" ? `${sideFilter} ` : ""}
+              {symbolFilter ? `${symbolFilter} ` : ""}trades in this range.
             </Typography.Paragraph>
           ) : (
             <>
