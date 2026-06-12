@@ -2,16 +2,24 @@
 
 import { SymbolField, type SymbolFieldInstrument } from "@/components/symbol-field";
 import { formatBdt, formatShares } from "@/lib/format-bdt";
-import { planAmount, type PositionPlanRow, type PositionSide } from "@/lib/positions";
+import {
+  planAmount,
+  POSITION_BROKERAGES,
+  type PositionBrokerage,
+  type PositionPlanRow,
+  type PositionSide,
+} from "@/lib/positions";
 import {
   addPositionPlan,
   deletePositionPlan,
   markPositionPlan,
   updatePositionPlan,
 } from "@/app/(app)/positions-actions";
-import { Alert, Button, Card, InputNumber, Popconfirm, Table } from "antd";
+import { Alert, Button, Card, InputNumber, Popconfirm, Select, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useMemo, useState } from "react";
+
+const BROKERAGE_OPTIONS = POSITION_BROKERAGES.map((b) => ({ label: b, value: b }));
 
 type Props = {
   initialBuy: PositionPlanRow[];
@@ -42,12 +50,14 @@ export function PositionsView({
       symbol: string,
       quantity: number,
       price: number,
+      brokerage: PositionBrokerage,
     ): Promise<{ ok: boolean; error?: string }> => {
       const res = await addPositionPlan({
         side,
         symbol,
         quantity_shares: quantity,
         target_price: price,
+        brokerage,
       });
       if (!res.ok) return { ok: false, error: res.error };
       setRowsFor(side)((prev) => [...prev, res.row]);
@@ -85,12 +95,14 @@ export function PositionsView({
       symbol: string,
       quantity: number,
       price: number,
+      brokerage: PositionBrokerage,
     ): Promise<{ ok: boolean; error?: string }> => {
       const res = await updatePositionPlan({
         id,
         symbol,
         quantity_shares: quantity,
         target_price: price,
+        brokerage,
       });
       if (!res.ok) return { ok: false, error: res.error };
       setRowsFor(side)((prev) => prev.map((r) => (r.id === id ? res.row : r)));
@@ -172,6 +184,7 @@ function PlanSection({
     symbol: string,
     quantity: number,
     price: number,
+    brokerage: PositionBrokerage,
   ) => Promise<{ ok: boolean; error?: string }>;
   onMark: (side: PositionSide, id: string) => void;
   onUpdate: (
@@ -180,12 +193,14 @@ function PlanSection({
     symbol: string,
     quantity: number,
     price: number,
+    brokerage: PositionBrokerage,
   ) => Promise<{ ok: boolean; error?: string }>;
   onDelete: (side: PositionSide, id: string) => void;
 }) {
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState<number | null>(null);
   const [price, setPrice] = useState<number | null>(null);
+  const [brokerage, setBrokerage] = useState<PositionBrokerage | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -194,6 +209,7 @@ function PlanSection({
   const [editSymbol, setEditSymbol] = useState("");
   const [editQty, setEditQty] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<number | null>(null);
+  const [editBrokerage, setEditBrokerage] = useState<PositionBrokerage | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -205,6 +221,7 @@ function PlanSection({
     setEditSymbol(row.symbol);
     setEditQty(row.quantity_shares);
     setEditPrice(row.target_price);
+    setEditBrokerage(row.brokerage);
   }, []);
 
   const cancelEdit = useCallback(() => {
@@ -227,9 +244,13 @@ function PlanSection({
       setEditError("Enter a target price.");
       return;
     }
+    if (!editBrokerage) {
+      setEditError("Choose a brokerage house.");
+      return;
+    }
     setEditSaving(true);
     try {
-      const res = await onUpdate(side, editId, editSymbol, editQty, editPrice);
+      const res = await onUpdate(side, editId, editSymbol, editQty, editPrice, editBrokerage);
       if (!res.ok) {
         setEditError(res.error ?? "Could not update plan.");
         return;
@@ -238,7 +259,7 @@ function PlanSection({
     } finally {
       setEditSaving(false);
     }
-  }, [editId, editSymbol, editQty, editPrice, onUpdate, side]);
+  }, [editId, editSymbol, editQty, editPrice, editBrokerage, onUpdate, side]);
 
   const commissionPct = commissionRate ? (commissionRate * 100).toFixed(3).replace(/\.?0+$/, "") : null;
 
@@ -262,9 +283,13 @@ function PlanSection({
       setError("Enter a target price.");
       return;
     }
+    if (!brokerage) {
+      setError("Choose a brokerage house.");
+      return;
+    }
     setSaving(true);
     try {
-      const res = await onAdd(side, symbol, quantity, price);
+      const res = await onAdd(side, symbol, quantity, price, brokerage);
       if (!res.ok) {
         setError(res.error ?? "Could not add plan.");
         return;
@@ -272,10 +297,11 @@ function PlanSection({
       setSymbol("");
       setQuantity(null);
       setPrice(null);
+      setBrokerage(null);
     } finally {
       setSaving(false);
     }
-  }, [onAdd, side, symbol, quantity, price]);
+  }, [onAdd, side, symbol, quantity, price, brokerage]);
 
   const total = useMemo(
     () =>
@@ -310,6 +336,30 @@ function PlanSection({
             }`}
           >
             {v}
+          </span>
+        ),
+    },
+    {
+      title: "Brokerage",
+      dataIndex: "brokerage",
+      width: 140,
+      render: (v: PositionBrokerage | null, row) =>
+        editId === row.id ? (
+          <Select<PositionBrokerage>
+            value={editBrokerage ?? undefined}
+            onChange={(val) => setEditBrokerage(val)}
+            options={BROKERAGE_OPTIONS}
+            placeholder="Brokerage"
+            size="small"
+            className="w-full"
+          />
+        ) : (
+          <span
+            className={`text-[14px] ${
+              row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
+            }`}
+          >
+            {v ?? "—"}
           </span>
         ),
     },
@@ -455,7 +505,7 @@ function PlanSection({
       }
     >
       <div className="space-y-4">
-        <div className="grid items-end gap-3 sm:grid-cols-[1fr_120px_140px_auto]">
+        <div className="grid items-end gap-3 sm:grid-cols-[1fr_160px_120px_140px_auto]">
           <div>
             <label className="block text-[13px] text-[var(--ink-strong)]">Stock</label>
             <SymbolField
@@ -468,6 +518,20 @@ function PlanSection({
               }}
               placeholder="Trading code"
               aria-label={`${title} stock`}
+            />
+          </div>
+          <div>
+            <label className="block text-[13px] text-[var(--ink-strong)]">Brokerage</label>
+            <Select<PositionBrokerage>
+              value={brokerage ?? undefined}
+              onChange={(v) => {
+                setBrokerage(v);
+                setError(null);
+              }}
+              options={BROKERAGE_OPTIONS}
+              placeholder="Choose"
+              aria-label={`${title} brokerage`}
+              className="mt-1 w-full"
             />
           </div>
           <div>

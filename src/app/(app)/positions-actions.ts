@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  normalizeBrokerage,
   normalizeSymbol,
   planBalanceDelta,
   validatePositionPlan,
@@ -23,6 +24,7 @@ function mapRow(r: Record<string, unknown>): PositionPlanRow {
     symbol: normalizeSymbol(r.symbol),
     quantity_shares: Number(r.quantity_shares ?? 0),
     target_price: Number(r.target_price ?? 0),
+    brokerage: normalizeBrokerage(r.brokerage),
     executed: Boolean(r.executed),
     created_at: String(r.created_at),
   };
@@ -52,7 +54,7 @@ export async function getPositions(): Promise<
   const [plansRes, settingsRes] = await Promise.all([
     supabase
       .from("position_plans")
-      .select("id, side, symbol, quantity_shares, target_price, executed, created_at")
+      .select("id, side, symbol, quantity_shares, target_price, brokerage, executed, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: true }),
     supabase
@@ -124,10 +126,17 @@ export async function addPositionPlan(input: {
   symbol: string;
   quantity_shares: number | string;
   target_price: number | string;
+  brokerage: string;
 }): Promise<
   { ok: true; row: PositionPlanRow; balance: number } | { ok: false; error: string }
 > {
-  const validated = validatePositionPlan(input);
+  const validated = validatePositionPlan({
+    side: input.side,
+    symbol: input.symbol,
+    quantity_shares: input.quantity_shares,
+    target_price: input.target_price,
+    brokerage: input.brokerage,
+  });
   if (!validated.ok) return validated;
 
   const supabase = await createClient();
@@ -170,6 +179,7 @@ export async function updatePositionPlan(input: {
   symbol: string;
   quantity_shares: number | string;
   target_price: number | string;
+  brokerage: string;
 }): Promise<
   { ok: true; row: PositionPlanRow; balance: number } | { ok: false; error: string }
 > {
@@ -197,6 +207,7 @@ export async function updatePositionPlan(input: {
     symbol: input.symbol,
     quantity_shares: input.quantity_shares,
     target_price: input.target_price,
+    brokerage: input.brokerage,
   });
   if (!validated.ok) return validated;
 
@@ -222,6 +233,7 @@ export async function updatePositionPlan(input: {
       symbol: validated.row.symbol,
       quantity_shares: validated.row.quantity_shares,
       target_price: validated.row.target_price,
+      brokerage: validated.row.brokerage,
     })
     .eq("id", id)
     .eq("user_id", user.id)

@@ -11,12 +11,17 @@
 
 export type PositionSide = "buy" | "sell";
 
+/** Brokerage houses the user can place a plan through. */
+export const POSITION_BROKERAGES = ["IDLC", "LankaBangla", "BRAC EPL"] as const;
+export type PositionBrokerage = (typeof POSITION_BROKERAGES)[number];
+
 export type PositionPlanRow = {
   id: string;
   side: PositionSide;
   symbol: string;
   quantity_shares: number;
   target_price: number;
+  brokerage: PositionBrokerage | null;
   executed: boolean;
   created_at: string;
 };
@@ -24,6 +29,13 @@ export type PositionPlanRow = {
 /** Sanity caps mirroring the other plan tables. */
 export const POSITION_MAX_QUANTITY = 1_000_000_000;
 export const POSITION_MAX_PRICE = 1_000_000;
+
+export function normalizeBrokerage(raw: unknown): PositionBrokerage | null {
+  const s = String(raw ?? "").trim();
+  return (POSITION_BROKERAGES as readonly string[]).includes(s)
+    ? (s as PositionBrokerage)
+    : null;
+}
 
 /** Canonical trading-code form: trimmed, upper-cased (matches DSE LSP keys). */
 export function normalizeSymbol(raw: unknown): string {
@@ -35,6 +47,7 @@ export type PositionPlanInput = {
   symbol: string;
   quantity_shares: unknown;
   target_price: unknown;
+  brokerage: unknown;
 };
 
 export type PositionPlanValidation =
@@ -45,6 +58,7 @@ export type PositionPlanValidation =
         symbol: string;
         quantity_shares: number;
         target_price: number;
+        brokerage: PositionBrokerage;
       };
     }
   | { ok: false; error: string };
@@ -68,6 +82,9 @@ export function validatePositionPlan(raw: PositionPlanInput): PositionPlanValida
     return { ok: false, error: "Enter a valid target price." };
   }
 
+  const brokerage = normalizeBrokerage(raw.brokerage);
+  if (!brokerage) return { ok: false, error: "Choose a brokerage house." };
+
   return {
     ok: true,
     row: {
@@ -75,6 +92,7 @@ export function validatePositionPlan(raw: PositionPlanInput): PositionPlanValida
       symbol,
       quantity_shares: Math.round(qty * 100) / 100,
       target_price: Math.round(price * 100) / 100,
+      brokerage,
     },
   };
 }
