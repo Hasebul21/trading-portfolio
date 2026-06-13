@@ -331,7 +331,7 @@ function PlanSection({
           />
         ) : (
           <span
-            className={`font-mono text-[14px] ${
+            className={`font-mono text-[13px] sm:text-[14px] ${
               row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
             }`}
           >
@@ -340,34 +340,11 @@ function PlanSection({
         ),
     },
     {
-      title: "Brokerage",
-      dataIndex: "brokerage",
-      width: 140,
-      render: (v: PositionBrokerage | null, row) =>
-        editId === row.id ? (
-          <Select<PositionBrokerage>
-            value={editBrokerage ?? undefined}
-            onChange={(val) => setEditBrokerage(val)}
-            options={BROKERAGE_OPTIONS}
-            placeholder="Brokerage"
-            size="small"
-            className="w-full"
-          />
-        ) : (
-          <span
-            className={`text-[14px] ${
-              row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
-            }`}
-          >
-            {v ?? "—"}
-          </span>
-        ),
-    },
-    {
       title: "Qty",
       dataIndex: "quantity_shares",
       align: "right",
-      width: 110,
+      width: 70,
+      className: "hidden sm:table-cell",
       render: (v: number, row) =>
         editId === row.id ? (
           <InputNumber
@@ -380,7 +357,7 @@ function PlanSection({
           />
         ) : (
           <span
-            className={`tabular-nums text-[14px] ${
+            className={`tabular-nums text-[13px] sm:text-[14px] ${
               row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
             }`}
           >
@@ -392,7 +369,8 @@ function PlanSection({
       title: "Target price",
       dataIndex: "target_price",
       align: "right",
-      width: 130,
+      width: 90,
+      className: "hidden sm:table-cell",
       render: (v: number, row) =>
         editId === row.id ? (
           <InputNumber
@@ -405,7 +383,7 @@ function PlanSection({
           />
         ) : (
           <span
-            className={`tabular-nums text-[14px] ${
+            className={`tabular-nums text-[13px] sm:text-[14px] ${
               row.executed ? "text-[var(--ink-muted)] line-through" : "text-[var(--ink-strong)]"
             }`}
           >
@@ -417,7 +395,7 @@ function PlanSection({
       title: isBuy ? "Cost" : "Proceeds",
       key: "amount",
       align: "right",
-      width: 130,
+      width: 100,
       render: (_, row) => {
         const editing = editId === row.id;
         const amt = editing
@@ -427,7 +405,7 @@ function PlanSection({
           : planAmount(side, row.quantity_shares, row.target_price, commissionRate);
         return (
           <span
-            className={`tabular-nums text-[14px] ${
+            className={`tabular-nums text-[13px] sm:text-[14px] ${
               row.executed
                 ? "text-[var(--ink-muted)] line-through"
                 : isBuy
@@ -443,31 +421,45 @@ function PlanSection({
     {
       title: "",
       key: "actions",
-      width: 250,
+      width: 120,
       align: "right",
       render: (_, row) => {
         if (row.executed) {
-          return <span className="text-[12px] text-[var(--ink-muted)]">Done — clears on refresh</span>;
+          return <span className="text-[11px] sm:text-[12px] text-[var(--ink-muted)]">Done</span>;
         }
         if (editId === row.id) {
           return (
-            <div className="flex items-center justify-end gap-1">
+            <div className="flex items-center justify-end gap-0.5 sm:gap-1">
               <Button size="small" type="primary" loading={editSaving} onClick={() => void saveEdit()}>
                 Save
               </Button>
               <Button size="small" type="text" disabled={editSaving} onClick={cancelEdit}>
-                Cancel
+                ✕
               </Button>
             </div>
           );
         }
         return (
-          <div className="flex items-center justify-end gap-1">
-            <Button size="small" type="default" disabled={editId !== null} onClick={() => startEdit(row)}>
-              Edit
+          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+            <Button
+              size="small"
+              type="text"
+              disabled={editId !== null}
+              onClick={() => startEdit(row)}
+              className="!p-1 sm:!p-4"
+              title="Edit"
+            >
+              ✎
             </Button>
-            <Button size="small" type="default" disabled={editId !== null} onClick={() => onMark(side, row.id)}>
-              Mark as done
+            <Button
+              size="small"
+              type="text"
+              disabled={editId !== null}
+              onClick={() => onMark(side, row.id)}
+              className="!p-1 sm:!p-4 hidden sm:inline-block"
+              title="Mark as done"
+            >
+              ✓
             </Button>
             <Popconfirm
               title="Remove this row?"
@@ -477,8 +469,15 @@ function PlanSection({
               cancelText="Cancel"
               onConfirm={() => onDelete(side, row.id)}
             >
-              <Button size="small" type="text" danger disabled={editId !== null}>
-                Remove
+              <Button
+                size="small"
+                type="text"
+                danger
+                disabled={editId !== null}
+                className="!p-1 sm:!p-4"
+                title="Remove"
+              >
+                ×
               </Button>
             </Popconfirm>
           </div>
@@ -505,9 +504,9 @@ function PlanSection({
       }
     >
       <div className="space-y-4">
-        <div className="grid items-end gap-3 sm:grid-cols-[1fr_160px_120px_140px_auto]">
+        <div className="grid items-end gap-2 grid-cols-1 sm:gap-3 sm:grid-cols-[1fr_140px_100px_110px_auto]">
           <div>
-            <label className="block text-[13px] text-[var(--ink-strong)]">Stock</label>
+            <label className="block text-[13px] text-[var(--ink-strong)] mb-1">Stock</label>
             <SymbolField
               instruments={instruments}
               loadError={instrumentsError}
@@ -520,8 +519,8 @@ function PlanSection({
               aria-label={`${title} stock`}
             />
           </div>
-          <div>
-            <label className="block text-[13px] text-[var(--ink-strong)]">Brokerage</label>
+          <div className="hidden sm:block">
+            <label className="block text-[13px] text-[var(--ink-strong)] mb-1">Brokerage</label>
             <Select<PositionBrokerage>
               value={brokerage ?? undefined}
               onChange={(v) => {
@@ -531,11 +530,12 @@ function PlanSection({
               options={BROKERAGE_OPTIONS}
               placeholder="Choose"
               aria-label={`${title} brokerage`}
-              className="mt-1 w-full"
+              className="w-full"
+              size="small"
             />
           </div>
           <div>
-            <label className="block text-[13px] text-[var(--ink-strong)]">Quantity</label>
+            <label className="block text-[13px] text-[var(--ink-strong)] mb-1">Qty</label>
             <InputNumber
               value={quantity}
               onChange={(v) => {
@@ -545,11 +545,12 @@ function PlanSection({
               min={0}
               step={1}
               placeholder="0"
-              className="mt-1 w-full rounded-md"
+              className="w-full rounded-md"
+              size="small"
             />
           </div>
           <div>
-            <label className="block text-[13px] text-[var(--ink-strong)]">Target price</label>
+            <label className="block text-[13px] text-[var(--ink-strong)] mb-1">Price</label>
             <InputNumber
               value={price}
               onChange={(v) => {
@@ -559,7 +560,8 @@ function PlanSection({
               min={0}
               step={0.1}
               placeholder="0.00"
-              className="mt-1 w-full rounded-md"
+              className="w-full rounded-md"
+              size="small"
             />
           </div>
           <Button
@@ -567,9 +569,26 @@ function PlanSection({
             loading={saving}
             disabled={saving}
             onClick={() => void submit()}
+            className="sm:mt-0"
           >
             Add
           </Button>
+        </div>
+
+        <div className="block sm:hidden">
+          <label className="block text-[13px] text-[var(--ink-strong)] mb-1">Brokerage</label>
+          <Select<PositionBrokerage>
+            value={brokerage ?? undefined}
+            onChange={(v) => {
+              setBrokerage(v);
+              setError(null);
+            }}
+            options={BROKERAGE_OPTIONS}
+            placeholder="Choose"
+            aria-label={`${title} brokerage`}
+            className="w-full"
+            size="small"
+          />
         </div>
 
         <div className="flex min-h-[20px] flex-wrap items-center gap-x-2 text-[13px]">
