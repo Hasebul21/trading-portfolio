@@ -88,6 +88,23 @@ export function PositionsView({
     [setRowsFor],
   );
 
+  const handleReorder = useCallback(
+    (side: PositionSide, id: string, direction: "up" | "down") => {
+      setRowsFor(side)((prev) => {
+        const idx = prev.findIndex((r) => r.id === id);
+        if (idx === -1) return prev;
+        if (direction === "up" && idx === 0) return prev;
+        if (direction === "down" && idx === prev.length - 1) return prev;
+
+        const newIdx = direction === "up" ? idx - 1 : idx + 1;
+        const newRows = [...prev];
+        [newRows[idx], newRows[newIdx]] = [newRows[newIdx], newRows[idx]];
+        return newRows;
+      });
+    },
+    [setRowsFor],
+  );
+
   const handleUpdate = useCallback(
     async (
       side: PositionSide,
@@ -141,6 +158,7 @@ export function PositionsView({
         onMark={handleMark}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onReorder={handleReorder}
       />
 
       <PlanSection
@@ -155,6 +173,7 @@ export function PositionsView({
         onMark={handleMark}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
+        onReorder={handleReorder}
       />
     </div>
   );
@@ -171,6 +190,7 @@ function PlanSection({
   onMark,
   onUpdate,
   onDelete,
+  onReorder,
 }: {
   side: PositionSide;
   title: string;
@@ -196,6 +216,7 @@ function PlanSection({
     brokerage: PositionBrokerage,
   ) => Promise<{ ok: boolean; error?: string }>;
   onDelete: (side: PositionSide, id: string) => void;
+  onReorder: (side: PositionSide, id: string, direction: "up" | "down") => void;
 }) {
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState<number | null>(null);
@@ -421,9 +442,11 @@ function PlanSection({
     {
       title: "",
       key: "actions",
-      width: 120,
+      width: 150,
       align: "right",
-      render: (_, row) => {
+      render: (_, row, rowIndex) => {
+        const isFirst = rowIndex === 0;
+        const isLast = rowIndex === rows.length - 1;
         if (row.executed) {
           return <span className="text-[11px] sm:text-[12px] text-[var(--ink-muted)]">Done</span>;
         }
@@ -441,6 +464,26 @@ function PlanSection({
         }
         return (
           <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+            <Button
+              size="small"
+              type="text"
+              disabled={editId !== null || isFirst}
+              onClick={() => onReorder(side, row.id, "up")}
+              className="!p-1 sm:!p-4"
+              title="Move up"
+            >
+              ↑
+            </Button>
+            <Button
+              size="small"
+              type="text"
+              disabled={editId !== null || isLast}
+              onClick={() => onReorder(side, row.id, "down")}
+              className="!p-1 sm:!p-4"
+              title="Move down"
+            >
+              ↓
+            </Button>
             <Button
               size="small"
               type="text"
@@ -589,25 +632,6 @@ function PlanSection({
             className="w-full"
             size="small"
           />
-        </div>
-
-        <div className="flex min-h-[20px] flex-wrap items-center gap-x-2 text-[13px]">
-          <span className="text-[var(--ink-muted)]">{isBuy ? "Cost to deduct:" : "Proceeds to add:"}</span>
-          {previewAmount !== null ? (
-            <span
-              className={`tabular-nums ${isBuy ? "text-[var(--loss-700)]" : "text-[var(--gain-700)]"}`}
-            >
-              {isBuy ? "−" : "+"}৳{formatBdt(previewAmount)}
-            </span>
-          ) : (
-            <span className="text-[var(--ink-faint)]">— enter quantity &amp; target price</span>
-          )}
-          {previewAmount !== null && commissionPct ? (
-            <span className="text-[var(--ink-faint)]">
-              (gross ৳{formatBdt(Math.round((quantity as number) * (price as number) * 100) / 100)} ·
-              {" "}{commissionPct}% fee)
-            </span>
-          ) : null}
         </div>
 
         {error ? <Alert type="error" showIcon message={error} /> : null}
